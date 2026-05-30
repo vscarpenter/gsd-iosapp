@@ -161,6 +161,19 @@ struct ValidationTests {
         try TaskValidator.validate(task)
     }
 
+    // MARK: - ValidationError.message
+
+    @Test func everyValidationErrorHasANonEmptyMessage() {
+        let all: [ValidationError] = [.titleLength, .descriptionTooLong, .tagLength, .tooManyTags,
+                                      .subtaskTitleLength, .tooManySubtasks, .tooManyDependencies,
+                                      .estimateOutOfRange, .tooManyTimeEntries]
+        for e in all { #expect(!e.message.isEmpty) }
+    }
+
+    @Test func descriptionErrorMessageMentionsDescription() {
+        #expect(ValidationError.descriptionTooLong.message.localizedCaseInsensitiveContains("description"))
+    }
+
     // MARK: - Happy path (fully-populated valid task)
 
     @Test func acceptsFullyPopulatedValidTask() throws {

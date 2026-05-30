@@ -36,6 +36,23 @@ public enum ValidationError: Error, Equatable {
     case tooManyTimeEntries
 }
 
+extension ValidationError {
+    /// Human-readable, localized reason for surfacing in the UI.
+    public var message: String {
+        switch self {
+        case .titleLength:         String(localized: "Title must be 1–80 characters.")
+        case .descriptionTooLong:  String(localized: "Description must be 600 characters or fewer.")
+        case .tagLength:           String(localized: "Each tag must be 1–30 characters.")
+        case .tooManyTags:         String(localized: "A task can have at most 20 tags.")
+        case .subtaskTitleLength:  String(localized: "Each subtask title must be 1–100 characters.")
+        case .tooManySubtasks:     String(localized: "A task can have at most 50 subtasks.")
+        case .tooManyDependencies: String(localized: "A task can depend on at most 50 tasks.")
+        case .estimateOutOfRange:  String(localized: "Estimate must be between 1 minute and 7 days.")
+        case .tooManyTimeEntries:  String(localized: "Too many time entries on this task.")
+        }
+    }
+}
+
 public enum TaskValidator {
     public static func validate(_ task: Task) throws {
         guard FieldLimits.titleRange.contains(task.title.count) else { throw ValidationError.titleLength }
