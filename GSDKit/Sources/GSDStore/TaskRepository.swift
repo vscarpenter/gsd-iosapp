@@ -2,12 +2,16 @@ import Foundation
 import GRDB
 import GSDModel
 
-/// Async persistence boundary for tasks. Holds NO business rules. The spec rule
-/// "every mutation bumps `updatedAt`" (increment spec §3.3, product spec §5.1) is
-/// satisfied one layer up: the Phase 1 use-case/store layer stamps `updatedAt`
-/// with an injected clock before calling `upsert`, so the repository itself never
-/// injects time. `delete` also strips the id from every other task's
-/// `dependencies` (product spec §6.8 cleanup-on-delete).
+/// Async persistence boundary for tasks. Holds NO business rules.
+///
+/// Responsibility split for `updatedAt`:
+/// - The caller (Phase 1 use-case/store layer) stamps `updatedAt` on the PRIMARY
+///   mutation (upsert) with its own injected clock — the repository never touches
+///   it there (increment spec §3.3, product spec §5.1).
+/// - The repository stamps `updatedAt` on CASCADE SIDE-EFFECTS it originates —
+///   specifically, the dependency-scrub rows produced by `delete` (§6.8). The
+///   caller can't know which rows were scrubbed, so the repository owns that stamp
+///   via its own injected clock (`now`).
 public protocol TaskRepository: Sendable {
     func upsert(_ task: Task) async throws
     func fetchAll() async throws -> [Task]
@@ -18,10 +22,12 @@ public protocol TaskRepository: Sendable {
 
 public final class GRDBTaskRepository: TaskRepository {
     private let dbWriter: any DatabaseWriter
+    private let now: @Sendable () -> Date
     private let observerQueue = DispatchQueue(label: "dev.vinny.gsd.task-observer")
 
-    public init(_ database: AppDatabase) {
+    public init(_ database: AppDatabase, now: @escaping @Sendable () -> Date = { Date() }) {
         self.dbWriter = database.writer
+        self.now = now
     }
 
     public func upsert(_ task: Task) async throws {
@@ -43,18 +49,23 @@ public final class GRDBTaskRepository: TaskRepository {
     }
 
     public func delete(id: String) async throws {
+        let scrubTimestamp = now()
         try await dbWriter.write { db in
             // O(n) scrub: scans every row to strip the deleted id from `dependencies`.
             // This relies on every row's `dependencies` being well-formed JSON (guaranteed
             // by the NOT NULL DEFAULT '[]' column constraint + all writes going through
             // TaskRecord). A malformed row would throw here and abort the whole transaction.
             // YAGNI: a targeted index-based approach is not worth the added complexity yet.
+            //
+            // `updatedAt` is stamped here (via injected clock) because this repository
+            // originates the scrub — the caller can't know which rows were affected.
             for var record in try TaskRecord.fetchAll(db) where record.id != id {
                 var deps = try GSDJSON.value([String].self, record.dependencies)
                 guard deps.contains(id) else { continue }
                 deps.removeAll { $0 == id }
                 record.dependencies = try GSDJSON.string(deps)
-                try record.update(db, columns: ["dependencies"])
+                record.updatedAt = scrubTimestamp
+                try record.update(db, columns: ["dependencies", "updatedAt"])
             }
             _ = try TaskRecord.deleteOne(db, key: id)
         }
