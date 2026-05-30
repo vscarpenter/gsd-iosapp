@@ -18,6 +18,7 @@
 		A92FC63E75447B51AB504FE8 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 10C5831BD27556073CD6CD9F /* GSDModel */; };
 		AD6837183E00E04042A56ED0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 249F029B40FD9FDAA6A68A25 /* Assets.xcassets */; };
 		BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 834FF1E8BA076E31BA383962 /* GSDApp.swift */; };
+		C54C617DEC7531732CFC2822 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */; };
 		EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6988BDFABF5E325C967D8EA /* TaskCardView.swift */; };
 /* End PBXBuildFile section */
 
@@ -30,6 +31,7 @@
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		834FF1E8BA076E31BA383962 /* GSDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDApp.swift; sourceTree = "<group>"; };
 		B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
 		B6988BDFABF5E325C967D8EA /* TaskCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCardView.swift; sourceTree = "<group>"; };
@@ -58,6 +60,7 @@
 				1E44544249232FE202E59EB0 /* GSD.entitlements */,
 				834FF1E8BA076E31BA383962 /* GSDApp.swift */,
 				3CBE7AF1D884DE679CAEE64D /* Editor */,
+				CA9A551E91A1952A1BA0DAFB /* Effects */,
 				FA90F57386B51F3EB784FDB4 /* Matrix */,
 				B04168E073460512D3FB1A61 /* Store */,
 				90EBAFD44A99F0DBD17A24F5 /* Theme */,
@@ -106,6 +109,14 @@
 				D515A28E5AA76CE02716A6EF /* Packages */,
 				A8F4EE28B10703F63C52EDE9 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		CA9A551E91A1952A1BA0DAFB /* Effects */ = {
+			isa = PBXGroup;
+			children = (
+				6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */,
+			);
+			path = Effects;
 			sourceTree = "<group>";
 		};
 		D515A28E5AA76CE02716A6EF /* Packages */ = {
@@ -203,6 +214,7 @@
 			files = (
 				85FC74F90BC144FB514B2924 /* AppPreferences.swift in Sources */,
 				046100EB23A8521EA8275EAE /* CaptureBar.swift in Sources */,
+				C54C617DEC7531732CFC2822 /* ConfettiView.swift in Sources */,
 				2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
