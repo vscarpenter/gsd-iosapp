@@ -9,6 +9,14 @@ public struct ParsedCapture: Equatable, Sendable {
     public var important: Bool
     public var tags: [String]
     public var descriptionAdditions: [String]   // sanitized URLs to append to description
+
+    public init(title: String, urgent: Bool, important: Bool, tags: [String], descriptionAdditions: [String]) {
+        self.title = title
+        self.urgent = urgent
+        self.important = important
+        self.tags = tags
+        self.descriptionAdditions = descriptionAdditions
+    }
 }
 
 /// Parses the capture shorthand: `!!`/`!`/`*` flags, `#tag`s, and http(s) URLs.
