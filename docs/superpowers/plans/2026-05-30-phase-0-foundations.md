@@ -1328,7 +1328,9 @@ Phase 1 will build on these exact entry points (stable public API of `GSDKit`):
 
 ## Phase 0 — Definition of Done
 
-- [ ] `swift test` passes for `GSDModel` + `GSDStore` with no simulator (spec acceptance **A1**).
+**Status: ✅ COMPLETE** (all 10 tasks executed via subagent-driven development; 39 tests green; app builds + launches on the iPhone 17 simulator; tagged `phase-0-foundations`).
+
+- [x] `swift test` passes for `GSDModel` + `GSDStore` with no simulator (spec acceptance **A1**).
 - [ ] `v1` migration creates the `tasks` table with the full §5.1 column set, asserted by a test (**A2**).
 - [ ] Generated IDs are URL-safe, meet minimum lengths, and are deterministic under a seeded RNG (**A3**).
 - [ ] `Task.quadrant` is derived and provably never drifts from the flags.
@@ -1349,4 +1351,5 @@ These are non-blocking findings from the Task 1 review. None affects the simulat
 - **`CODE_SIGN_IDENTITY` (cosmetic).** XcodeGen emitted the deprecated `"iPhone Developer"`; switch to `"Apple Development"` on the next `project.yml` pass.
 - **App icon asset (→ Phase 1 theming).** `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` is set but there is no `Assets.xcassets`, producing a missing-icon build warning. The Phase 1 theming task creates the asset catalog (accent colors + app icon); fold the fix in there.
 - **`GSDModel.Task` shadows Swift Concurrency's `Task` (→ decide at Phase 1's first `@Observable` store/SwiftUI integration).** Harmless inside GSDModel and in the persistence layer (bare `Task` type references resolve to our type; stdlib `Task` is generic and needs args). The friction appears when a Phase 1 file uses both our model and a `Task { }` concurrency block — `Task { }` would resolve to our initializer. Don't rename now; at the first SwiftUI store bridge, decide between qualifying call sites (`_Concurrency.Task { }` / `GSDModel.Task`) or a project-wide convention. File as Phase 1 technical debt.
+- **`GSDJSON` date decoder is strict about fractional seconds (→ revisit at Phase 5 sync).** It now encodes/decodes ISO-8601 with milliseconds (matching the web/PocketBase wire format) and *rejects* whole-second strings on decode. Safe for our own greenfield data (we always write fractional seconds). When Phase 5 consumes real PocketBase `time_entries`, confirm every source emits fractional seconds (JS `toISOString()` does); if any whole-second strings appear, make the decoder lenient (try-with-then-without fractional). Also consider caching the `ISO8601DateFormatter` (currently constructed per call for `Sendable` safety) if bulk import/sync profiling shows it hot.
 
