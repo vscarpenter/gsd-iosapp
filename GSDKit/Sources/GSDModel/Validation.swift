@@ -10,9 +10,11 @@ public enum FieldLimits {
     public static let subtaskTitleRange = 1...100
     public static let maxSubtasks = 50
     public static let maxDependencies = 50
+    /// Enforced at the time-entry note input UI (Phase 2), NOT inside `TaskValidator.validate`.
     public static let timeEntryNoteMax = 200
     public static let maxTimeEntries = 1000
     public static let estimatedMinutesRange = 1...10080   // 1 min – 7 days
+    /// Enforced at the snooze action UI (Phase 2), NOT inside `TaskValidator.validate`.
     public static let maxSnoozeInterval: TimeInterval = 365 * 24 * 60 * 60
 
     /// A stored estimate of 0 means "unset" (product spec §5.1).
