@@ -33,4 +33,30 @@ struct URLSanitizerTests {
         let huge = "https://example.com/" + String(repeating: "a", count: 2048)
         #expect(URLSanitizer.sanitize(huge) == nil)
     }
+
+    // Fix 2: percent-encoded credential host rejection
+    @Test func rejectsPercentEncodedAtSignInHost() {
+        #expect(URLSanitizer.sanitize("https://evil%40good.com") == nil)
+    }
+
+    @Test func normalHostStillAccepted() {
+        #expect(URLSanitizer.sanitize("https://example.com") == "https://example.com")
+    }
+
+    // Fix 3: length boundary coverage
+    @Test func accepts2047CharURL() {
+        // "https://e.co/" is 13 chars; pad with 'a' to reach exactly 2047 total
+        let padding = String(repeating: "a", count: 2047 - 13)
+        let url = "https://e.co/" + padding
+        assert(url.count == 2047, "url.count=\(url.count)")
+        #expect(URLSanitizer.sanitize(url) != nil)
+    }
+
+    @Test func rejects2048CharURL() {
+        // "https://e.co/" is 13 chars; pad with 'a' to reach exactly 2048 total
+        let padding = String(repeating: "a", count: 2048 - 13)
+        let url = "https://e.co/" + padding
+        assert(url.count == 2048, "url.count=\(url.count)")
+        #expect(URLSanitizer.sanitize(url) == nil)
+    }
 }

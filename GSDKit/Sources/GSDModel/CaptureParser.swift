@@ -42,7 +42,7 @@ public enum CaptureParser {
         let tagMatches = working.matches(of: #/(?:^|\s)#(\w[\w-]*)/#)
         for match in tagMatches {
             let tag = String(match.1).lowercased()
-            if !tags.contains(tag) && tags.count < FieldLimits.maxTags {
+            if FieldLimits.tagLengthRange.contains(tag.count) && !tags.contains(tag) && tags.count < FieldLimits.maxTags {
                 tags.append(tag)
             }
         }

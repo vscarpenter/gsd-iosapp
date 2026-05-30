@@ -65,4 +65,22 @@ struct CaptureParserTests {
         let r = CaptureParser.parse("a   !!   b")
         #expect(r.title == "a b")
     }
+
+    // Fix 1: tag length validation
+    @Test func tagOver30CharsIsDropped() {
+        let longTag = "#" + String(repeating: "a", count: 31)
+        let r = CaptureParser.parse("Task \(longTag)")
+        #expect(r.tags.isEmpty)
+    }
+
+    @Test func tagExactly30CharsIsKept() {
+        let tag30 = "#" + String(repeating: "a", count: 30)
+        let r = CaptureParser.parse("Task \(tag30)")
+        #expect(r.tags == [String(repeating: "a", count: 30)])
+    }
+
+    @Test func digitLeadingTagIsKept() {
+        let r = CaptureParser.parse("Task #123")
+        #expect(r.tags.contains("123"))
+    }
 }

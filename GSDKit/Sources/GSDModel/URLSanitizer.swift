@@ -23,6 +23,11 @@ public enum URLSanitizer {
         // Reject embedded credentials (user:pass@host).
         guard components.user == nil, components.password == nil else { return nil }
 
+        // Reject percent-encoded credentials: URLComponents decodes %40 → @
+        // into the host field, bypassing the user/password check above.
+        // A legitimate hostname never contains @.
+        guard !host.contains("@") else { return nil }
+
         return trimmed
     }
 }
