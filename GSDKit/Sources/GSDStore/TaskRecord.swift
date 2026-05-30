@@ -69,6 +69,9 @@ extension TaskRecord {
             urgent: urgent, important: important,
             completed: completed, completedAt: completedAt,
             createdAt: createdAt, updatedAt: updatedAt, dueDate: dueDate,
+            // .none fallback is intentional store-layer defensiveness: an unrecognized
+            // persisted recurrence value (e.g. from a future schema version) degrades
+            // gracefully to .none rather than failing the entire fetch.
             recurrence: RecurrenceType(rawValue: recurrence) ?? .none,
             tags: try GSDJSON.value([String].self, tags),
             subtasks: try GSDJSON.value([Subtask].self, subtasks),

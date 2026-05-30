@@ -25,4 +25,30 @@ struct TaskRecordTests {
         let restored = try record.toDomain()
         #expect(restored == task)
     }
+
+    /// Proves that sub-second (millisecond-aligned) dates in embedded collections
+    /// survive the TaskRecord round-trip. This exposes the ISO-8601 truncation bug
+    /// where .iso8601 encoding drops fractional seconds (1500.5 → 1500.0).
+    @Test func roundTripsSubSecondMillisecondDates() throws {
+        let task = Task(
+            id: "rt2", title: "Sub-second test", description: "",
+            urgent: false, important: true,
+            completed: false, completedAt: nil,
+            createdAt: Date(timeIntervalSince1970: 1000),
+            updatedAt: Date(timeIntervalSince1970: 2000.5),
+            dueDate: nil,
+            recurrence: .none,
+            tags: [],
+            subtasks: [],
+            dependencies: [],
+            timeEntries: [
+                TimeEntry(id: "te000002",
+                          startedAt: Date(timeIntervalSince1970: 1500.5),
+                          endedAt: Date(timeIntervalSince1970: 1800.25),
+                          notes: "x")
+            ]
+        )
+        let restored = try TaskRecord(task).toDomain()
+        #expect(restored == task)
+    }
 }

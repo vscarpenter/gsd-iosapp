@@ -8,10 +8,43 @@ struct MigrationTests {
         try db.writer.read { d in
             #expect(try d.tableExists("tasks"))
             let columns = Set(try d.columns(in: "tasks").map(\.name))
-            // spot-check the spec-critical columns across scalar, JSON, and device-local groups
-            for expected in ["id", "quadrant", "tags", "subtasks", "dependencies",
-                             "timeEntries", "snoozedUntil", "notificationSent", "updatedAt"] {
-                #expect(columns.contains(expected), "missing column \(expected)")
+
+            // Assert ALL 24 columns from the §5.1 schema are present.
+            let expectedColumns: Set<String> = [
+                "id",
+                "title",
+                "description",
+                "urgent",
+                "important",
+                "quadrant",
+                "completed",
+                "completedAt",
+                "createdAt",
+                "updatedAt",
+                "dueDate",
+                "recurrence",
+                "tags",
+                "subtasks",
+                "dependencies",
+                "parentTaskId",
+                "notifyBefore",
+                "notificationEnabled",
+                "notificationSent",
+                "lastNotificationAt",
+                "snoozedUntil",
+                "estimatedMinutes",
+                "timeSpent",
+                "timeEntries",
+            ]
+            for expected in expectedColumns.sorted() {
+                #expect(columns.contains(expected), "missing column: \(expected)")
+            }
+            #expect(columns == expectedColumns, "unexpected extra columns: \(columns.subtracting(expectedColumns))")
+
+            // Assert the four indexed columns are indexed (product spec §5.1).
+            let indexedColumns = Set(try d.indexes(on: "tasks").flatMap(\.columns))
+            for col in ["quadrant", "completed", "dueDate", "updatedAt"] {
+                #expect(indexedColumns.contains(col), "missing index on column: \(col)")
             }
         }
     }

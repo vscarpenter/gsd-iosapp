@@ -44,6 +44,11 @@ public final class GRDBTaskRepository: TaskRepository {
 
     public func delete(id: String) async throws {
         try await dbWriter.write { db in
+            // O(n) scrub: scans every row to strip the deleted id from `dependencies`.
+            // This relies on every row's `dependencies` being well-formed JSON (guaranteed
+            // by the NOT NULL DEFAULT '[]' column constraint + all writes going through
+            // TaskRecord). A malformed row would throw here and abort the whole transaction.
+            // YAGNI: a targeted index-based approach is not worth the added complexity yet.
             for var record in try TaskRecord.fetchAll(db) where record.id != id {
                 var deps = try GSDJSON.value([String].self, record.dependencies)
                 guard deps.contains(id) else { continue }
