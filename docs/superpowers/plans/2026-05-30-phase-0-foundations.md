@@ -1337,3 +1337,15 @@ Phase 1 will build on these exact entry points (stable public API of `GSDKit`):
 - [ ] The iOS app target builds and launches the shell on the simulator.
 - [ ] One commit per task; clean working tree; `phase-0-foundations` tag created.
 
+---
+
+## Deferred polish (from Task 1 code review — address at the noted phase, not now)
+
+These are non-blocking findings from the Task 1 review. None affects the simulator-only Phase 0–2 loop; each is recorded here so it resurfaces when it actually matters.
+
+- **Project-level `SWIFT_VERSION` (→ when a 2nd target is added, Phase 6).** `project.yml` sets Swift 6.0 only on the `GSD` target; the project-level config defaults to Swift 5. Add a top-level `settings.base.SWIFT_VERSION: "6.0"` before adding widget/extension targets so they don't silently compile as Swift 5.
+- **Shared Xcode scheme (→ when CI is added).** `GSD.xcodeproj/xcshareddata/xcschemes/` is empty; `xcodebuild -scheme GSD` works only because Xcode auto-generates a user-local scheme. Add a `scheme` to `project.yml` for the `GSD` target and commit the emitted shared scheme before wiring CI / fresh-checkout builds.
+- **`DEVELOPMENT_TEAM` + App Group provisioning (→ Phase 6, BLOCKING for device builds).** The `group.dev.vinny.gsd` capability cannot be provisioned for a device build without the owner's Apple Team ID. Obtain the Team ID and set `DEVELOPMENT_TEAM` in `project.yml` before any on-device or extension work. Simulator builds are unaffected.
+- **`CODE_SIGN_IDENTITY` (cosmetic).** XcodeGen emitted the deprecated `"iPhone Developer"`; switch to `"Apple Development"` on the next `project.yml` pass.
+- **App icon asset (→ Phase 1 theming).** `ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon` is set but there is no `Assets.xcassets`, producing a missing-icon build warning. The Phase 1 theming task creates the asset catalog (accent colors + app icon); fold the fix in there.
+

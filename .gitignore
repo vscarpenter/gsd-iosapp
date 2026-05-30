@@ -11,7 +11,7 @@ xcuserdata/
 
 # Swift Package Manager
 .build/
-.swiftpm/xcode/package.xcworkspace/xcuserdata/
+**/.swiftpm/
 # Note: Package.resolved IS committed to pin dependency versions.
 
 # Misc
