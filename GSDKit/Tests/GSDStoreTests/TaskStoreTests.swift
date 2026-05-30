@@ -53,6 +53,16 @@ struct TaskStoreTests {
         #expect(store.tasks.first?.title == "Visible")
     }
 
+    @Test func createStampsBothTimestampsFromClock() async throws {
+        let (store, repo) = try makeStoreAndRepo()
+        let stale = Date(timeIntervalSince1970: 5)
+        let t = Task(id: "made", title: "X", urgent: true, important: false, createdAt: stale, updatedAt: stale)
+        try await store.create(t)
+        let stored = try await repo.fetch(id: "made")
+        #expect(stored?.createdAt == Date(timeIntervalSince1970: 1000))
+        #expect(stored?.updatedAt == Date(timeIntervalSince1970: 1000))
+    }
+
     @Test func tasksInQuadrantSortsIncompleteFirst() async throws {
         let (store, repo) = try makeStoreAndRepo()
         let now = Date(timeIntervalSince1970: 1000)

@@ -57,6 +57,15 @@ public final class TaskStore {
         try await repository.upsert(task)
     }
 
+    public func create(_ task: Task) async throws {
+        var t = task
+        let now = clock()
+        t.createdAt = now
+        t.updatedAt = now
+        try TaskValidator.validate(t)
+        try await repository.upsert(t)
+    }
+
     public func save(_ task: Task) async throws {
         var t = task; t.updatedAt = clock()
         try TaskValidator.validate(t)
