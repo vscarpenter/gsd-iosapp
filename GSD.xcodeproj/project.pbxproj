@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		002BFF4E14DD42A9716D323B /* GSDStore in Frameworks */ = {isa = PBXBuildFile; productRef = 579A119DFC479E75D3534B6C /* GSDStore */; };
+		046100EB23A8521EA8275EAE /* CaptureBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A03169462530BB59EC808C /* CaptureBar.swift */; };
 		1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CAA477CE99B7420D83C9362 /* Theme.swift */; };
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
@@ -24,6 +25,7 @@
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		1E44544249232FE202E59EB0 /* GSD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSD.entitlements; sourceTree = "<group>"; };
 		249F029B40FD9FDAA6A68A25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		30A03169462530BB59EC808C /* CaptureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBar.swift; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -114,6 +116,7 @@
 		FA90F57386B51F3EB784FDB4 /* Matrix */ = {
 			isa = PBXGroup;
 			children = (
+				30A03169462530BB59EC808C /* CaptureBar.swift */,
 				B6988BDFABF5E325C967D8EA /* TaskCardView.swift */,
 			);
 			path = Matrix;
@@ -196,6 +199,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				85FC74F90BC144FB514B2924 /* AppPreferences.swift in Sources */,
+				046100EB23A8521EA8275EAE /* CaptureBar.swift in Sources */,
 				2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
