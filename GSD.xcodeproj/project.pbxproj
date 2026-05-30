@@ -20,6 +20,8 @@
 		BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 834FF1E8BA076E31BA383962 /* GSDApp.swift */; };
 		C54C617DEC7531732CFC2822 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */; };
 		EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6988BDFABF5E325C967D8EA /* TaskCardView.swift */; };
+		FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */; };
+		FE0F884C571B70DC1021DC4F /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A151034146B4714F731EE2 /* TaskActions.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -29,8 +31,10 @@
 		249F029B40FD9FDAA6A68A25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		30A03169462530BB59EC808C /* CaptureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBar.swift; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
+		53A151034146B4714F731EE2 /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantSection.swift; sourceTree = "<group>"; };
 		6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		834FF1E8BA076E31BA383962 /* GSDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDApp.swift; sourceTree = "<group>"; };
 		B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
@@ -131,6 +135,8 @@
 			isa = PBXGroup;
 			children = (
 				30A03169462530BB59EC808C /* CaptureBar.swift */,
+				6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */,
+				53A151034146B4714F731EE2 /* TaskActions.swift */,
 				B6988BDFABF5E325C967D8EA /* TaskCardView.swift */,
 			);
 			path = Matrix;
@@ -218,7 +224,9 @@
 				2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
+				FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */,
 				226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */,
+				FE0F884C571B70DC1021DC4F /* TaskActions.swift in Sources */,
 				EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */,
 				148AA072429C982C5B7B77C0 /* TaskEditorView.swift in Sources */,
 				1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */,
