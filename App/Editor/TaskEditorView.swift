@@ -128,8 +128,10 @@ struct TaskEditorView: View {
             do {
                 if original == nil { try await store.create(task) } else { try await store.save(task) }
                 dismiss()
+            } catch let error as ValidationError {
+                saveError = error.message
             } catch {
-                saveError = String(localized: "Couldn't save — title must be 1–80 characters and tags ≤ 30 characters.")
+                saveError = String(localized: "Couldn't save. Please try again.")
             }
         }
     }

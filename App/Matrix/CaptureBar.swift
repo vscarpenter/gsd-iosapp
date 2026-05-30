@@ -65,8 +65,11 @@ struct CaptureBar: View {
             do {
                 try await store.add(p, override: ov)
                 draft = ""; override = nil; captureError = nil; focused = true
+            } catch let error as ValidationError {
+                captureError = error.message
+                focused = true
             } catch {
-                captureError = String(localized: "Couldn't add — title must be 1–80 characters.")
+                captureError = String(localized: "Couldn't add. Please try again.")
                 focused = true
             }
         }
