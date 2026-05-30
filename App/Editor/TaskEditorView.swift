@@ -11,6 +11,7 @@ struct TaskEditorView: View {
     @State private var quadrant: Quadrant
     @State private var tags: [String]
     @State private var tagDraft = ""
+    @State private var saveError: String?
     /// The task being edited (nil = creating a new one). Saving an edit mutates
     /// THIS value so non-edited (Phase-2) fields survive.
     private let original: Task?
@@ -35,12 +36,18 @@ struct TaskEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section { TextField(String(localized: "Title"), text: $title) }
+                Section {
+                    TextField(String(localized: "Title"), text: $title)
+                        .onChange(of: title) { _, _ in saveError = nil }
+                }
                 Section(String(localized: "Quadrant")) { quadrantPicker }
                 Section(String(localized: "Tags")) { tagField }
                 Section(String(localized: "Notes")) {
                     TextField(String(localized: "Description"), text: $description, axis: .vertical)
                         .lineLimit(3...8)
+                }
+                if let saveError {
+                    Section { Text(saveError).font(.caption).foregroundStyle(.red) }
                 }
             }
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
@@ -96,7 +103,7 @@ struct TaskEditorView: View {
     private func addTag() {
         let t = tagDraft.trimmingCharacters(in: CharacterSet(charactersIn: " ,#")).lowercased()
         tagDraft = ""
-        guard !t.isEmpty, !tags.contains(t), tags.count < FieldLimits.maxTags else { return }
+        guard !t.isEmpty, FieldLimits.tagLengthRange.contains(t.count), !tags.contains(t), tags.count < FieldLimits.maxTags else { return }
         tags.append(t)
     }
 
@@ -117,6 +124,13 @@ struct TaskEditorView: View {
                         urgent: quadrant.isUrgent, important: quadrant.isImportant,
                         createdAt: now, updatedAt: now, tags: tags)
         }
-        _Concurrency.Task { try? await store.save(task); dismiss() }
+        _Concurrency.Task { @MainActor in
+            do {
+                if original == nil { try await store.create(task) } else { try await store.save(task) }
+                dismiss()
+            } catch {
+                saveError = String(localized: "Couldn't save — title must be 1–80 characters and tags ≤ 30 characters.")
+            }
+        }
     }
 }
