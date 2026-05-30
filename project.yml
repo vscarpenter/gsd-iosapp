@@ -1,0 +1,30 @@
+name: GSD
+options:
+  bundleIdPrefix: dev.vinny
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+packages:
+  GSDKit:
+    path: GSDKit
+targets:
+  GSD:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    dependencies:
+      - package: GSDKit
+        product: GSDModel
+      - package: GSDKit
+        product: GSDStore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: "YES"
+        CODE_SIGN_ENTITLEMENTS: App/GSD.entitlements
+        CODE_SIGN_STYLE: Automatic
+        # DEVELOPMENT_TEAM: <your Team ID>   # set before device builds; simulator works without it
