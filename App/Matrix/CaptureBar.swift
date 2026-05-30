@@ -66,7 +66,8 @@ struct CaptureBar: View {
                 try await store.add(p, override: ov)
                 draft = ""; override = nil; captureError = nil; focused = true
             } catch {
-                captureError = String(localized: "Couldn't add task — title or link may be too long.")
+                captureError = String(localized: "Couldn't add — title must be 1–80 characters.")
+                focused = true
             }
         }
     }
