@@ -755,27 +755,711 @@ Expected: app launches; typing `Buy milk !! #errand` and submitting shows "Buy m
 
 ---
 
-## Group C — Task card + capture bar (to be detailed)
+## Group C — Task card, capture bar, presentation model
 
-Builds the reusable presentation pieces. Full SwiftUI code authored at execution time (build-verified via `xcodebuild`).
+> SwiftUI presentation; build-verified via `xcodebuild`. Flag these APIs at build time if they don't compile as written: `@Environment(TaskStore.self)`, `.accessibilityActions`, `Text(markdown:)` link rendering.
 
-- **Task C1: `App/Matrix/TaskCardView.swift`** — a card for a Phase-1 task: title (strikethrough when completed), 2-line description preview with tappable links, tag chips, and the quadrant accent (stripe + `QuadrantStyle` symbol). VoiceOver: a combined label (title, quadrant, completion state) + custom actions (Complete, Edit, Delete). Dynamic Type; ≥44pt hit targets. *(Phase-1 fields only — subtask progress, dependency badges, due date, timer, snooze are Phase 2.)*
-- **Task C2: `App/Matrix/CaptureBar.swift`** — the capture field: live parse preview (a quadrant chip from `CaptureParser.parse(draft)` updating as you type, detected `#tags` as chips); Return adds via `store.add(parsed, override:)` and keeps focus for serial capture; a tappable quadrant-override segmented chip that cycles `none → Q1 → Q2 → Q3 → Q4 → none`; a "Details" affordance opening the editor (Group E) pre-filled from the parse.
+### Task C1: EditorRequest (shared presentation model)
 
-## Group D — Matrix surfaces + completion (to be detailed)
+**Files:** Create `App/Editor/EditorRequest.swift`
 
-- **Task D1: `App/Effects/ConfettiView.swift`** — `Canvas` + `TimelineView` particle burst; **gated on `@Environment(\.accessibilityReduceMotion)`** (no confetti when Reduce Motion is on, §6.4/§12.3). Particle counts (~120 center + 60×2) are a feel reference, tunable.
-- **Task D2: `App/Matrix/QuadrantSection.swift`** — one quadrant: header (serif title + accent + live active/done/overdue counts) over a list of `TaskCardView`. Swipe actions: leading → complete/uncomplete (success haptic + confetti trigger); trailing → Delete. Tap → editor. Context menu (Complete, Edit, Move to quadrant, Delete).
-- **Task D3: `App/Matrix/MatrixView.swift` (iPhone)** — sticky `CaptureBar` + a vertical stack of the 4 `QuadrantSection`s (collapsible, Q1→Q4) in a `ScrollView`; a show-completed toggle (`@AppStorage("showCompleted", store: .shared)`); confetti overlay.
-- **Task D4: `App/Matrix/MatrixGridView.swift` (iPad)** — `CaptureBar` + a true 2×2 `LazyVGrid` (Q1 TL→Q4 BR), each cell a `QuadrantSection`; **drag-and-drop across quadrants** (`.draggable(task.id)` / `.dropDestination`) calling `store.move(_:to:)`.
-- **Task D5:** replace `ContentView`'s temporary shell with the size-class branch (`MatrixView` compact / `MatrixGridView` regular); wire completion haptic + confetti. Build + launch + screenshot on both an iPhone and an iPad simulator.
+- [ ] **Step 1: Write it** (no test — a trivial enum; build-verified):
+```swift
+import GSDModel
 
-## Group E — Task editor (to be detailed)
+/// What the editor sheet was opened to do. `Identifiable` so it drives `.sheet(item:)`.
+enum EditorRequest: Identifiable {
+    case new(Quadrant, prefill: ParsedCapture?)
+    case edit(Task)
 
-- **Task E1: `App/Editor/TaskEditorView.swift`** — Phase-1 editor in a sheet (with detents on iPhone): title (Save disabled while empty), description, a 2×2 quadrant picker (mirrors the matrix, accent-colored, using `Quadrant.isUrgent/isImportant`), and a tags token field (type + Return/comma to add, backspace-on-empty removes last, autocomplete from existing tags). Save routes through `store.save(_:)` (new task) or updates an existing one; validates via `TaskValidator`. *(Due date, recurrence, subtasks, dependencies, snooze, time tracking, estimate, reminders are Phase 2/4. The iPad inspector-column presentation, §4.2, is deferred to Phase 3 when the sidebar/smart-views land — Phase 1 uses a sheet on both idioms.)*
-- **Task E2:** wire the editor into card tap, the capture bar's "Details", and an "Add to {quadrant}" affordance on empty sections. Build + launch + a Dynamic-Type-max & VoiceOver accessibility pass on the matrix + editor.
+    var id: String {
+        switch self {
+        case .new(let q, _): "new-\(q.rawValue)"
+        case .edit(let t): t.id
+        }
+    }
+}
+```
+- [ ] **Step 2: Commit** `git add App/Editor/EditorRequest.swift && git commit -m "feat: add EditorRequest presentation model"`
 
-> **Why C–E are outlined, not fully coded here:** they are presentation layers validated by building, not by `swift test`. Their exact SwiftUI is authored task-by-task at execution (each still TDD where logic exists — e.g. confetti reduce-motion gating, parse-preview — and build-verified otherwise). The contracts they depend on (store API, parser, `QuadrantStyle`, `Quadrant` flags) are all fully specified above.
+### Task C2: TaskCardView
+
+**Files:** Create `App/Matrix/TaskCardView.swift`
+
+A pure view of a Phase-1 `Task` (no store dependency — swipe/menu/a11y actions are attached by the section in Group E).
+
+- [ ] **Step 1: Write it:**
+```swift
+import SwiftUI
+import GSDModel
+
+/// One task row. Phase-1 fields only (subtask progress, dependency badges, due
+/// date, timer, snooze arrive in Phase 2). Hosts its own VoiceOver label;
+/// custom actions are attached by the enclosing section.
+struct TaskCardView: View {
+    let task: Task
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            RoundedRectangle(cornerRadius: 2)
+                .fill(QuadrantStyle.accent(task.quadrant))
+                .frame(width: 4)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(task.title)
+                    .font(.headline)
+                    .strikethrough(task.completed)
+                    .foregroundStyle(task.completed ? .secondary : .primary)
+
+                if !task.description.isEmpty {
+                    Text(task.description)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                if !task.tags.isEmpty {
+                    HStack(spacing: 6) {
+                        ForEach(task.tags, id: \.self) { tag in
+                            Text("#\(tag)")
+                                .font(.caption2)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(QuadrantStyle.accent(task.quadrant).opacity(0.15), in: Capsule())
+                        }
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: task.completed ? "checkmark.circle.fill" : "circle")
+                .imageScale(.large)
+                .foregroundStyle(task.completed ? QuadrantStyle.accent(task.quadrant) : .secondary)
+                .accessibilityHidden(true)
+        }
+        .padding(.vertical, 8)
+        .frame(minHeight: 44)                 // ≥44pt hit target (§12.3)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        let state = task.completed ? String(localized: "completed") : String(localized: "active")
+        return "\(task.title), \(task.quadrant.title), \(state)"
+    }
+}
+```
+- [ ] **Step 2: Build** `xcodegen generate && xcodebuild -project GSD.xcodeproj -scheme GSD -destination 'platform=iOS Simulator,name=iPhone 17' build -quiet` → SUCCEEDED.
+- [ ] **Step 3: Commit** `git add App GSD.xcodeproj && git commit -m "feat: add TaskCardView"`
+
+### Task C3: CaptureBar
+
+**Files:** Create `App/Matrix/CaptureBar.swift`
+
+- [ ] **Step 1: Write it:**
+```swift
+import SwiftUI
+import GSDModel
+import GSDStore
+
+/// Capture field with a live parse preview and a cycling quadrant override.
+struct CaptureBar: View {
+    @Environment(TaskStore.self) private var store
+    @State private var draft = ""
+    @State private var override: Quadrant?
+    @FocusState private var focused: Bool
+    /// Opens the full editor pre-filled from the current parse.
+    var onDetails: (ParsedCapture, Quadrant?) -> Void
+
+    private var parsed: ParsedCapture { CaptureParser.parse(draft) }
+    private var previewQuadrant: Quadrant {
+        override ?? Quadrant(urgent: parsed.urgent, important: parsed.important)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                TextField(String(localized: "Capture a task…  (try !!  *  #tag)"), text: $draft)
+                    .focused($focused)
+                    .submitLabel(.done)
+                    .onSubmit(submit)
+                Button(action: cycleOverride) {
+                    Label(previewQuadrant.title, systemImage: QuadrantStyle.symbol(previewQuadrant))
+                        .font(.caption)
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(QuadrantStyle.accent(previewQuadrant))
+                }
+                .buttonStyle(.bordered)
+                .accessibilityHint(String(localized: "Cycles the target quadrant"))
+            }
+            if !draft.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(parsed.tags, id: \.self) { tag in
+                        Text("#\(tag)").font(.caption2)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(.quaternary, in: Capsule())
+                    }
+                    Spacer()
+                    Button(String(localized: "Details")) { onDetails(parsed, override) }
+                        .font(.caption)
+                }
+            }
+        }
+        .padding(.horizontal).padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    private func submit() {
+        let p = CaptureParser.parse(draft)
+        guard !p.title.isEmpty else { return }
+        let ov = override
+        draft = ""; override = nil; focused = true
+        _Concurrency.Task { try? await store.add(p, override: ov) }
+    }
+
+    private func cycleOverride() {
+        let order: [Quadrant?] = [nil, .urgentImportant, .notUrgentImportant,
+                                  .urgentNotImportant, .notUrgentNotImportant]
+        let i = order.firstIndex(of: override) ?? 0
+        override = order[(i + 1) % order.count]
+    }
+}
+```
+- [ ] **Step 2: Build** (same command) → SUCCEEDED.
+- [ ] **Step 3: Commit** `git add App GSD.xcodeproj && git commit -m "feat: add capture bar with live parse preview"`
+
+## Group D — Task editor
+
+> Built before the matrix (Group E) so the matrix can present it. Build-verified.
+
+### Task D1: TaskEditorView
+
+**Files:** Create `App/Editor/TaskEditorView.swift`
+
+Phase-1 fields only: title, description, quadrant, tags. **Crucially, editing an existing task starts from that task** so Phase-2 fields (subtasks, dependencies, due date, etc.) are preserved on save, not wiped.
+
+- [ ] **Step 1: Write it:**
+```swift
+import SwiftUI
+import GSDModel
+import GSDStore
+
+struct TaskEditorView: View {
+    @Environment(TaskStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var title: String
+    @State private var description: String
+    @State private var quadrant: Quadrant
+    @State private var tags: [String]
+    @State private var tagDraft = ""
+    /// The task being edited (nil = creating a new one). Saving an edit mutates
+    /// THIS value so non-edited (Phase-2) fields survive.
+    private let original: Task?
+
+    init(request: EditorRequest) {
+        switch request {
+        case .new(let q, let prefill):
+            _title = State(initialValue: prefill?.title ?? "")
+            _description = State(initialValue: prefill?.descriptionAdditions.joined(separator: "\n") ?? "")
+            _quadrant = State(initialValue: prefill.map { Quadrant(urgent: $0.urgent, important: $0.important) } ?? q)
+            _tags = State(initialValue: prefill?.tags ?? [])
+            original = nil
+        case .edit(let t):
+            _title = State(initialValue: t.title)
+            _description = State(initialValue: t.description)
+            _quadrant = State(initialValue: t.quadrant)
+            _tags = State(initialValue: t.tags)
+            original = t
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section { TextField(String(localized: "Title"), text: $title) }
+                Section(String(localized: "Quadrant")) { quadrantPicker }
+                Section(String(localized: "Tags")) { tagField }
+                Section(String(localized: "Notes")) {
+                    TextField(String(localized: "Description"), text: $description, axis: .vertical)
+                        .lineLimit(3...8)
+                }
+            }
+            .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "Cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(String(localized: "Save"), action: save)
+                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    private var quadrantPicker: some View {
+        LazyVGrid(columns: [GridItem(), GridItem()], spacing: 8) {
+            ForEach(Quadrant.allCases, id: \.self) { q in
+                Button { quadrant = q } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: QuadrantStyle.symbol(q))
+                        Text(q.title).font(.caption)
+                    }
+                    .frame(maxWidth: .infinity).padding(8)
+                    .background(quadrant == q ? QuadrantStyle.accent(q).opacity(0.2) : .clear,
+                                in: RoundedRectangle(cornerRadius: 8))
+                    .overlay(RoundedRectangle(cornerRadius: 8)
+                        .stroke(QuadrantStyle.accent(q), lineWidth: quadrant == q ? 2 : 0.5))
+                }
+                .tint(QuadrantStyle.accent(q))
+                .accessibilityAddTraits(quadrant == q ? .isSelected : [])
+            }
+        }
+    }
+
+    private var tagField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !tags.isEmpty {
+                HStack {
+                    ForEach(tags, id: \.self) { tag in
+                        Button { tags.removeAll { $0 == tag } } label: { Text("#\(tag)  ✕").font(.caption2) }
+                            .buttonStyle(.bordered)
+                    }
+                }
+            }
+            TextField(String(localized: "Add tag"), text: $tagDraft)
+                .onSubmit(addTag)
+                .onChange(of: tagDraft) { _, new in if new.hasSuffix(",") { addTag() } }
+        }
+    }
+
+    private func addTag() {
+        let t = tagDraft.trimmingCharacters(in: CharacterSet(charactersIn: " ,#")).lowercased()
+        tagDraft = ""
+        guard !t.isEmpty, !tags.contains(t), tags.count < FieldLimits.maxTags else { return }
+        tags.append(t)
+    }
+
+    private func save() {
+        var task: Task
+        if let original {
+            task = original
+            task.title = title.trimmingCharacters(in: .whitespaces)
+            task.description = description
+            task.urgent = quadrant.isUrgent
+            task.important = quadrant.isImportant
+            task.tags = tags
+        } else {
+            let now = Date.now
+            task = Task(id: IDGenerator.generate(size: IDGenerator.Size.task),
+                        title: title.trimmingCharacters(in: .whitespaces),
+                        description: description,
+                        urgent: quadrant.isUrgent, important: quadrant.isImportant,
+                        createdAt: now, updatedAt: now, tags: tags)
+        }
+        _Concurrency.Task { try? await store.save(task); dismiss() }
+    }
+}
+```
+- [ ] **Step 2: Build** → SUCCEEDED.
+- [ ] **Step 3: Commit** `git add App GSD.xcodeproj && git commit -m "feat: add Phase 1 task editor"`
+
+## Group E — Matrix surfaces + completion
+
+> The phase's visible payoff. Build-verified; the genuinely uncertain APIs to confirm at build: `TimelineView(.animation(paused:))`, `Canvas` per-particle opacity, `.draggable`/`.dropDestination`, `.safeAreaInset`. iPad reclassify uses drag-and-drop (swipe actions need a `List`, so the iPad grid uses context menu + drag instead).
+
+### Task E1: ConfettiView
+
+**Files:** Create `App/Effects/ConfettiView.swift`
+
+- [ ] **Step 1: Write it:**
+```swift
+import SwiftUI
+
+/// A one-shot confetti burst, fired by incrementing `trigger`. Honors Reduce
+/// Motion (§6.4/§12.3): no particles emitted when it's on. Particle counts are a
+/// feel reference, freely tunable.
+struct ConfettiView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let trigger: Int
+
+    @State private var particles: [Particle] = []
+    @State private var startDate: Date?
+
+    private static let duration: TimeInterval = 1.6
+
+    var body: some View {
+        TimelineView(.animation(paused: startDate == nil)) { timeline in
+            Canvas { context, size in
+                guard let start = startDate else { return }
+                let t = timeline.date.timeIntervalSince(start)
+                if t > Self.duration { return }
+                for p in particles {
+                    let pos = p.position(at: t, in: size)
+                    var ctx = context
+                    ctx.opacity = max(0, 1 - t / Self.duration)
+                    ctx.fill(Path(ellipseIn: CGRect(x: pos.x, y: pos.y, width: p.size, height: p.size)),
+                             with: .color(p.color))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .onChange(of: trigger) { _, _ in fire() }
+    }
+
+    private func fire() {
+        guard !reduceMotion else { return }
+        particles = (0..<160).map { _ in Particle.random() }
+        startDate = .now
+    }
+
+    struct Particle {
+        var origin: CGPoint          // normalized 0...1
+        var velocity: CGVector
+        var color: Color
+        var size: CGFloat
+        func position(at t: TimeInterval, in size: CGSize) -> CGPoint {
+            let gravity = 700.0
+            return CGPoint(x: origin.x * size.width + velocity.dx * t,
+                           y: origin.y * size.height + velocity.dy * t + 0.5 * gravity * t * t)
+        }
+        static func random() -> Particle {
+            let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .pink]
+            let angle = Double.random(in: 0..<2 * .pi)
+            let speed = Double.random(in: 150...460)
+            return Particle(origin: CGPoint(x: Double.random(in: 0.3...0.7), y: 0.45),
+                            velocity: CGVector(dx: cos(angle) * speed, dy: sin(angle) * speed - 220),
+                            color: colors.randomElement()!, size: .random(in: 5...10))
+        }
+    }
+}
+```
+- [ ] **Step 2: Build** → SUCCEEDED. (Visual + Reduce-Motion behavior is verified in E5.)
+- [ ] **Step 3: Commit** `git add App GSD.xcodeproj && git commit -m "feat: add reduce-motion-aware confetti"`
+
+### Task E2: TaskActions + QuadrantSection (iPhone List section)
+
+**Files:** Create `App/Matrix/TaskActions.swift`, `App/Matrix/QuadrantSection.swift`
+
+- [ ] **Step 1: Write `App/Matrix/TaskActions.swift`** (shared mutation handlers + haptic):
+```swift
+import SwiftUI
+import GSDModel
+import GSDStore
+
+/// Bundles the row mutation handlers so the iPhone section and iPad cell share them.
+@MainActor
+struct TaskActions {
+    let store: TaskStore
+    let onCompleted: () -> Void   // fire confetti when a task becomes complete
+
+    func toggle(_ t: Task) {
+        let willComplete = !t.completed
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        _Concurrency.Task { try? await store.toggleComplete(t); if willComplete { onCompleted() } }
+    }
+    func delete(_ t: Task) { _Concurrency.Task { try? await store.delete(t) } }
+    func move(_ t: Task, to q: Quadrant) { _Concurrency.Task { try? await store.move(t, to: q) } }
+}
+```
+
+- [ ] **Step 2: Write `App/Matrix/QuadrantSection.swift`:**
+```swift
+import SwiftUI
+import GSDModel
+import GSDStore
+
+/// One quadrant as a `List` `Section` (iPhone) — enables native swipe actions.
+struct QuadrantSection: View {
+    @Environment(TaskStore.self) private var store
+    let quadrant: Quadrant
+    let showCompleted: Bool
+    let actions: TaskActions
+    var onEdit: (Task) -> Void
+    var onAdd: () -> Void
+
+    private var items: [Task] { store.tasks(in: quadrant, showCompleted: showCompleted) }
+    private var activeCount: Int { store.tasks(in: quadrant, showCompleted: false).count }
+
+    var body: some View {
+        Section {
+            if items.isEmpty {
+                Button(action: onAdd) {
+                    Label(String(localized: "Add to \(quadrant.title)"), systemImage: "plus.circle")
+                }
+                .foregroundStyle(.secondary)
+            } else {
+                ForEach(items) { task in
+                    TaskCardView(task: task)
+                        .onTapGesture { onEdit(task) }
+                        .swipeActions(edge: .leading) {
+                            Button { actions.toggle(task) } label: {
+                                Label(task.completed ? "Uncomplete" : "Complete",
+                                      systemImage: task.completed ? "arrow.uturn.left" : "checkmark")
+                            }
+                            .tint(QuadrantStyle.accent(quadrant))
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) { actions.delete(task) } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .contextMenu { rowMenu(task) }
+                        .accessibilityActions {
+                            Button(task.completed ? "Uncomplete" : "Complete") { actions.toggle(task) }
+                            Button("Edit") { onEdit(task) }
+                            Button("Delete") { actions.delete(task) }
+                        }
+                }
+            }
+        } header: {
+            HStack {
+                Label(quadrant.title, systemImage: QuadrantStyle.symbol(quadrant))
+                    .font(.serif(.headline))
+                    .foregroundStyle(QuadrantStyle.accent(quadrant))
+                Spacer()
+                Text("\(activeCount)")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .accessibilityLabel(String(localized: "\(activeCount) active"))
+            }
+        }
+    }
+
+    @ViewBuilder private func rowMenu(_ task: Task) -> some View {
+        Button { onEdit(task) } label: { Label("Edit", systemImage: "pencil") }
+        Button { actions.toggle(task) } label: {
+            Label(task.completed ? "Uncomplete" : "Complete", systemImage: "checkmark")
+        }
+        Menu(String(localized: "Move to")) {
+            ForEach(Quadrant.allCases, id: \.self) { q in
+                Button(q.title) { actions.move(task, to: q) }
+            }
+        }
+        Button(role: .destructive) { actions.delete(task) } label: { Label("Delete", systemImage: "trash") }
+    }
+}
+```
+- [ ] **Step 3: Build** → SUCCEEDED.
+- [ ] **Step 4: Commit** `git add App GSD.xcodeproj && git commit -m "feat: add task actions and iPhone quadrant section"`
+
+---
+
+### Task E3: QuadrantCell (iPad grid cell with drag-and-drop)
+
+**Files:** Create `App/Matrix/QuadrantCell.swift`
+
+A self-contained boxed quadrant for the iPad 2×2 grid (no `List`, so no swipe — uses context menu + tap + drag-and-drop instead).
+
+- [ ] **Step 1: Write it:**
+```swift
+import SwiftUI
+import GSDModel
+import GSDStore
+
+struct QuadrantCell: View {
+    @Environment(TaskStore.self) private var store
+    let quadrant: Quadrant
+    let showCompleted: Bool
+    let actions: TaskActions
+    var onEdit: (Task) -> Void
+    var onAdd: () -> Void
+
+    @State private var isTargeted = false
+    private var items: [Task] { store.tasks(in: quadrant, showCompleted: showCompleted) }
+    private var activeCount: Int { store.tasks(in: quadrant, showCompleted: false).count }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Label(quadrant.title, systemImage: QuadrantStyle.symbol(quadrant))
+                    .font(.serif(.headline))
+                    .foregroundStyle(QuadrantStyle.accent(quadrant))
+                Spacer()
+                Text("\(activeCount)").font(.caption).foregroundStyle(.secondary)
+            }
+            if items.isEmpty {
+                Button(action: onAdd) {
+                    Label(String(localized: "Add to \(quadrant.title)"), systemImage: "plus.circle")
+                }
+                .foregroundStyle(.secondary).padding(.vertical, 4)
+            }
+            ForEach(items) { task in
+                TaskCardView(task: task)
+                    .onTapGesture { onEdit(task) }
+                    .draggable(task.id)
+                    .contextMenu {
+                        Button { onEdit(task) } label: { Label("Edit", systemImage: "pencil") }
+                        Button { actions.toggle(task) } label: {
+                            Label(task.completed ? "Uncomplete" : "Complete", systemImage: "checkmark")
+                        }
+                        Button(role: .destructive) { actions.delete(task) } label: { Label("Delete", systemImage: "trash") }
+                    }
+                    .accessibilityActions {
+                        Button(task.completed ? "Uncomplete" : "Complete") { actions.toggle(task) }
+                        Button("Edit") { onEdit(task) }
+                        Button("Delete") { actions.delete(task) }
+                    }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .background(QuadrantStyle.accent(quadrant).opacity(isTargeted ? 0.12 : 0.04),
+                    in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(QuadrantStyle.accent(quadrant).opacity(0.3)))
+        .dropDestination(for: String.self) { ids, _ in
+            guard let id = ids.first, let task = store.tasks.first(where: { $0.id == id }) else { return false }
+            actions.move(task, to: quadrant)
+            return true
+        } isTargeted: { isTargeted = $0 }
+    }
+}
+```
+- [ ] **Step 2: Build** → SUCCEEDED.
+- [ ] **Step 3: Commit** `git add App GSD.xcodeproj && git commit -m "feat: add iPad quadrant cell with drag-and-drop"`
+
+### Task E4: MatrixView (iPhone) + MatrixGridView (iPad)
+
+**Files:** Create `App/Matrix/MatrixView.swift`, `App/Matrix/MatrixGridView.swift`
+
+- [ ] **Step 1: Write `App/Matrix/MatrixView.swift`:**
+```swift
+import SwiftUI
+import GSDModel
+import GSDStore
+
+/// iPhone: capture bar + a List of stacked quadrant sections (Q1→Q4).
+struct MatrixView: View {
+    @Environment(TaskStore.self) private var store
+    @AppStorage("showCompleted", store: .shared) private var showCompleted = false
+    @State private var editor: EditorRequest?
+    @State private var confettiTrigger = 0
+
+    var body: some View {
+        ZStack {
+            NavigationStack {
+                List {
+                    ForEach(Quadrant.allCases, id: \.self) { q in
+                        QuadrantSection(
+                            quadrant: q, showCompleted: showCompleted,
+                            actions: TaskActions(store: store) { confettiTrigger += 1 },
+                            onEdit: { editor = .edit($0) },
+                            onAdd: { editor = .new(q, prefill: nil) }
+                        )
+                    }
+                }
+                .listStyle(.insetGrouped)
+                .navigationTitle("Matrix")
+                .toolbar { showCompletedToggle($showCompleted) }
+                .safeAreaInset(edge: .top) {
+                    CaptureBar { parsed, ov in
+                        editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
+                    }
+                }
+            }
+            ConfettiView(trigger: confettiTrigger)
+        }
+        .sheet(item: $editor) { TaskEditorView(request: $0) }
+    }
+}
+
+@ToolbarContentBuilder
+func showCompletedToggle(_ binding: Binding<Bool>) -> some ToolbarContent {
+    ToolbarItem(placement: .topBarTrailing) {
+        Toggle(isOn: binding) { Label("Show Completed", systemImage: "checkmark.circle") }
+            .toggleStyle(.button)
+    }
+}
+```
+
+- [ ] **Step 2: Write `App/Matrix/MatrixGridView.swift`:**
+```swift
+import SwiftUI
+import GSDModel
+import GSDStore
+
+/// iPad: capture bar + a true 2×2 grid (Q1 TL → Q4 BR).
+struct MatrixGridView: View {
+    @Environment(TaskStore.self) private var store
+    @AppStorage("showCompleted", store: .shared) private var showCompleted = false
+    @State private var editor: EditorRequest?
+    @State private var confettiTrigger = 0
+
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+
+    var body: some View {
+        ZStack {
+            NavigationStack {
+                VStack(spacing: 0) {
+                    CaptureBar { parsed, ov in
+                        editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
+                    }
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(Quadrant.allCases, id: \.self) { q in
+                                QuadrantCell(
+                                    quadrant: q, showCompleted: showCompleted,
+                                    actions: TaskActions(store: store) { confettiTrigger += 1 },
+                                    onEdit: { editor = .edit($0) },
+                                    onAdd: { editor = .new(q, prefill: nil) }
+                                )
+                            }
+                        }
+                        .padding(12)
+                    }
+                }
+                .navigationTitle("Matrix")
+                .toolbar { showCompletedToggle($showCompleted) }
+            }
+            ConfettiView(trigger: confettiTrigger)
+        }
+        .sheet(item: $editor) { TaskEditorView(request: $0) }
+    }
+}
+```
+- [ ] **Step 3: Build** → SUCCEEDED.
+- [ ] **Step 4: Commit** `git add App GSD.xcodeproj && git commit -m "feat: add iPhone stacked and iPad 2x2 matrix views"`
+
+### Task E5: Wire the adaptive root + verify
+
+**Files:** Modify `App/ContentView.swift`
+
+- [ ] **Step 1: Replace `App/ContentView.swift`** (drops the temporary shell):
+```swift
+import SwiftUI
+
+/// Adaptive root: stacked matrix on compact width (iPhone), 2×2 grid on regular (iPad).
+struct ContentView: View {
+    @Environment(\.horizontalSizeClass) private var sizeClass
+
+    var body: some View {
+        if sizeClass == .compact {
+            MatrixView()
+        } else {
+            MatrixGridView()
+        }
+    }
+}
+```
+- [ ] **Step 2: Build, launch, and verify on BOTH idioms:**
+```
+xcodegen generate
+xcodebuild -project GSD.xcodeproj -scheme GSD -destination 'platform=iOS Simulator,name=iPhone 17' -derivedDataPath .build-app build -quiet
+xcrun simctl boot "iPhone 17" 2>/dev/null || true
+xcrun simctl install booted ".build-app/Build/Products/Debug-iphonesimulator/GSD.app"
+xcrun simctl launch booted dev.vinny.gsd
+xcrun simctl io booted screenshot /tmp/phase1-iphone.png
+```
+Repeat the build/install/launch/screenshot for an iPad simulator (e.g. `-destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M4)'`; list available with `xcrun simctl list devices available | grep iPad`).
+Expected: capture `Plan the offsite ! #work`, see it land in **Delegate (Q3)**; swipe-complete on iPhone shows confetti; drag a card between cells on iPad reclassifies it; toggling Show Completed reveals/hides the completed card.
+
+- [ ] **Step 3: Accessibility pass** (manual, §12.3): run with Dynamic Type at the largest accessibility size (Settings or `-AppleTextDirection`/Accessibility Inspector) — confirm no clipped text and the matrix reflows. Run a VoiceOver pass on the matrix + editor — confirm each card reads "title, quadrant, state" and exposes Complete/Edit/Delete custom actions. Toggle Reduce Motion and confirm completion fires NO confetti. Record any blocking issues as fixes before closing the phase.
+
+- [ ] **Step 4: Commit** `git add App GSD.xcodeproj && git commit -m "feat: wire adaptive matrix root; remove temporary shell"`
 
 ---
 
