@@ -25,4 +25,7 @@ public enum Quadrant: String, Codable, Sendable, CaseIterable {
         case .notUrgentNotImportant: "Eliminate"
         }
     }
+
+    public var isUrgent: Bool { self == .urgentImportant || self == .urgentNotImportant }
+    public var isImportant: Bool { self == .urgentImportant || self == .notUrgentImportant }
 }

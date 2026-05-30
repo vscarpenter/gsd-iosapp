@@ -20,4 +20,14 @@ struct QuadrantTests {
             .urgentNotImportant, .notUrgentNotImportant,
         ])
     }
+
+    @Test func reverseMappingExposesFlags() {
+        #expect(Quadrant.urgentImportant.isUrgent && Quadrant.urgentImportant.isImportant)
+        #expect(Quadrant.notUrgentImportant.isImportant && !Quadrant.notUrgentImportant.isUrgent)
+        #expect(Quadrant.urgentNotImportant.isUrgent && !Quadrant.urgentNotImportant.isImportant)
+        #expect(!Quadrant.notUrgentNotImportant.isUrgent && !Quadrant.notUrgentNotImportant.isImportant)
+    }
+    @Test func reverseMappingRoundTripsWithDerivation() {
+        for q in Quadrant.allCases { #expect(Quadrant(urgent: q.isUrgent, important: q.isImportant) == q) }
+    }
 }
