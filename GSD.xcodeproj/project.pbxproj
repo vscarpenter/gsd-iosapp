@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		002BFF4E14DD42A9716D323B /* GSDStore in Frameworks */ = {isa = PBXBuildFile; productRef = 579A119DFC479E75D3534B6C /* GSDStore */; };
 		046100EB23A8521EA8275EAE /* CaptureBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A03169462530BB59EC808C /* CaptureBar.swift */; };
+		148AA072429C982C5B7B77C0 /* TaskEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */; };
 		1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CAA477CE99B7420D83C9362 /* Theme.swift */; };
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
@@ -30,6 +31,7 @@
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		834FF1E8BA076E31BA383962 /* GSDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDApp.swift; sourceTree = "<group>"; };
+		B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
 		B6988BDFABF5E325C967D8EA /* TaskCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCardView.swift; sourceTree = "<group>"; };
 		BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorRequest.swift; sourceTree = "<group>"; };
 		F13D65075CBAAF0DA403E950 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -67,6 +69,7 @@
 			isa = PBXGroup;
 			children = (
 				BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */,
+				B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */,
 			);
 			path = Editor;
 			sourceTree = "<group>";
@@ -205,6 +208,7 @@
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
 				226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */,
 				EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */,
+				148AA072429C982C5B7B77C0 /* TaskEditorView.swift in Sources */,
 				1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
