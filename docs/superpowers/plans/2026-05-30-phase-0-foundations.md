@@ -63,8 +63,10 @@ Expected: a path to `xcodegen`, or a successful Homebrew install.
 
 - [ ] **Step 2: Write `GSDKit/Package.swift`**
 
+> **Note:** `swift-tools-version` must be **6.2** or higher — the `.v26` platform enum is unavailable in 6.0/6.1. (Verified by compile-probe against the installed toolchain.)
+
 ```swift
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
@@ -1176,7 +1178,10 @@ struct TaskRepositoryTests {
         var iterator = repo.observeAll().makeAsyncIterator()
         #expect(try await iterator.next()?.isEmpty == true)  // initial snapshot
         try await repo.upsert(makeTask(id: "x"))
-        #expect(try await iterator.next()?.count == 1)        // after insert
+        // Drain until the insert is observed — ValueObservation may coalesce emissions.
+        var observed = try await iterator.next()
+        while observed?.isEmpty == true { observed = try await iterator.next() }
+        #expect(observed?.count == 1)
     }
 }
 ```
@@ -1194,8 +1199,10 @@ import Foundation
 import GRDB
 import GSDModel
 
-/// Async persistence boundary for tasks. Holds NO business rules — callers stamp
-/// `updatedAt` (with an injected clock) before upserting, so the repository never
+/// Async persistence boundary for tasks. Holds NO business rules. The spec rule
+/// "every mutation bumps `updatedAt`" (increment spec §3.3, product spec §5.1) is
+/// satisfied one layer up: the Phase 1 use-case/store layer stamps `updatedAt`
+/// with an injected clock before calling `upsert`, so the repository itself never
 /// injects time. `delete` also strips the id from every other task's
 /// `dependencies` (product spec §6.8 cleanup-on-delete).
 public protocol TaskRepository: Sendable {
