@@ -170,6 +170,7 @@ public final class TaskStore {
 
     public func deleteSubtask(in task: Task, subtaskID: String) async throws {
         var t = task
+        guard t.subtasks.contains(where: { $0.id == subtaskID }) else { return }
         t.subtasks.removeAll { $0.id == subtaskID }
         try await persist(t)
     }
@@ -194,7 +195,8 @@ public final class TaskStore {
     /// Add a dependency edge after validating it against the live graph (no
     /// self-reference, the id must exist, no cycle). Throws `DependencyError` on rejection.
     public func addDependency(_ dependencyID: String, to task: Task) async throws {
-        let graph = DependencyGraph(tasks: tasks)
+        let allTasks = try await repository.fetchAll()
+        let graph = DependencyGraph(tasks: allTasks)
         try graph.validateAdd(dependency: dependencyID, to: task.id)
         var t = task
         guard !t.dependencies.contains(dependencyID) else { return }
@@ -204,6 +206,7 @@ public final class TaskStore {
 
     public func removeDependency(_ dependencyID: String, from task: Task) async throws {
         var t = task
+        guard t.dependencies.contains(dependencyID) else { return }
         t.dependencies.removeAll { $0 == dependencyID }
         try await persist(t)
     }

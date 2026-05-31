@@ -225,6 +225,7 @@ struct TaskStoreDepthTests {
         await #expect(throws: DependencyError.cycle) {
             try await store.addDependency("A", to: b)
         }
+        #expect(try await repo.fetch(id: "B")?.dependencies == [])
     }
 
     @Test func removeDependencyDropsIt() async throws {
