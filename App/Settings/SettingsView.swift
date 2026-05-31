@@ -143,6 +143,9 @@ struct SettingsView: View {
             Button(String(localized: "Enable Notifications")) {
                 _Concurrency.Task { @MainActor in
                     _ = await store.requestNotificationAuthorization()
+                    // Re-sync the local mirror so the store's stamped `permissionAsked`
+                    // isn't overwritten by a later flushNotificationSettings() (e.g. a toggle).
+                    notificationSettings = store.notificationSettings
                     refreshAuthStatus()
                 }
             }
