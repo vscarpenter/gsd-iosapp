@@ -8,6 +8,7 @@ extension AppDatabase {
         registerV1(&migrator)
         registerV2(&migrator)
         registerV3(&migrator)
+        registerV4(&migrator)
         return migrator
     }
 
@@ -53,6 +54,23 @@ extension AppDatabase {
                 t.column("timeSpent", .integer)
                 t.column("timeEntries", .text).notNull().defaults(to: "[]")
                 t.column("archivedAt", .datetime).notNull().indexed()
+            }
+        }
+    }
+
+    static func registerV4(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v4") { db in
+            try db.create(table: "syncQueue") { t in
+                t.primaryKey("id", .text)
+                t.column("taskId", .text).notNull().indexed()
+                t.column("operation", .text).notNull()
+                t.column("timestamp", .integer).notNull().indexed()
+                t.column("retryCount", .integer).notNull().defaults(to: 0)
+                t.column("payload", .text)                       // JSON-encoded Task; NULL for delete
+                t.column("status", .text).notNull().defaults(to: "pending").indexed()
+                t.column("lastError", .text)
+                t.column("lastAttemptAt", .integer)
+                t.column("failedAt", .integer)
             }
         }
     }
