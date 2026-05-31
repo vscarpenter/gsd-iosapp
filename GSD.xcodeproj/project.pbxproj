@@ -17,6 +17,7 @@
 		3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */; };
 		58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */; };
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
+		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
 		7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ED783FE5C2324C295B0273 /* RelativeDate.swift */; };
 		8004840C42749CB157F55F18 /* MatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */; };
 		85FC74F90BC144FB514B2924 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */; };
@@ -43,6 +44,7 @@
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantCell.swift; sourceTree = "<group>"; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartViewEditorView.swift; sourceTree = "<group>"; };
 		6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantSection.swift; sourceTree = "<group>"; };
 		6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DependencyPickerView.swift; sourceTree = "<group>"; };
@@ -94,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */,
+				5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */,
 				F8FB17173BD410FDE2B3AD58 /* SmartViewListView.swift */,
 			);
 			path = Browse;
@@ -272,6 +275,7 @@
 				FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */,
 				226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */,
 				7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */,
+				73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */,
 				B17361EAF4ABA6F4940F94B8 /* SmartViewListView.swift in Sources */,
 				FE0F884C571B70DC1021DC4F /* TaskActions.swift in Sources */,
 				EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */,

@@ -9,7 +9,11 @@ struct GSDApp: App {
     init() {
         // The local store is the app's source of truth; failure to open it is unrecoverable.
         let database = try! AppDatabase.live()
-        _store = State(initialValue: TaskStore(repository: GRDBTaskRepository(database)))
+        _store = State(initialValue: TaskStore(
+            repository: GRDBTaskRepository(database),
+            smartViewRepository: GRDBSmartViewRepository(database),
+            archiveRepository: GRDBArchiveRepository(database)
+        ))
     }
 
     var body: some Scene {
