@@ -9,7 +9,7 @@ struct TaskFilterTests {
     }()
     private func day(_ y: Int, _ m: Int, _ d: Int, _ h: Int = 12) -> Date {
         var c = DateComponents(); c.year = y; c.month = m; c.day = d; c.hour = h
-        return Calendar(identifier: .gregorian).date(from: { var x = c; return x }())!
+        return cal.date(from: c)!
     }
     private var now: Date { day(2026, 6, 15, 9) }
 
