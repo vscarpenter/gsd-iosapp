@@ -122,14 +122,3 @@ struct DataStorageView: View {
         }
     }
 }
-
-/// Standalone host so the view build-verifies without `SettingsView` (Group E embeds the
-/// sections directly into its own Form). Compiled by the app; not a throwaway.
-struct DataStorageScreen: View {
-    var body: some View {
-        NavigationStack {
-            Form { DataStorageView() }
-                .navigationTitle(String(localized: "Data & Storage"))
-        }
-    }
-}
