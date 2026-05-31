@@ -12,7 +12,7 @@ enum PaletteResult {
     case toggleTheme
     case navigate(PaletteDestination)
 }
-enum PaletteDestination { case matrix, browse, archive, dashboard }
+enum PaletteDestination { case matrix, browse, archive, dashboard, settings }
 
 /// A Browse-stack route. The list links are value-based so the palette can push either a
 /// smart view or the Archive by appending to `PaletteController.browsePath` — a plain
@@ -40,7 +40,7 @@ final class PaletteController {
 
 /// iPad sidebar selection. Shared so the palette handler can drive it; `RegularRootView`
 /// binds its `List(selection:)` to `PaletteController.regularSelection`.
-enum RegularItem: Hashable { case matrix, archive, dashboard, smartView(String) }
+enum RegularItem: Hashable { case matrix, archive, dashboard, settings, smartView(String) }
 
 /// ⌘K command palette: a search field + sectioned, substring-matched results across
 /// Tasks / Smart Views / Actions / Navigation. Case-insensitive; not fuzzy (YAGNI).
@@ -70,7 +70,8 @@ struct CommandPaletteView: View {
         [(String(localized: "Matrix"), "square.grid.2x2", .navigate(.matrix)),
          (String(localized: "Dashboard"), "chart.bar.xaxis", .navigate(.dashboard)),
          (String(localized: "Browse"), "line.3.horizontal.decrease.circle", .navigate(.browse)),
-         (String(localized: "Archive"), "archivebox", .navigate(.archive))]
+         (String(localized: "Archive"), "archivebox", .navigate(.archive)),
+         (String(localized: "Settings"), "gearshape", .navigate(.settings))]
             .filter { match($0.0) }
     }
 

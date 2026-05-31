@@ -50,6 +50,9 @@ struct ContentView: View {
                 DashboardView()
                     .tabItem { Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis") }
                     .tag(2)
+                SettingsView()
+                    .tabItem { Label(String(localized: "Settings"), systemImage: "gearshape") }
+                    .tag(3)
             }
         } else {
             RegularRootView()
@@ -85,6 +88,7 @@ struct ContentView: View {
             case .browse: palette.compactTab = 1; palette.browsePath = []
             case .archive: palette.compactTab = 1; palette.browsePath = [.archive]
             case .dashboard: palette.compactTab = 2
+            case .settings: palette.compactTab = 3
             }
         } else {
             switch dest {
@@ -92,6 +96,7 @@ struct ContentView: View {
             case .browse: break   // iPad has no Browse tab; the sidebar is always visible
             case .archive: palette.regularSelection = .archive
             case .dashboard: palette.regularSelection = .dashboard
+            case .settings: palette.regularSelection = .settings
             }
         }
     }
@@ -119,6 +124,7 @@ private struct RegularRootView: View {
                 Label(String(localized: "Matrix"), systemImage: "square.grid.2x2").tag(RegularItem.matrix)
                 Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis").tag(RegularItem.dashboard)
                 Label(String(localized: "Archive"), systemImage: "archivebox").tag(RegularItem.archive)
+                Label(String(localized: "Settings"), systemImage: "gearshape").tag(RegularItem.settings)
                 if !store.pinnedViews.isEmpty {
                     Section(String(localized: "Pinned")) {
                         ForEach(store.pinnedViews) { view in sidebarRow(view) }
@@ -159,6 +165,8 @@ private struct RegularRootView: View {
                 NavigationStack { ArchiveListView() }
             case .dashboard:
                 DashboardView()
+            case .settings:
+                SettingsView()
             case .matrix, .none:
                 MatrixGridView()
             }

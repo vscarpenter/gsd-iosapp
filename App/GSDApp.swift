@@ -5,6 +5,7 @@ import GSDStore
 struct GSDApp: App {
     @State private var store: TaskStore
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
+    @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
 
     init() {
         // The local store is the app's source of truth; failure to open it is unrecoverable.
@@ -24,6 +25,12 @@ struct GSDApp: App {
                 .task {
                     store.start()
                     try? await store.runAutoArchiveSweep()
+                }
+                .fullScreenCover(isPresented: Binding(
+                    get: { !hasOnboarded },
+                    set: { presenting in if !presenting { hasOnboarded = true } }
+                )) {
+                    OnboardingView { hasOnboarded = true }
                 }
         }
     }
