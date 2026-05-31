@@ -275,6 +275,12 @@ public final class TaskStore {
         TaskFilter.apply(criteria, to: tasks, now: clock(), calendar: calendar)
     }
 
+    /// The dashboard summary over the live task snapshot, resolved with the store's
+    /// injected clock/calendar. Pure/derived — delegates to `AnalyticsEngine`; never mutates.
+    public func analytics(trendDays: Int) -> AnalyticsSummary {
+        AnalyticsEngine.compute(tasks: tasks, now: clock(), calendar: calendar, trendDays: trendDays)
+    }
+
     // MARK: Smart views (custom CRUD + pinning)
 
     /// Pinned ids first (in pin order), then the 9 built-ins, then custom views — with
