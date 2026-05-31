@@ -24,6 +24,10 @@ let package = Package(
         .target(name: "GSDSync", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDModelTests", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDStoreTests", dependencies: ["GSDStore"]),
-        .testTarget(name: "GSDSyncTests", dependencies: ["GSDSync"]),
+        .testTarget(
+            name: "GSDSyncTests",
+            dependencies: ["GSDSync"],
+            resources: [.copy("Fixtures")]
+        ),
     ]
 )

@@ -1,0 +1,5 @@
+[
+  {"task_id": "task-ok-1", "title": "first", "urgent": false, "important": true},
+  {"title": "no task_id — malformed", "urgent": false, "important": false},
+  {"task_id": "task-ok-2", "title": "third", "urgent": true, "important": true}
+]
