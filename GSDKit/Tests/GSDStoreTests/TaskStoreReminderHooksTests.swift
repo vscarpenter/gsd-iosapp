@@ -97,4 +97,19 @@ struct TaskStoreReminderHooksTests {
         }
         #expect(spawnSchedules.count == 1)   // exactly one schedule for the spawned instance
     }
+    @Test func refreshBadgeForwardsComputedCount() async throws {
+        let rec = RecordingReminderScheduler()
+        let store = try makeStore(rec)
+        store.start()
+        // Two due-today/overdue tasks + one future → badge 2.
+        try await store.create(task("a", due: now.addingTimeInterval(-3600)))   // overdue
+        try await store.create(task("b", due: now))                              // due today
+        try await store.create(task("c", due: now.addingTimeInterval(7 * 86_400))) // future
+        var waited = 0
+        while store.tasks.count != 3 && waited < 200 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        await store.refreshBadge()
+        #expect(rec.calls.contains(.badge(2)))
+    }
 }

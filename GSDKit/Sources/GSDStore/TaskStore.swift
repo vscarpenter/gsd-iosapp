@@ -430,6 +430,14 @@ public final class TaskStore {
         if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
     }
 
+    /// Recompute the app-icon badge over the live snapshot and forward it (product spec §9.4).
+    /// Uses the pure `ReminderMath.badgeCount` (the only scheduling math the store touches —
+    /// it returns an `Int`, so `GSDStore` stays free of `UserNotifications`).
+    public func refreshBadge() async {
+        let count = ReminderMath.badgeCount(tasks: tasks, now: clock(), calendar: calendar)
+        await reminders.setBadge(count)
+    }
+
     // MARK: Bulk operations (multi-select; each op is per-task, validated, stamps updatedAt)
 
     private func selectedTasks(_ ids: Set<String>) -> [Task] {
