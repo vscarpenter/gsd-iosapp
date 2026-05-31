@@ -12,6 +12,7 @@ struct ArchiveListView: View {
     @State private var pendingDelete: Task?
     @State private var selection = Set<String>()
     @State private var showBulkDeleteConfirm = false
+    @Environment(\.editMode) private var editMode
 
     private var results: [Task] {
         guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return store.archivedTasks }
@@ -105,6 +106,9 @@ struct ArchiveListView: View {
             Button(String(localized: "Cancel"), role: .cancel) { pendingDelete = nil }
         } message: {
             Text(String(localized: "This can't be undone."))
+        }
+        .onChange(of: editMode?.wrappedValue) { _, mode in
+            if mode?.isEditing == false { selection.removeAll() }
         }
     }
 

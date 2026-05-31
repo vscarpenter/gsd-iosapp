@@ -12,6 +12,7 @@ struct FilteredTaskListView: View {
     @State private var confettiTrigger = 0
     @State private var searchText = ""
     @State private var selection = Set<String>()
+    @Environment(\.editMode) private var editMode
 
     private var tasks: [Task] {
         var criteria = view.criteria
@@ -62,5 +63,8 @@ struct FilteredTaskListView: View {
             }
         }
         .sheet(item: $editor) { TaskEditorView(request: $0) }
+        .onChange(of: editMode?.wrappedValue) { _, mode in
+            if mode?.isEditing == false { selection.removeAll() }
+        }
     }
 }
