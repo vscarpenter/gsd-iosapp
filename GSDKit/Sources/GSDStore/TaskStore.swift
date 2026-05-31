@@ -29,40 +29,73 @@ public enum SnoozePreset: Equatable, Sendable {
 @Observable
 public final class TaskStore {
     public private(set) var tasks: [Task] = []
+    public private(set) var customViews: [SmartView] = []
+    public private(set) var archivedTasks: [Task] = []
 
     private let repository: any TaskRepository
+    private let smartViewRepository: any SmartViewRepository
+    private let archiveRepository: any ArchiveRepository
+    private let defaults: UserDefaults
     private let clock: @Sendable () -> Date
     private let newID: @Sendable () -> String
     private let calendar: Calendar
-    // nonisolated(unsafe) so deinit can cancel it without a MainActor hop.
+    // nonisolated(unsafe) so deinit can cancel without a MainActor hop.
     nonisolated(unsafe) private var observerTask: _Concurrency.Task<Void, Never>?
+    nonisolated(unsafe) private var smartViewObserverTask: _Concurrency.Task<Void, Never>?
+    nonisolated(unsafe) private var archiveObserverTask: _Concurrency.Task<Void, Never>?
 
     public init(
         repository: any TaskRepository,
+        smartViewRepository: any SmartViewRepository,
+        archiveRepository: any ArchiveRepository,
+        defaults: UserDefaults = AppGroupDefaults.shared,
         clock: @escaping @Sendable () -> Date = { Date() },
-        newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.task) },
+        newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.smartView) },
         calendar: Calendar = .current
     ) {
         self.repository = repository
+        self.smartViewRepository = smartViewRepository
+        self.archiveRepository = archiveRepository
+        self.defaults = defaults
         self.clock = clock
         self.newID = newID
         self.calendar = calendar
     }
 
-    /// Begin observing the repository. Idempotent; call once from the app root.
+    /// Begin observing all repositories. Idempotent; call once from the app root.
     public func start() {
+        startTaskObserver()
+        startSmartViewObserver()
+        startArchiveObserver()
+    }
+
+    private func startTaskObserver() {
         guard observerTask == nil else { return }
         let stream = repository.observeAll()
         observerTask = _Concurrency.Task { [weak self] in
-            do {
-                for try await snapshot in stream { self?.tasks = snapshot }
-            } catch {
-                // Observation ended with an error; keep the last snapshot.
-            }
+            do { for try await snapshot in stream { self?.tasks = snapshot } } catch {}
+        }
+    }
+    private func startSmartViewObserver() {
+        guard smartViewObserverTask == nil else { return }
+        let stream = smartViewRepository.observeAll()
+        smartViewObserverTask = _Concurrency.Task { [weak self] in
+            do { for try await snapshot in stream { self?.customViews = snapshot } } catch {}
+        }
+    }
+    private func startArchiveObserver() {
+        guard archiveObserverTask == nil else { return }
+        let stream = archiveRepository.observeAll()
+        archiveObserverTask = _Concurrency.Task { [weak self] in
+            do { for try await snapshot in stream { self?.archivedTasks = snapshot } } catch {}
         }
     }
 
-    deinit { observerTask?.cancel() }
+    deinit {
+        observerTask?.cancel()
+        smartViewObserverTask?.cancel()
+        archiveObserverTask?.cancel()
+    }
 
     // MARK: Mutations (all stamp updatedAt via the injected clock)
 
@@ -237,5 +270,147 @@ public final class TaskStore {
     /// injected clock/calendar. Pure/derived — delegates to `TaskFilter`; never mutates.
     public func tasks(matching criteria: FilterCriteria) -> [Task] {
         TaskFilter.apply(criteria, to: tasks, now: clock(), calendar: calendar)
+    }
+
+    // MARK: Smart views (custom CRUD + pinning)
+
+    /// Pinned ids first (in pin order), then the 9 built-ins, then custom views — with
+    /// pinned ids de-duplicated out of their home section (product spec §6.13).
+    public var allViews: [SmartView] {
+        let everything = BuiltInSmartViews.all + customViews
+        let byID = Dictionary(everything.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let pinned = pinnedSmartViewIds.compactMap { byID[$0] }
+        let pinnedIDs = Set(pinned.map(\.id))
+        let rest = everything.filter { !pinnedIDs.contains($0.id) }
+        return pinned + rest
+    }
+
+    public var pinnedViews: [SmartView] {
+        let byID = Dictionary((BuiltInSmartViews.all + customViews).map { ($0.id, $0) },
+                              uniquingKeysWith: { a, _ in a })
+        return pinnedSmartViewIds.compactMap { byID[$0] }
+    }
+
+    public func createView(name: String, icon: String, criteria: FilterCriteria) async throws {
+        let now = clock()
+        let view = SmartView(id: newID(), name: name, icon: icon, criteria: criteria, isBuiltIn: false)
+        try await smartViewRepository.upsert(view, createdAt: now, updatedAt: now)
+    }
+
+    /// Update a custom view's name/icon/criteria, stamping `updatedAt` via the clock.
+    /// `createdAt` is re-stamped to `now` on edit (the `SmartView` domain model doesn't
+    /// carry it, and UI ordering uses `updatedAt`) — see the note below.
+    public func updateView(_ view: SmartView) async throws {
+        let now = clock()
+        try await smartViewRepository.upsert(view, createdAt: now, updatedAt: now)
+    }
+
+    public func deleteView(id: String) async throws {
+        try await smartViewRepository.delete(id: id)
+        unpin(id)   // a deleted view can't stay pinned
+    }
+
+    // MARK: Pinning (App-Group UserDefaults; ordered, capped at SmartViewPinning.maxPins)
+
+    public var pinnedSmartViewIds: [String] {
+        defaults.stringArray(forKey: AppGroupDefaults.Key.pinnedSmartViewIds) ?? []
+    }
+    public func pin(_ id: String) {
+        defaults.set(SmartViewPinning.pin(id, in: pinnedSmartViewIds),
+                     forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
+    }
+    public func unpin(_ id: String) {
+        defaults.set(SmartViewPinning.unpin(id, in: pinnedSmartViewIds),
+                     forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
+    }
+    public func reorderPins(fromOffsets: IndexSet, toOffset: Int) {
+        defaults.set(SmartViewPinning.reorder(pinnedSmartViewIds, fromOffsets: fromOffsets, toOffset: toOffset),
+                     forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
+    }
+
+    // MARK: Archive
+
+    /// Move a task into the archive (removed from active). Goes through the archive
+    /// repository's single-transaction move; the observers refresh `tasks`/`archivedTasks`.
+    /// NOTE (Phase 5): enqueue a sync op here.
+    public func archive(_ task: Task) async throws {
+        try await archiveRepository.archive(task)
+    }
+
+    /// Restore an archived task to active, stamping `updatedAt` so it sorts fresh.
+    /// Two writes: the repository re-inserts the stored row, then we upsert the freshened
+    /// `updatedAt` (the active observer coalesces both into one snapshot).
+    public func restore(_ task: Task) async throws {
+        var t = task
+        t.updatedAt = clock()
+        try await archiveRepository.restore(id: task.id)
+        try await repository.upsert(t)
+    }
+
+    public func deletePermanently(_ task: Task) async throws {
+        try await archiveRepository.deletePermanently(id: task.id)
+    }
+
+    /// Archive every completed task older than the configured threshold — but only when
+    /// auto-archive is enabled. Pure selection via `AutoArchive`; gating lives here.
+    public func runAutoArchiveSweep() async throws {
+        let settings = archiveSettings
+        guard settings.autoEnabled else { return }
+        let toArchive = AutoArchive.tasksToArchive(tasks, afterDays: settings.afterDays,
+                                                   now: clock(), calendar: calendar)
+        for task in toArchive { try await archiveRepository.archive(task) }
+    }
+
+    // MARK: Archive settings (App-Group UserDefaults; design-spec scope call)
+
+    public var archiveSettings: ArchiveSettings {
+        get {
+            ArchiveSettings(
+                autoEnabled: defaults.bool(forKey: AppGroupDefaults.Key.archiveAutoEnabled),
+                afterDays: defaults.object(forKey: AppGroupDefaults.Key.archiveAfterDays) as? Int ?? 30
+            )
+        }
+        set {
+            defaults.set(newValue.autoEnabled, forKey: AppGroupDefaults.Key.archiveAutoEnabled)
+            defaults.set(newValue.afterDays, forKey: AppGroupDefaults.Key.archiveAfterDays)
+        }
+    }
+
+    // MARK: Bulk operations (multi-select; each op is per-task, validated, stamps updatedAt)
+
+    private func selectedTasks(_ ids: Set<String>) -> [Task] {
+        tasks.filter { ids.contains($0.id) }
+    }
+
+    public func bulkComplete(ids: Set<String>) async throws {
+        for task in selectedTasks(ids) where !task.completed {
+            try? await toggleComplete(task)   // stamps completedAt/updatedAt + spawns recurrence
+        }
+    }
+    public func bulkMove(ids: Set<String>, to quadrant: Quadrant) async throws {
+        for task in selectedTasks(ids) { try? await move(task, to: quadrant) }
+    }
+    public func bulkAddTags(ids: Set<String>, tags newTags: [String]) async throws {
+        for var task in selectedTasks(ids) {
+            let merged = task.tags + newTags.filter { !task.tags.contains($0) }
+            task.tags = merged
+            try? await save(task)             // save validates (tag count/length) + stamps updatedAt
+        }
+    }
+    public func bulkRemoveTags(ids: Set<String>, tags removeTags: [String]) async throws {
+        let toRemove = Set(removeTags)
+        for var task in selectedTasks(ids) {
+            task.tags.removeAll { toRemove.contains($0) }
+            try? await save(task)
+        }
+    }
+    public func bulkSetDue(ids: Set<String>, to dueDate: Date?) async throws {
+        for var task in selectedTasks(ids) {
+            task.dueDate = dueDate
+            try? await save(task)
+        }
+    }
+    public func bulkDelete(ids: Set<String>) async throws {
+        for task in selectedTasks(ids) { try? await delete(task) }
     }
 }

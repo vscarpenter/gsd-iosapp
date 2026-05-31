@@ -16,9 +16,15 @@ struct TaskStoreFilterTests {
     }()
 
     private func makeStore() throws -> (TaskStore, GRDBTaskRepository) {
-        let repo = GRDBTaskRepository(try AppDatabase.inMemory(), now: { Date(timeIntervalSince1970: 0) })
+        let db = try AppDatabase.inMemory()
+        let repo = GRDBTaskRepository(db, now: { Date(timeIntervalSince1970: 0) })
         let fixed = now
-        let store = TaskStore(repository: repo, clock: { fixed }, calendar: utcCalendar())
+        let store = TaskStore(repository: repo,
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 0) }),
+                              defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
+                              clock: { fixed },
+                              calendar: utcCalendar())
         return (store, repo)
     }
     private func waitForTasks(_ store: TaskStore, count: Int) async throws {

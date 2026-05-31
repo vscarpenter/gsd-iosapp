@@ -8,8 +8,14 @@ struct TaskStoreTests {
     private let fixed = Date(timeIntervalSince1970: 1000)
 
     private func makeStoreAndRepo() throws -> (TaskStore, GRDBTaskRepository) {
-        let repo = GRDBTaskRepository(try AppDatabase.inMemory(), now: { Date(timeIntervalSince1970: 1000) })
-        let store = TaskStore(repository: repo, clock: { Date(timeIntervalSince1970: 1000) }, newID: { "fixed-id" })
+        let db = try AppDatabase.inMemory()
+        let repo = GRDBTaskRepository(db, now: { Date(timeIntervalSince1970: 1000) })
+        let store = TaskStore(repository: repo,
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 1000) }),
+                              defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
+                              clock: { Date(timeIntervalSince1970: 1000) },
+                              newID: { "fixed-id" })
         return (store, repo)
     }
 

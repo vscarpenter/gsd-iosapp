@@ -14,10 +14,14 @@ struct TaskStoreDepthTests {
     }
 
     private func makeStore() throws -> (TaskStore, GRDBTaskRepository) {
-        let repo = GRDBTaskRepository(try AppDatabase.inMemory(), now: { Date(timeIntervalSince1970: 1_700_000_000) })
+        let db = try AppDatabase.inMemory()
+        let repo = GRDBTaskRepository(db, now: { Date(timeIntervalSince1970: 1_700_000_000) })
         nonisolated(unsafe) var ids = ["spawned-id", "spawned-id-2"]
         let store = TaskStore(
             repository: repo,
+            smartViewRepository: GRDBSmartViewRepository(db),
+            archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 1_700_000_000) }),
+            defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
             clock: { Date(timeIntervalSince1970: 1_700_000_000) },
             newID: { ids.isEmpty ? "fallback" : ids.removeFirst() },
             calendar: utcCalendar()
