@@ -11,6 +11,13 @@ struct SmartViewListView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    NavigationLink {
+                        ArchiveListView()
+                    } label: {
+                        Label(String(localized: "Archive"), systemImage: "archivebox")
+                    }
+                }
                 if !store.pinnedViews.isEmpty {
                     Section(String(localized: "Pinned")) {
                         ForEach(store.pinnedViews) { view in viewLink(view) }

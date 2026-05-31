@@ -21,7 +21,10 @@ struct GSDApp: App {
             ContentView()
                 .environment(store)
                 .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme ?? nil)
-                .task { store.start() }
+                .task {
+                    store.start()
+                    try? await store.runAutoArchiveSweep()
+                }
         }
     }
 }

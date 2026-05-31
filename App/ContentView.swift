@@ -24,7 +24,7 @@ struct ContentView: View {
 /// iPad split view. Sidebar selection drives the detail column.
 private struct RegularRootView: View {
     @Environment(TaskStore.self) private var store
-    private enum Item: Hashable { case matrix, smartView(String) }
+    private enum Item: Hashable { case matrix, archive, smartView(String) }
     @State private var selection: Item? = .matrix
     @State private var editorTarget: SmartViewEditorTarget?
 
@@ -32,6 +32,7 @@ private struct RegularRootView: View {
         NavigationSplitView {
             List(selection: $selection) {
                 Label(String(localized: "Matrix"), systemImage: "square.grid.2x2").tag(Item.matrix)
+                Label(String(localized: "Archive"), systemImage: "archivebox").tag(Item.archive)
                 if !store.pinnedViews.isEmpty {
                     Section(String(localized: "Pinned")) {
                         ForEach(store.pinnedViews) { view in sidebarRow(view) }
@@ -61,6 +62,8 @@ private struct RegularRootView: View {
                 } else {
                     MatrixGridView()
                 }
+            case .archive:
+                NavigationStack { ArchiveListView() }
             case .matrix, .none:
                 MatrixGridView()
             }
