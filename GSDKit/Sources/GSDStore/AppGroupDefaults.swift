@@ -18,6 +18,8 @@ public enum AppGroupDefaults {
         public static let notificationQuietHoursStart = "notificationQuietHoursStart"
         public static let notificationQuietHoursEnd = "notificationQuietHoursEnd"
         public static let notificationPermissionAsked = "notificationPermissionAsked"
+        public static let deviceId = "deviceId"
+        public static let deviceName = "deviceName"
     }
 }
 
