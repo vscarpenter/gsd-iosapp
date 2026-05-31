@@ -2,6 +2,25 @@ import Foundation
 import Observation
 import GSDModel
 
+/// Snooze durations (product spec §6.7). `.custom` supports arbitrary intervals
+/// (clamped to `FieldLimits.maxSnoozeInterval`).
+public enum SnoozePreset: Equatable, Sendable {
+    case fifteenMinutes, thirtyMinutes, oneHour, threeHours, tomorrow, nextWeek
+    case custom(TimeInterval)
+
+    public var interval: TimeInterval {
+        switch self {
+        case .fifteenMinutes: 15 * 60
+        case .thirtyMinutes:  30 * 60
+        case .oneHour:        60 * 60
+        case .threeHours:     3 * 60 * 60
+        case .tomorrow:       24 * 60 * 60
+        case .nextWeek:       7 * 24 * 60 * 60
+        case .custom(let seconds): seconds
+        }
+    }
+}
+
 /// The single mutation path and observable task snapshot for the UI. Bridges
 /// `TaskRepository.observeAll()` into `tasks`, and stamps `updatedAt` (via an
 /// injected clock) on every PRIMARY mutation — satisfying the §3.3 invariant at
@@ -99,6 +118,40 @@ public final class TaskStore {
     }
 
     public func delete(_ task: Task) async throws { try await repository.delete(id: task.id) }
+
+    /// Set `snoozedUntil = now + preset`, clamped to the 1-year max (product spec §6.7).
+    public func snooze(_ task: Task, by preset: SnoozePreset) async throws {
+        var t = task
+        let now = clock()
+        let interval = min(preset.interval, FieldLimits.maxSnoozeInterval)
+        t.snoozedUntil = now.addingTimeInterval(interval)
+        t.updatedAt = now
+        try await repository.upsert(t)
+    }
+
+    /// Start a time-tracking entry; rejects a second concurrent timer (product spec §6.9).
+    public func startTimer(_ task: Task) async throws {
+        var t = task
+        let now = clock()
+        t.timeEntries = try TimeTracking.start(t.timeEntries, now: now,
+                                               newID: newID(size: IDGenerator.Size.timeEntry))
+        t.updatedAt = now
+        try await repository.upsert(t)
+    }
+
+    /// Stop the running entry and recalculate `timeSpent` (product spec §6.9).
+    public func stopTimer(_ task: Task, notes: String? = nil) async throws {
+        var t = task
+        let now = clock()
+        t.timeEntries = try TimeTracking.stop(t.timeEntries, now: now, notes: notes)
+        t.timeSpent = TimeTracking.timeSpentMinutes(t.timeEntries)
+        t.updatedAt = now
+        try await repository.upsert(t)
+    }
+
+    private func newID(size: Int) -> String {
+        size == IDGenerator.Size.task ? newID() : IDGenerator.generate(size: size)
+    }
 
     // MARK: Reads
 

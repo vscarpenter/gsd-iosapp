@@ -75,4 +75,61 @@ struct TaskStoreDepthTests {
         #expect(try await repo.fetch(id: "orig")?.completed == false)
         #expect(try await repo.fetch(id: "spawned-id") == nil)
     }
+
+    @Test func snoozeSetsSnoozedUntilFromPreset() async throws {
+        let (store, repo) = try makeStore()
+        let task = Task(id: "orig", title: "Ping", urgent: true, important: false,
+                        createdAt: fixed, updatedAt: fixed)
+        try await repo.upsert(task)
+        try await store.snooze(task, by: .oneHour)
+        let updated = try #require(try await repo.fetch(id: "orig"))
+        #expect(updated.snoozedUntil == fixed.addingTimeInterval(60 * 60))
+        #expect(updated.updatedAt == fixed)
+    }
+
+    @Test func snoozeIsClampedToOneYearMax() async throws {
+        let (store, repo) = try makeStore()
+        let task = Task(id: "orig", title: "Ping", urgent: true, important: false,
+                        createdAt: fixed, updatedAt: fixed)
+        try await repo.upsert(task)
+        // Custom interval beyond 1 year is clamped.
+        try await store.snooze(task, by: .custom(FieldLimits.maxSnoozeInterval + 1_000_000))
+        let updated = try #require(try await repo.fetch(id: "orig"))
+        #expect(updated.snoozedUntil == fixed.addingTimeInterval(FieldLimits.maxSnoozeInterval))
+    }
+
+    @Test func startTimerAddsRunningEntry() async throws {
+        let (store, repo) = try makeStore()
+        let task = Task(id: "orig", title: "Work", urgent: true, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        try await repo.upsert(task)
+        try await store.startTimer(task)
+        let updated = try #require(try await repo.fetch(id: "orig"))
+        #expect(updated.timeEntries.count == 1)
+        #expect(updated.timeEntries[0].endedAt == nil)
+    }
+
+    @Test func startingSecondTimerThrows() async throws {
+        let (store, repo) = try makeStore()
+        var task = Task(id: "orig", title: "Work", urgent: true, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        task.timeEntries = [TimeEntry(id: "te000001", startedAt: fixed)]
+        try await repo.upsert(task)
+        await #expect(throws: TimeTrackingError.alreadyRunning) {
+            try await store.startTimer(task)
+        }
+    }
+
+    @Test func stopTimerClosesEntryAndRecalculatesTimeSpent() async throws {
+        let (store, repo) = try makeStore()
+        var task = Task(id: "orig", title: "Work", urgent: true, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        // Running entry started 5 minutes before "now".
+        task.timeEntries = [TimeEntry(id: "te000001", startedAt: fixed.addingTimeInterval(-300))]
+        try await repo.upsert(task)
+        try await store.stopTimer(task)
+        let updated = try #require(try await repo.fetch(id: "orig"))
+        #expect(updated.timeEntries[0].endedAt == fixed)
+        #expect(updated.timeSpent == 5)
+    }
 }
