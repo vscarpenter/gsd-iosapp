@@ -20,6 +20,9 @@ struct TaskEditorView: View {
     // C3 — subtasks
     @State private var subtasks: [Subtask]
     @State private var subtaskDraft = ""
+    // C4 — dependencies
+    @State private var dependencies: [String]
+    @State private var showingDependencyPicker = false
     /// The task being edited (nil = creating a new one). Saving an edit mutates
     /// THIS value so non-edited (Phase-2) fields survive.
     private let original: Task?
@@ -39,6 +42,7 @@ struct TaskEditorView: View {
             _snoozedUntil = State(initialValue: nil)
             _estimateText = State(initialValue: "")
             _subtasks = State(initialValue: [])
+            _dependencies = State(initialValue: [])
             original = nil
             editingTaskID = IDGenerator.generate(size: IDGenerator.Size.task)
         case .edit(let t):
@@ -51,6 +55,7 @@ struct TaskEditorView: View {
             _snoozedUntil = State(initialValue: t.snoozedUntil)
             _estimateText = State(initialValue: t.estimatedMinutes.map(String.init) ?? "")
             _subtasks = State(initialValue: t.subtasks)
+            _dependencies = State(initialValue: t.dependencies)
             original = t
             editingTaskID = t.id
         }
@@ -59,23 +64,28 @@ struct TaskEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    TextField(String(localized: "Title"), text: $title)
-                        .onChange(of: title) { _, _ in saveError = nil }
+                Group {
+                    Section {
+                        TextField(String(localized: "Title"), text: $title)
+                            .onChange(of: title) { _, _ in saveError = nil }
+                    }
+                    Section(String(localized: "Quadrant")) { quadrantPicker }
+                    Section(String(localized: "Tags")) { tagField }
+                    Section(String(localized: "Notes")) {
+                        TextField(String(localized: "Description"), text: $description, axis: .vertical)
+                            .lineLimit(3...8)
+                    }
+                    dueDateSection
+                    recurrenceSection
                 }
-                Section(String(localized: "Quadrant")) { quadrantPicker }
-                Section(String(localized: "Tags")) { tagField }
-                Section(String(localized: "Notes")) {
-                    TextField(String(localized: "Description"), text: $description, axis: .vertical)
-                        .lineLimit(3...8)
-                }
-                dueDateSection
-                recurrenceSection
-                subtasksSection
-                estimateSection
-                snoozeSection
-                if let saveError {
-                    Section { Text(saveError).font(.caption).foregroundStyle(.red) }
+                Group {
+                    subtasksSection
+                    estimateSection
+                    snoozeSection
+                    dependenciesSection
+                    if let saveError {
+                        Section { Text(saveError).font(.caption).foregroundStyle(.red) }
+                    }
                 }
             }
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
@@ -91,6 +101,13 @@ struct TaskEditorView: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .sheet(isPresented: $showingDependencyPicker) {
+            DependencyPickerView(
+                editingTaskID: editingTaskID,
+                currentDependencies: dependencies,
+                onPick: { dependencies.append($0) }
+            )
+        }
     }
 
     private var quadrantPicker: some View {
@@ -221,6 +238,24 @@ struct TaskEditorView: View {
         }
     }
 
+    private var dependenciesSection: some View {
+        Section(String(localized: "Dependencies")) {
+            ForEach(dependencies, id: \.self) { depID in
+                HStack {
+                    Text(store.tasks.first { $0.id == depID }?.title
+                         ?? String(localized: "Unknown task"))
+                    Spacer()
+                    Button(role: .destructive) {
+                        dependencies.removeAll { $0 == depID }
+                    } label: { Image(systemName: "minus.circle") }
+                    .buttonStyle(.plain)
+                }
+            }
+            Button(String(localized: "Add dependency…")) { showingDependencyPicker = true }
+                .disabled(dependencies.count >= FieldLimits.maxDependencies)
+        }
+    }
+
     private func addSubtask() {
         let title = subtaskDraft.trimmingCharacters(in: .whitespaces)
         subtaskDraft = ""
@@ -288,6 +323,8 @@ struct TaskEditorView: View {
             task.estimatedMinutes = FieldLimits.normalizedEstimate(Int(estimateText))
             // C3: subtasks
             task.subtasks = subtasks
+            // C4: dependencies
+            task.dependencies = dependencies
         } else {
             let now = Date.now
             task = Task(id: editingTaskID,
@@ -299,6 +336,7 @@ struct TaskEditorView: View {
                         recurrence: recurrence,
                         tags: tags,
                         subtasks: subtasks,
+                        dependencies: dependencies,
                         snoozedUntil: snoozedUntil,
                         estimatedMinutes: FieldLimits.normalizedEstimate(Int(estimateText)))
         }
