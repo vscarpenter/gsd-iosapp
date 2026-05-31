@@ -32,6 +32,21 @@ struct MigrationTests {
         #expect(keepCount == 1)
     }
 
+    @Test func v3CreatesArchivedTasksTableWithArchivedAt() throws {
+        let db = try AppDatabase.inMemory()
+        try db.writer.read { d in
+            #expect(try d.tableExists("archivedTasks"))
+            let columns = Set(try d.columns(in: "archivedTasks").map(\.name))
+            // Same 24 task columns + archivedAt.
+            #expect(columns.contains("archivedAt"))
+            #expect(columns.contains("id"))
+            #expect(columns.contains("completedAt"))
+            #expect(columns.count == 25)
+            let indexed = Set(try d.indexes(on: "archivedTasks").flatMap(\.columns))
+            #expect(indexed.contains("archivedAt"))
+        }
+    }
+
     @Test func v1CreatesTasksTableWithFullColumnSet() throws {
         let db = try AppDatabase.inMemory()
         try db.writer.read { d in
