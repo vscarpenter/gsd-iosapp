@@ -232,4 +232,10 @@ public final class TaskStore {
             .filter { $0.quadrant == quadrant && (showCompleted || !$0.completed) }
             .sorted { a, b in a.completed == b.completed ? a.updatedAt > b.updatedAt : !a.completed }
     }
+
+    /// Tasks matching a `FilterCriteria` (product spec §5.9), resolved with the store's
+    /// injected clock/calendar. Pure/derived — delegates to `TaskFilter`; never mutates.
+    public func tasks(matching criteria: FilterCriteria) -> [Task] {
+        TaskFilter.apply(criteria, to: tasks, now: clock(), calendar: calendar)
+    }
 }
