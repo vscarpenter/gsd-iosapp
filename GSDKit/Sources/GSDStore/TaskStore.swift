@@ -178,11 +178,14 @@ public final class TaskStore {
         var t = task
         // `Array.move(fromOffsets:toOffset:)` is SwiftUI-only; implement it with
         // Foundation primitives so GSDStore stays SwiftUI-free.
+        // Remove in reverse-index order to preserve stable indices during removal.
         let moved = fromOffsets.sorted(by: >).map { idx -> Subtask in
             let item = t.subtasks[idx]; t.subtasks.remove(at: idx); return item
         }.reversed()
-        let insertAt = toOffset > (fromOffsets.first ?? 0) ? toOffset - fromOffsets.count : toOffset
-        t.subtasks.insert(contentsOf: moved, at: insertAt)
+        // Adjust destination: only source offsets strictly below toOffset have been
+        // removed, shifting remaining elements left by exactly that count.
+        let shift = fromOffsets.filter { $0 < toOffset }.count
+        t.subtasks.insert(contentsOf: moved, at: toOffset - shift)
         try await persist(t)
     }
 

@@ -177,6 +177,20 @@ struct TaskStoreDepthTests {
         #expect(try await repo.fetch(id: "orig")?.subtasks.map(\.id) == ["s3", "s1", "s2"])
     }
 
+    @Test func moveSubtaskStraddlingMultiSelect() async throws {
+        // Covers the straddling multi-index case: indices {0, 4} moved to toOffset 2
+        // over a 5-element list. SwiftUI's move yields [B, A, E, C, D].
+        let (store, repo) = try makeStore()
+        var task = Task(id: "orig", title: "Trip", urgent: false, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        task.subtasks = [Subtask(id: "A", title: "A"), Subtask(id: "B", title: "B"),
+                         Subtask(id: "C", title: "C"), Subtask(id: "D", title: "D"),
+                         Subtask(id: "E", title: "E")]
+        try await repo.upsert(task)
+        try await store.moveSubtask(in: task, fromOffsets: IndexSet([0, 4]), toOffset: 2)
+        #expect(try await repo.fetch(id: "orig")?.subtasks.map(\.id) == ["B", "A", "E", "C", "D"])
+    }
+
     @Test func addDependencyValidatesAndPersists() async throws {
         let (store, repo) = try makeStore()
         let now = fixed
