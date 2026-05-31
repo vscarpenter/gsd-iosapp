@@ -27,8 +27,10 @@ struct MigrationTests {
         }
         _ = try AppDatabase(queue)   // runs the full migrator over the existing DB
         let hasSmartViews = try queue.read { d in try d.tableExists("smartViews") }
+        let hasArchivedTasks = try queue.read { d in try d.tableExists("archivedTasks") }
         let keepCount = try queue.read { d in try Int.fetchOne(d, sql: "SELECT COUNT(*) FROM tasks WHERE id = 'keep'") }
         #expect(hasSmartViews)
+        #expect(hasArchivedTasks)
         #expect(keepCount == 1)
     }
 
