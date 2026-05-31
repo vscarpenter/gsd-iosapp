@@ -17,6 +17,17 @@ targets:
     platform: iOS
     sources:
       - App
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UIBackgroundModes:
+          - fetch
+          - processing
+        BGTaskSchedulerPermittedIdentifiers:
+          - dev.vinny.gsd.refresh
     dependencies:
       - package: GSDKit
         product: GSDModel
@@ -28,7 +39,7 @@ targets:
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
-        GENERATE_INFOPLIST_FILE: "YES"
+        GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: App/GSD.entitlements
         CODE_SIGN_STYLE: Automatic
         # DEVELOPMENT_TEAM: <your Team ID>   # set before device builds; simulator works without it

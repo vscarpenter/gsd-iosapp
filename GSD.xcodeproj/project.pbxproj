@@ -65,6 +65,7 @@
 		94ED783FE5C2324C295B0273 /* RelativeDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeDate.swift; sourceTree = "<group>"; };
 		9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredTaskListView.swift; sourceTree = "<group>"; };
 		A92D91657DBB6423E6BBE725 /* DataStorageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStorageView.swift; sourceTree = "<group>"; };
+		ABCFD2CB1A7F53B54E6E1725 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
 		B6988BDFABF5E325C967D8EA /* TaskCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCardView.swift; sourceTree = "<group>"; };
 		BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorRequest.swift; sourceTree = "<group>"; };
@@ -95,6 +96,7 @@
 				F13D65075CBAAF0DA403E950 /* ContentView.swift */,
 				1E44544249232FE202E59EB0 /* GSD.entitlements */,
 				834FF1E8BA076E31BA383962 /* GSDApp.swift */,
+				ABCFD2CB1A7F53B54E6E1725 /* Info.plist */,
 				3437FF1C97F9C4E349C6B0F2 /* Archive */,
 				13F17FD694362B5F0CFE7108 /* Browse */,
 				673A791563D7F81CCA41A63F /* Bulk */,
@@ -372,7 +374,8 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -393,7 +396,8 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
