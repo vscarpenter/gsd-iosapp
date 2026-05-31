@@ -390,6 +390,33 @@ public final class TaskStore {
         }
     }
 
+    // MARK: Notification settings (App-Group UserDefaults; mirrors archiveSettings, product spec §5.4)
+
+    public var notificationSettings: NotificationSettings {
+        get {
+            NotificationSettings(
+                enabled: defaults.object(forKey: AppGroupDefaults.Key.notificationsEnabled) as? Bool ?? true,
+                defaultReminder: defaults.object(forKey: AppGroupDefaults.Key.notificationDefaultReminder) as? Int ?? 15,
+                soundEnabled: defaults.object(forKey: AppGroupDefaults.Key.notificationSoundEnabled) as? Bool ?? true,
+                quietHoursStart: defaults.string(forKey: AppGroupDefaults.Key.notificationQuietHoursStart),
+                quietHoursEnd: defaults.string(forKey: AppGroupDefaults.Key.notificationQuietHoursEnd),
+                permissionAsked: defaults.bool(forKey: AppGroupDefaults.Key.notificationPermissionAsked)
+            )
+        }
+        set {
+            defaults.set(newValue.enabled, forKey: AppGroupDefaults.Key.notificationsEnabled)
+            defaults.set(newValue.defaultReminder, forKey: AppGroupDefaults.Key.notificationDefaultReminder)
+            defaults.set(newValue.soundEnabled, forKey: AppGroupDefaults.Key.notificationSoundEnabled)
+            setOrRemove(newValue.quietHoursStart, forKey: AppGroupDefaults.Key.notificationQuietHoursStart)
+            setOrRemove(newValue.quietHoursEnd, forKey: AppGroupDefaults.Key.notificationQuietHoursEnd)
+            defaults.set(newValue.permissionAsked, forKey: AppGroupDefaults.Key.notificationPermissionAsked)
+        }
+    }
+
+    private func setOrRemove(_ value: String?, forKey key: String) {
+        if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
+    }
+
     // MARK: Bulk operations (multi-select; each op is per-task, validated, stamps updatedAt)
 
     private func selectedTasks(_ ids: Set<String>) -> [Task] {
