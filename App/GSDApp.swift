@@ -4,6 +4,7 @@ import GSDStore
 @main
 struct GSDApp: App {
     @State private var store: TaskStore
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
 
@@ -31,6 +32,12 @@ struct GSDApp: App {
                 .task {
                     store.start()
                     try? await store.runAutoArchiveSweep()
+                    await store.refreshBadge()
+                }
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active {
+                        _Concurrency.Task { await store.refreshBadge() }
+                    }
                 }
                 .fullScreenCover(isPresented: Binding(
                     get: { !hasOnboarded },
