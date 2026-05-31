@@ -15,6 +15,7 @@ struct FilteredTaskListView: View {
     private var graph: DependencyGraph { DependencyGraph(tasks: store.tasks) }
 
     var body: some View {
+        let rowActions = TaskActions(store: store) { confettiTrigger += 1 }
         ZStack {
             Group {
                 if tasks.isEmpty {
@@ -27,7 +28,7 @@ struct FilteredTaskListView: View {
                             task: task,
                             blockedByCount: graph.uncompletedBlockers(of: task.id).count,
                             blockingCount: graph.blockedTasks(of: task.id).count,
-                            actions: TaskActions(store: store) { confettiTrigger += 1 },
+                            actions: rowActions,
                             onEdit: { editor = .edit($0) }
                         )
                     }
