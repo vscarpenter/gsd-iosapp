@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "GSDModel", targets: ["GSDModel"]),
         .library(name: "GSDStore", targets: ["GSDStore"]),
+        .library(name: "GSDSync", targets: ["GSDSync"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
@@ -20,7 +21,9 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift"),
             ]
         ),
+        .target(name: "GSDSync", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDModelTests", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDStoreTests", dependencies: ["GSDStore"]),
+        .testTarget(name: "GSDSyncTests", dependencies: ["GSDSync"]),
     ]
 )
