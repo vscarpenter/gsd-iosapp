@@ -36,9 +36,9 @@ struct OnboardingView: View {
             }
             TabView(selection: $page) {
                 ForEach(Array(pages.enumerated()), id: \.element.id) { index, p in
-                    VStack(spacing: 20) {
+                    VStack(spacing: 16) {
                         Image(systemName: p.icon)
-                            .font(.system(size: 64))
+                            .font(.system(size: 52))
                             .foregroundStyle(.tint)
                         Text(p.title)
                             .font(.serif(.title))
@@ -49,12 +49,23 @@ struct OnboardingView: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(40)
+                    .padding(.horizontal, 40)
+                    .padding(.vertical, 16)
                     .tag(index)
                 }
             }
-            .tabViewStyle(.page)
-            .indexViewStyle(.page(backgroundDisplayMode: .always))
+            // Hide the built-in page dots: they overlay the bottom of the TabView frame
+            // and collide with long body text. Render our own dot row below instead.
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            HStack(spacing: 8) {
+                ForEach(pages.indices, id: \.self) { index in
+                    Circle()
+                        .fill(index == page ? Color.accentColor : Color.secondary.opacity(0.3))
+                        .frame(width: 8, height: 8)
+                }
+            }
+            .padding(.top, 8)
 
             Button(action: advance) {
                 Text(page == pages.count - 1 ? String(localized: "Get Started") : String(localized: "Next"))
