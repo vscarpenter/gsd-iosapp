@@ -16,12 +16,18 @@ struct GSDApp: App {
         let scheduler = LiveReminderScheduler(settingsProvider: {
             TaskStore.readNotificationSettings(from: .shared)
         })
-        _store = State(initialValue: TaskStore(
+        let store = TaskStore(
             repository: GRDBTaskRepository(database),
             smartViewRepository: GRDBSmartViewRepository(database),
             archiveRepository: GRDBArchiveRepository(database),
             reminders: scheduler
-        ))
+        )
+        _store = State(initialValue: store)
+        // BGTaskScheduler handlers MUST be registered before the app finishes launching —
+        // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
+        // and would trip "all launch handlers must be registered before application finishes
+        // launching". `App.init()` is main-actor-isolated, so the @MainActor register is safe.
+        BackgroundRefresh.register(store: store)
     }
 
     var body: some Scene {
@@ -35,8 +41,13 @@ struct GSDApp: App {
                     await store.refreshBadge()
                 }
                 .onChange(of: scenePhase) { _, phase in
-                    if phase == .active {
+                    switch phase {
+                    case .active:
                         _Concurrency.Task { await store.refreshBadge() }
+                    case .background:
+                        BackgroundRefresh.schedule()
+                    default:
+                        break
                     }
                 }
                 .fullScreenCover(isPresented: Binding(

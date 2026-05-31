@@ -19,6 +19,7 @@
 		3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */; };
 		3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */; };
 		4132C3E4E3012462A71F5C24 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */; };
+		52058F06635130DE73D6A92D /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */; };
 		58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */; };
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
@@ -44,6 +45,7 @@
 /* Begin PBXFileReference section */
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		1E44544249232FE202E59EB0 /* GSD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSD.entitlements; sourceTree = "<group>"; };
 		249F029B40FD9FDAA6A68A25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		30895EFC952028C78E9F99EE /* BulkActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkActionBar.swift; sourceTree = "<group>"; };
@@ -100,6 +102,7 @@
 				834FF1E8BA076E31BA383962 /* GSDApp.swift */,
 				ABCFD2CB1A7F53B54E6E1725 /* Info.plist */,
 				3437FF1C97F9C4E349C6B0F2 /* Archive */,
+				9380E0B72DF855B837B0BB7A /* Background */,
 				13F17FD694362B5F0CFE7108 /* Browse */,
 				673A791563D7F81CCA41A63F /* Bulk */,
 				BAC77554DBBDEEACBDA67AE5 /* Dashboard */,
@@ -176,6 +179,14 @@
 				3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */,
 			);
 			path = Onboarding;
+			sourceTree = "<group>";
+		};
+		9380E0B72DF855B837B0BB7A /* Background */ = {
+			isa = PBXGroup;
+			children = (
+				18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */,
+			);
+			path = Background;
 			sourceTree = "<group>";
 		};
 		A8F4EE28B10703F63C52EDE9 /* Products */ = {
@@ -345,6 +356,7 @@
 			files = (
 				85FC74F90BC144FB514B2924 /* AppPreferences.swift in Sources */,
 				1995E0D8DB3D1CD07A579638 /* ArchiveListView.swift in Sources */,
+				52058F06635130DE73D6A92D /* BackgroundRefresh.swift in Sources */,
 				E63F93C1AFC3CD88D00DE943 /* BulkActionBar.swift in Sources */,
 				046100EB23A8521EA8275EAE /* CaptureBar.swift in Sources */,
 				4132C3E4E3012462A71F5C24 /* CommandPaletteView.swift in Sources */,
