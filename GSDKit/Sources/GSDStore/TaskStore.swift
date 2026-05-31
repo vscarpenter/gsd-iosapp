@@ -427,4 +427,57 @@ public final class TaskStore {
     public func bulkDelete(ids: Set<String>) async throws {
         for task in selectedTasks(ids) { try? await delete(task) }
     }
+
+    // MARK: Data (export / import / reset)
+
+    public enum ImportMode: Sendable { case replace, merge }
+
+    /// Serialize the live task snapshot to a `TaskExport` JSON payload (design-spec §3).
+    public func exportJSON() throws -> Data {
+        try TaskExport.encode(TaskExport(tasks: tasks, exportedAt: clock()))
+    }
+
+    /// Parse + persist an import. Replace clears all tasks then bulk-inserts (single
+    /// transaction); Merge regenerates colliding ids + remaps references, then upserts each
+    /// (stamping `updatedAt` via the clock). Limits + lenient decode live in `TaskImporter`.
+    /// Returns the parse result so the UI can report skipped-count.
+    /// NOTE (Phase 5): enqueue a sync op for each written task here.
+    @discardableResult
+    public func importTasks(_ data: Data, mode: ImportMode) async throws -> ImportResult {
+        switch mode {
+        case .replace:
+            let result = try TaskImporter.replace(from: data)
+            let now = clock()
+            let stamped = result.tasks.map { task -> Task in
+                var t = task; t.updatedAt = now; return t
+            }
+            try await repository.replaceAll(stamped)
+            return result
+        case .merge:
+            let existing = Set(try await repository.fetchAll().map(\.id))
+            let result = try TaskImporter.merge(from: data, existingIDs: existing, newID: { self.newID() })
+            for task in result.tasks {
+                var t = task; t.updatedAt = clock()
+                try await repository.upsert(t)
+            }
+            return result
+        }
+    }
+
+    /// Erase all app data EXCEPT the theme (design-spec §3 reset scope call): clears tasks,
+    /// archived tasks, custom smart views, pinning, and archive settings. `appTheme` +
+    /// `hasOnboarded` live in the App layer's `@AppStorage` and are intentionally untouched.
+    public func eraseAllData() async throws {
+        try await repository.replaceAll([])
+        for archived in try await archiveRepository.fetchAll() {
+            try await archiveRepository.deletePermanently(id: archived.id)
+        }
+        for view in try await smartViewRepository.fetchAll() {
+            try await smartViewRepository.delete(id: view.id)
+        }
+        pinnedIDs = []
+        defaults.removeObject(forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
+        defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAutoEnabled)
+        defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAfterDays)
+    }
 }
