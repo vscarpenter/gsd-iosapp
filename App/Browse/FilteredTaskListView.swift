@@ -10,8 +10,14 @@ struct FilteredTaskListView: View {
 
     @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
+    @State private var searchText = ""
 
-    private var tasks: [Task] { store.tasks(matching: view.criteria) }
+    private var tasks: [Task] {
+        var criteria = view.criteria
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { criteria.searchQuery = trimmed }   // overlay search on the view's criteria
+        return store.tasks(matching: criteria)
+    }
     private var graph: DependencyGraph { DependencyGraph(tasks: store.tasks) }
 
     var body: some View {
@@ -38,6 +44,7 @@ struct FilteredTaskListView: View {
             ConfettiView(trigger: confettiTrigger)
         }
         .navigationTitle(view.name)
+        .searchable(text: $searchText, prompt: String(localized: "Search \(view.name)"))
         .sheet(item: $editor) { TaskEditorView(request: $0) }
     }
 }
