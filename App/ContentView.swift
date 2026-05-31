@@ -2,8 +2,8 @@ import SwiftUI
 import GSDModel
 import GSDStore
 
-/// Adaptive root. Compact (iPhone): a TabView (Matrix · Browse). Regular (iPad): a
-/// NavigationSplitView (sidebar Matrix + Smart Views → detail grid / filtered list).
+/// Adaptive root. Compact (iPhone): a TabView (Matrix · Browse · Dashboard). Regular (iPad):
+/// a NavigationSplitView (sidebar Matrix + Dashboard + Smart Views → detail grid / filtered list).
 ///
 /// Also hosts the ⌘K command palette: a hidden keyboard-shortcut button + the palette
 /// sheet + the editor sheet it can open live here, while a shared `PaletteController`
@@ -47,6 +47,9 @@ struct ContentView: View {
                 SmartViewListView()
                     .tabItem { Label(String(localized: "Browse"), systemImage: "line.3.horizontal.decrease.circle") }
                     .tag(1)
+                DashboardView()
+                    .tabItem { Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis") }
+                    .tag(2)
             }
         } else {
             RegularRootView()
@@ -81,12 +84,14 @@ struct ContentView: View {
             case .matrix: palette.compactTab = 0
             case .browse: palette.compactTab = 1; palette.browsePath = []
             case .archive: palette.compactTab = 1; palette.browsePath = [.archive]
+            case .dashboard: palette.compactTab = 2
             }
         } else {
             switch dest {
             case .matrix: palette.regularSelection = .matrix
             case .browse: break   // iPad has no Browse tab; the sidebar is always visible
             case .archive: palette.regularSelection = .archive
+            case .dashboard: palette.regularSelection = .dashboard
             }
         }
     }
@@ -112,6 +117,7 @@ private struct RegularRootView: View {
         NavigationSplitView {
             List(selection: $palette.regularSelection) {
                 Label(String(localized: "Matrix"), systemImage: "square.grid.2x2").tag(RegularItem.matrix)
+                Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis").tag(RegularItem.dashboard)
                 Label(String(localized: "Archive"), systemImage: "archivebox").tag(RegularItem.archive)
                 if !store.pinnedViews.isEmpty {
                     Section(String(localized: "Pinned")) {
@@ -151,6 +157,8 @@ private struct RegularRootView: View {
                 }
             case .archive:
                 NavigationStack { ArchiveListView() }
+            case .dashboard:
+                DashboardView()
             case .matrix, .none:
                 MatrixGridView()
             }

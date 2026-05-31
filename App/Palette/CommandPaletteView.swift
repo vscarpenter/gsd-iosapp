@@ -12,7 +12,7 @@ enum PaletteResult {
     case toggleTheme
     case navigate(PaletteDestination)
 }
-enum PaletteDestination { case matrix, browse, archive }
+enum PaletteDestination { case matrix, browse, archive, dashboard }
 
 /// A Browse-stack route. The list links are value-based so the palette can push either a
 /// smart view or the Archive by appending to `PaletteController.browsePath` — a plain
@@ -29,7 +29,7 @@ enum BrowseRoute: Hashable {
 @Observable
 final class PaletteController {
     var showPalette = false
-    /// Compact (iPhone) tab selection: 0 = Matrix, 1 = Browse.
+    /// Compact (iPhone) tab selection: 0 = Matrix, 1 = Browse, 2 = Dashboard.
     var compactTab = 0
     /// The Browse `NavigationStack` path (compact). Pushing here opens a smart view / Archive.
     var browsePath: [BrowseRoute] = []
@@ -40,7 +40,7 @@ final class PaletteController {
 
 /// iPad sidebar selection. Shared so the palette handler can drive it; `RegularRootView`
 /// binds its `List(selection:)` to `PaletteController.regularSelection`.
-enum RegularItem: Hashable { case matrix, archive, smartView(String) }
+enum RegularItem: Hashable { case matrix, archive, dashboard, smartView(String) }
 
 /// ⌘K command palette: a search field + sectioned, substring-matched results across
 /// Tasks / Smart Views / Actions / Navigation. Case-insensitive; not fuzzy (YAGNI).
@@ -68,6 +68,7 @@ struct CommandPaletteView: View {
     }
     private var navResults: [(String, String, PaletteResult)] {
         [(String(localized: "Matrix"), "square.grid.2x2", .navigate(.matrix)),
+         (String(localized: "Dashboard"), "chart.bar.xaxis", .navigate(.dashboard)),
          (String(localized: "Browse"), "line.3.horizontal.decrease.circle", .navigate(.browse)),
          (String(localized: "Archive"), "archivebox", .navigate(.archive))]
             .filter { match($0.0) }
