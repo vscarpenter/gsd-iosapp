@@ -189,6 +189,8 @@ struct TaskEditorView: View {
                         Image(systemName: subtask.completed ? "checkmark.circle.fill" : "circle")
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(subtask.completed ? String(localized: "Mark incomplete") : String(localized: "Mark complete"))
+                    .accessibilityHint(subtask.title)
                     TextField(String(localized: "Subtask"), text: $subtask.title)
                         .strikethrough(subtask.completed)
                 }
@@ -249,6 +251,7 @@ struct TaskEditorView: View {
                         dependencies.removeAll { $0 == depID }
                     } label: { Image(systemName: "minus.circle") }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(String(localized: "Remove dependency"))
                 }
             }
             Button(String(localized: "Add dependency…")) { showingDependencyPicker = true }
