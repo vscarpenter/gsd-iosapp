@@ -16,6 +16,8 @@ struct TaskEditorView: View {
     @State private var dueDate: Date?
     @State private var recurrence: RecurrenceType
     @State private var snoozedUntil: Date?
+    @State private var notificationEnabled: Bool
+    @State private var notifyBefore: Int?
     @State private var estimateText: String
     // C3 — subtasks
     @State private var subtasks: [Subtask]
@@ -40,6 +42,8 @@ struct TaskEditorView: View {
             _dueDate = State(initialValue: nil)
             _recurrence = State(initialValue: .none)
             _snoozedUntil = State(initialValue: nil)
+            _notificationEnabled = State(initialValue: false)
+            _notifyBefore = State(initialValue: nil)
             _estimateText = State(initialValue: "")
             _subtasks = State(initialValue: [])
             _dependencies = State(initialValue: [])
@@ -53,6 +57,8 @@ struct TaskEditorView: View {
             _dueDate = State(initialValue: t.dueDate)
             _recurrence = State(initialValue: t.recurrence)
             _snoozedUntil = State(initialValue: t.snoozedUntil)
+            _notificationEnabled = State(initialValue: t.notificationEnabled && t.dueDate != nil)
+            _notifyBefore = State(initialValue: t.notifyBefore)
             _estimateText = State(initialValue: t.estimatedMinutes.map(String.init) ?? "")
             _subtasks = State(initialValue: t.subtasks)
             _dependencies = State(initialValue: t.dependencies)
@@ -83,6 +89,7 @@ struct TaskEditorView: View {
                     estimateSection
                     snoozeSection
                     dependenciesSection
+                    reminderSection
                     if let saveError {
                         Section { Text(saveError).font(.caption).foregroundStyle(.red) }
                     }
@@ -240,6 +247,55 @@ struct TaskEditorView: View {
         }
     }
 
+    /// Reminder controls (product spec §9) — shown only when a due date is set. The picker's
+    /// `None` selection disables the reminder; any offset enables it with that `notifyBefore`.
+    @ViewBuilder private var reminderSection: some View {
+        if dueDate != nil {
+            Section(String(localized: "Reminder")) {
+                Picker(String(localized: "Remind me"), selection: reminderSelection) {
+                    Text(String(localized: "None")).tag(ReminderOption.none)
+                    Text(String(localized: "At time of event")).tag(ReminderOption.offset(0))
+                    Text(String(localized: "5 minutes before")).tag(ReminderOption.offset(5))
+                    Text(String(localized: "15 minutes before")).tag(ReminderOption.offset(15))
+                    Text(String(localized: "30 minutes before")).tag(ReminderOption.offset(30))
+                    Text(String(localized: "1 hour before")).tag(ReminderOption.offset(60))
+                    Text(String(localized: "2 hours before")).tag(ReminderOption.offset(120))
+                    Text(String(localized: "1 day before")).tag(ReminderOption.offset(1440))
+                }
+            }
+        }
+    }
+
+    /// The reminder picker's options. `.none` = no reminder; `.offset(m)` = m minutes before due.
+    private enum ReminderOption: Hashable { case none, offset(Int) }
+
+    /// Binds the picker to `notificationEnabled` + `notifyBefore`. Selecting `.none` disables;
+    /// selecting an offset enables with that value. When enabled but `notifyBefore` is nil
+    /// (legacy/new), the displayed selection falls back to the store's `defaultReminder` — which
+    /// is always one of the offered offsets (the picker's offsets `{0,5,15,30,60,120,1440}` are a
+    /// superset of `NotificationSettings.allowedReminders` `{15,30,60,120,1440}`, so the Picker
+    /// never renders blank). Enabling a reminder requests OS authorization contextually (§9.2:
+    /// "when the user … sets a due date with a reminder") — a no-op if already asked/determined.
+    private var reminderSelection: Binding<ReminderOption> {
+        Binding(
+            get: {
+                guard notificationEnabled else { return .none }
+                return .offset(notifyBefore ?? store.notificationSettings.defaultReminder)
+            },
+            set: { option in
+                switch option {
+                case .none:
+                    notificationEnabled = false
+                    notifyBefore = nil
+                case .offset(let minutes):
+                    notificationEnabled = true
+                    notifyBefore = minutes
+                    _Concurrency.Task { await store.requestNotificationAuthorization() }
+                }
+            }
+        )
+    }
+
     private var dependenciesSection: some View {
         Section(String(localized: "Dependencies")) {
             ForEach(dependencies, id: \.self) { depID in
@@ -319,8 +375,16 @@ struct TaskEditorView: View {
             task.important = quadrant.isImportant
             task.tags = tags
             // C2: due date + recurrence
-            // TODO: Phase-4 — editing dueDate should reset reminder state (§6.3); no reminder UI yet.
             task.dueDate = dueDate
+            // Phase-4: the editor's reminder controls drive these (§9). Clearing the due date
+            // also clears the reminder (a reminder is meaningless without a due date).
+            if dueDate == nil {
+                task.notificationEnabled = false
+                task.notifyBefore = nil
+            } else {
+                task.notificationEnabled = notificationEnabled
+                task.notifyBefore = notificationEnabled ? notifyBefore : nil
+            }
             task.recurrence = recurrence
             task.snoozedUntil = snoozedUntil
             task.estimatedMinutes = FieldLimits.normalizedEstimate(Int(estimateText))
@@ -340,6 +404,8 @@ struct TaskEditorView: View {
                         tags: tags,
                         subtasks: subtasks,
                         dependencies: dependencies,
+                        notifyBefore: (dueDate != nil && notificationEnabled) ? notifyBefore : nil,
+                        notificationEnabled: dueDate != nil && notificationEnabled,
                         snoozedUntil: snoozedUntil,
                         estimatedMinutes: FieldLimits.normalizedEstimate(Int(estimateText)))
         }
