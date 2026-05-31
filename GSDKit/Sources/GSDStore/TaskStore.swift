@@ -39,6 +39,8 @@ public final class TaskStore {
     private let clock: @Sendable () -> Date
     private let newID: @Sendable () -> String
     private let calendar: Calendar
+    // Stored var so @Observable tracks mutations; UserDefaults is the persistence backing.
+    private var pinnedIDs: [String] = []
     // nonisolated(unsafe) so deinit can cancel without a MainActor hop.
     nonisolated(unsafe) private var observerTask: _Concurrency.Task<Void, Never>?
     nonisolated(unsafe) private var smartViewObserverTask: _Concurrency.Task<Void, Never>?
@@ -60,6 +62,7 @@ public final class TaskStore {
         self.clock = clock
         self.newID = newID
         self.calendar = calendar
+        self.pinnedIDs = defaults.stringArray(forKey: AppGroupDefaults.Key.pinnedSmartViewIds) ?? []
     }
 
     /// Begin observing all repositories. Idempotent; call once from the app root.
@@ -280,8 +283,8 @@ public final class TaskStore {
         let everything = BuiltInSmartViews.all + customViews
         let byID = Dictionary(everything.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
         let pinned = pinnedSmartViewIds.compactMap { byID[$0] }
-        let pinnedIDs = Set(pinned.map(\.id))
-        let rest = everything.filter { !pinnedIDs.contains($0.id) }
+        let pinnedSet = Set(pinned.map(\.id))
+        let rest = everything.filter { !pinnedSet.contains($0.id) }
         return pinned + rest
     }
 
@@ -312,20 +315,24 @@ public final class TaskStore {
 
     // MARK: Pinning (App-Group UserDefaults; ordered, capped at SmartViewPinning.maxPins)
 
-    public var pinnedSmartViewIds: [String] {
-        defaults.stringArray(forKey: AppGroupDefaults.Key.pinnedSmartViewIds) ?? []
-    }
+    // pinnedIDs is the reactive source of truth (@Observable tracks it); defaults is
+    // the persistence backing. Both are kept in sync on every mutation.
+    public var pinnedSmartViewIds: [String] { pinnedIDs }
+
     public func pin(_ id: String) {
-        defaults.set(SmartViewPinning.pin(id, in: pinnedSmartViewIds),
-                     forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
+        let newList = SmartViewPinning.pin(id, in: pinnedIDs)
+        pinnedIDs = newList
+        defaults.set(newList, forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
     }
     public func unpin(_ id: String) {
-        defaults.set(SmartViewPinning.unpin(id, in: pinnedSmartViewIds),
-                     forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
+        let newList = SmartViewPinning.unpin(id, in: pinnedIDs)
+        pinnedIDs = newList
+        defaults.set(newList, forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
     }
     public func reorderPins(fromOffsets: IndexSet, toOffset: Int) {
-        defaults.set(SmartViewPinning.reorder(pinnedSmartViewIds, fromOffsets: fromOffsets, toOffset: toOffset),
-                     forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
+        let newList = SmartViewPinning.reorder(pinnedIDs, fromOffsets: fromOffsets, toOffset: toOffset)
+        pinnedIDs = newList
+        defaults.set(newList, forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
     }
 
     // MARK: Archive
