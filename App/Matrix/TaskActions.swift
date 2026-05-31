@@ -15,4 +15,9 @@ struct TaskActions {
     }
     func delete(_ t: Task) { _Concurrency.Task { try? await store.delete(t) } }
     func move(_ t: Task, to q: Quadrant) { _Concurrency.Task { try? await store.move(t, to: q) } }
+    func snooze(_ t: Task, by preset: SnoozePreset) {
+        _Concurrency.Task { try? await store.snooze(t, by: preset) }
+    }
+    func startTimer(_ t: Task) { _Concurrency.Task { try? await store.startTimer(t) } }
+    func stopTimer(_ t: Task)  { _Concurrency.Task { try? await store.stopTimer(t) } }
 }

@@ -13,6 +13,8 @@ struct QuadrantCell: View {
     @State private var isTargeted = false
     private var items: [Task] { store.tasks(in: quadrant, showCompleted: showCompleted) }
     private var activeCount: Int { store.tasks(in: quadrant, showCompleted: false).count }
+    /// Computed once per render from the full task snapshot; dependencies cross quadrants.
+    private var graph: DependencyGraph { DependencyGraph(tasks: store.tasks) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -30,21 +32,28 @@ struct QuadrantCell: View {
                 .foregroundStyle(.secondary).padding(.vertical, 4)
             }
             ForEach(items) { task in
-                TaskCardView(task: task)
-                    .onTapGesture { onEdit(task) }
-                    .draggable(task.id)
-                    .contextMenu {
-                        Button { onEdit(task) } label: { Label("Edit", systemImage: "pencil") }
-                        Button { actions.toggle(task) } label: {
-                            Label(task.completed ? "Uncomplete" : "Complete", systemImage: "checkmark")
-                        }
-                        Button(role: .destructive) { actions.delete(task) } label: { Label("Delete", systemImage: "trash") }
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    TaskCardView(
+                        task: task,
+                        now: context.date,
+                        blockedByCount: graph.uncompletedBlockers(of: task.id).count,
+                        blockingCount: graph.blockedTasks(of: task.id).count
+                    )
+                }
+                .onTapGesture { onEdit(task) }
+                .draggable(task.id)
+                .contextMenu { cellMenu(task) }
+                .accessibilityActions {
+                    Button(task.completed ? "Uncomplete" : "Complete") { actions.toggle(task) }
+                    Button("Edit") { onEdit(task) }
+                    Button("Delete") { actions.delete(task) }
+                    Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
+                    if TimeTracking.runningEntry(task.timeEntries) == nil {
+                        Button(String(localized: "Start timer")) { actions.startTimer(task) }
+                    } else {
+                        Button(String(localized: "Stop timer")) { actions.stopTimer(task) }
                     }
-                    .accessibilityActions {
-                        Button(task.completed ? "Uncomplete" : "Complete") { actions.toggle(task) }
-                        Button("Edit") { onEdit(task) }
-                        Button("Delete") { actions.delete(task) }
-                    }
+                }
             }
             Spacer(minLength: 0)
         }
@@ -58,5 +67,34 @@ struct QuadrantCell: View {
             actions.move(task, to: quadrant)
             return true
         } isTargeted: { isTargeted = $0 }
+    }
+
+    @ViewBuilder private func cellMenu(_ task: Task) -> some View {
+        Button { onEdit(task) } label: { Label("Edit", systemImage: "pencil") }
+        Button { actions.toggle(task) } label: {
+            Label(task.completed ? "Uncomplete" : "Complete", systemImage: "checkmark")
+        }
+        if TimeTracking.runningEntry(task.timeEntries) == nil {
+            Button(String(localized: "Start Timer")) { actions.startTimer(task) }
+        } else {
+            Button(String(localized: "Stop Timer")) { actions.stopTimer(task) }
+        }
+        Menu(String(localized: "Snooze")) {
+            ForEach(snoozeMenuPresets.indices, id: \.self) { i in
+                Button(snoozeMenuPresets[i].0) { actions.snooze(task, by: snoozeMenuPresets[i].1) }
+            }
+        }
+        Button(role: .destructive) { actions.delete(task) } label: { Label("Delete", systemImage: "trash") }
+    }
+
+    /// Six §6.7 snooze presets. Intentionally NOT extracted to a shared constant
+    /// (duplicated in the editor per plan decision).
+    private var snoozeMenuPresets: [(String, SnoozePreset)] {
+        [(String(localized: "15 minutes"), .fifteenMinutes),
+         (String(localized: "30 minutes"), .thirtyMinutes),
+         (String(localized: "1 hour"), .oneHour),
+         (String(localized: "3 hours"), .threeHours),
+         (String(localized: "Tomorrow"), .tomorrow),
+         (String(localized: "Next week"), .nextWeek)]
     }
 }
