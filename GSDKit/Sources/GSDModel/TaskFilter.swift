@@ -11,7 +11,7 @@ public enum TaskFilter {
         let graph = DependencyGraph(tasks: tasks)
         let query = c.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
-        return tasks.filter { task in
+        let filtered = tasks.filter { task in
             switch c.status {
             case .all: break
             case .active: if task.completed { return false }
@@ -37,6 +37,24 @@ public enum TaskFilter {
                 if !hay.contains(where: { $0.lowercased().contains(query) }) { return false }
             }
             return true
+        }
+        if c.status == .completed {
+            return filtered.sorted { a, b in
+                switch (a.completedAt, b.completedAt) {
+                case let (x?, y?): return x == y ? a.createdAt > b.createdAt : x > y
+                case (_?, nil):    return true
+                case (nil, _?):    return false
+                case (nil, nil):   return a.createdAt > b.createdAt
+                }
+            }
+        }
+        return filtered.sorted { a, b in
+            switch (a.dueDate, b.dueDate) {
+            case let (x?, y?): return x == y ? a.createdAt > b.createdAt : x < y
+            case (_?, nil):    return true
+            case (nil, _?):    return false
+            case (nil, nil):   return a.createdAt > b.createdAt
+            }
         }
     }
 }

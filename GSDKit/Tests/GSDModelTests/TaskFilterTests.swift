@@ -98,4 +98,24 @@ struct TaskFilterTests {
                   task("b", urgent: true, important: true, tags: ["home"])]
         #expect(ids(FilterCriteria(quadrants: [.urgentImportant], tags: ["work"]), ts) == ["a"])
     }
+
+    @Test func activeResultsSortByDueDateAscNilLast() {
+        let ts = [task("late", due: day(2026, 6, 25)), task("none"),
+                  task("soon", due: day(2026, 6, 16))]
+        let r = TaskFilter.apply(FilterCriteria(status: .active), to: ts, now: now, calendar: cal)
+        #expect(r.map(\.id) == ["soon", "late", "none"]) // due asc, nil last
+    }
+    @Test func completedResultsSortByCompletedAtDesc() {
+        let ts = [task("old", completed: true, completedAt: day(2026, 6, 1)),
+                  task("new", completed: true, completedAt: day(2026, 6, 14))]
+        let r = TaskFilter.apply(FilterCriteria(status: .completed), to: ts, now: now, calendar: cal)
+        #expect(r.map(\.id) == ["new", "old"])
+    }
+    @Test func dueDateTieBreaksByCreatedAtDesc() {
+        let d = day(2026, 6, 20)
+        let ts = [task("older", due: d, created: day(2026, 6, 1)),
+                  task("newer", due: d, created: day(2026, 6, 10))]
+        let r = TaskFilter.apply(FilterCriteria(status: .active), to: ts, now: now, calendar: cal)
+        #expect(r.map(\.id) == ["newer", "older"])
+    }
 }
