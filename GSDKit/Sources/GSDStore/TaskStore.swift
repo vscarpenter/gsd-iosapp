@@ -363,7 +363,8 @@ public final class TaskStore {
     public func runAutoArchiveSweep() async throws {
         let settings = archiveSettings
         guard settings.autoEnabled else { return }
-        let toArchive = AutoArchive.tasksToArchive(tasks, afterDays: settings.afterDays,
+        let allTasks = try await repository.fetchAll()
+        let toArchive = AutoArchive.tasksToArchive(allTasks, afterDays: settings.afterDays,
                                                    now: clock(), calendar: calendar)
         for task in toArchive { try await archiveRepository.archive(task) }
     }
