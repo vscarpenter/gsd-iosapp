@@ -14,6 +14,7 @@
 		1995E0D8DB3D1CD07A579638 /* ArchiveListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923FB39E62F676CE76DDE26A /* ArchiveListView.swift */; };
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
+		34A8E574358FAB0570162302 /* LiveReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */; };
 		359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */; };
 		3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */; };
 		3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */; };
@@ -48,6 +49,7 @@
 		30895EFC952028C78E9F99EE /* BulkActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkActionBar.swift; sourceTree = "<group>"; };
 		30A03169462530BB59EC808C /* CaptureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBar.swift; sourceTree = "<group>"; };
 		3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReminderScheduler.swift; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		53A151034146B4714F731EE2 /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -104,6 +106,7 @@
 				3CBE7AF1D884DE679CAEE64D /* Editor */,
 				CA9A551E91A1952A1BA0DAFB /* Effects */,
 				FA90F57386B51F3EB784FDB4 /* Matrix */,
+				F3FD8333B4094D82335A01F0 /* Notifications */,
 				934B723B6C53CBA69947D7C1 /* Onboarding */,
 				34B0C6FC1C9DB00999F2B90A /* Palette */,
 				E3E7A9EE8C0A43B83CCADEC0 /* Settings */,
@@ -241,6 +244,14 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		F3FD8333B4094D82335A01F0 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */,
+			);
+			path = Notifications;
+			sourceTree = "<group>";
+		};
 		FA90F57386B51F3EB784FDB4 /* Matrix */ = {
 			isa = PBXGroup;
 			children = (
@@ -345,6 +356,7 @@
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
 				58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
+				34A8E574358FAB0570162302 /* LiveReminderScheduler.swift in Sources */,
 				359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */,
 				8004840C42749CB157F55F18 /* MatrixView.swift in Sources */,
 				3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */,
