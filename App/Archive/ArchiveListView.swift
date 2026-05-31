@@ -10,6 +10,8 @@ struct ArchiveListView: View {
     @Environment(TaskStore.self) private var store
     @State private var searchText = ""
     @State private var pendingDelete: Task?
+    @State private var selection = Set<String>()
+    @State private var showBulkDeleteConfirm = false
 
     private var results: [Task] {
         guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return store.archivedTasks }
@@ -24,20 +26,23 @@ struct ArchiveListView: View {
                                        systemImage: "archivebox",
                                        description: Text(String(localized: "Completed tasks you archive will appear here.")))
             } else {
-                List(results) { task in
-                    TaskCardView(task: task, now: .now, blockedByCount: 0, blockingCount: 0)
-                        .opacity(0.6)
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                _Concurrency.Task { try? await store.restore(task) }
-                            } label: { Label(String(localized: "Restore"), systemImage: "arrow.uturn.backward") }
-                            .tint(.blue)
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) { pendingDelete = task } label: {
-                                Label(String(localized: "Delete"), systemImage: "trash")
+                List(selection: $selection) {
+                    ForEach(results) { task in
+                        TaskCardView(task: task, now: .now, blockedByCount: 0, blockingCount: 0)
+                            .opacity(0.6)
+                            .tag(task.id)
+                            .swipeActions(edge: .leading) {
+                                Button {
+                                    _Concurrency.Task { try? await store.restore(task) }
+                                } label: { Label(String(localized: "Restore"), systemImage: "arrow.uturn.backward") }
+                                .tint(.blue)
                             }
-                        }
+                            .swipeActions(edge: .trailing) {
+                                Button(role: .destructive) { pendingDelete = task } label: {
+                                    Label(String(localized: "Delete"), systemImage: "trash")
+                                }
+                            }
+                    }
                 }
                 .listStyle(.insetGrouped)
             }
@@ -46,6 +51,46 @@ struct ArchiveListView: View {
         .searchable(text: $searchText, prompt: String(localized: "Search archive"))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) { archiveSettingsMenu }
+            ToolbarItem(placement: .topBarLeading) { EditButton() }
+        }
+        // Slim bulk bar: archive has no move/tags/due semantics, only Restore + Delete.
+        // Hosted via safeAreaInset so its confirmation presents reliably.
+        .safeAreaInset(edge: .bottom) {
+            if !selection.isEmpty {
+                HStack {
+                    Button(String(localized: "Restore")) {
+                        let ids = selection; selection.removeAll()
+                        _Concurrency.Task {
+                            for task in store.archivedTasks where ids.contains(task.id) {
+                                try? await store.restore(task)
+                            }
+                        }
+                    }
+                    Spacer()
+                    Text(String(localized: "\(selection.count) selected"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(String(localized: "Delete"), role: .destructive) { showBulkDeleteConfirm = true }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(.bar)
+            }
+        }
+        .confirmationDialog(String(localized: "Delete \(selection.count) tasks permanently?"),
+                            isPresented: $showBulkDeleteConfirm, titleVisibility: .visible) {
+            Button(String(localized: "Delete"), role: .destructive) {
+                let ids = selection; selection.removeAll()
+                _Concurrency.Task {
+                    for task in store.archivedTasks where ids.contains(task.id) {
+                        try? await store.deletePermanently(task)
+                    }
+                }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "This can't be undone."))
         }
         .confirmationDialog(String(localized: "Delete permanently?"),
                             isPresented: Binding(get: { pendingDelete != nil },
