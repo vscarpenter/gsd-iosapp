@@ -17,6 +17,10 @@ public protocol TaskRepository: Sendable {
     func fetchAll() async throws -> [Task]
     func fetch(id: String) async throws -> Task?
     func delete(id: String) async throws
+    /// Replace the entire task table in a single transaction: delete all rows, then insert
+    /// `tasks`. Used by Replace-mode import. No dependency-scrub is needed (a full clear
+    /// leaves no surviving rows that could reference a deleted id).
+    func replaceAll(_ tasks: [Task]) async throws
     func observeAll() -> AsyncThrowingStream<[Task], Error>
 }
 
@@ -68,6 +72,14 @@ public final class GRDBTaskRepository: TaskRepository {
                 try record.update(db, columns: ["dependencies", "updatedAt"])
             }
             _ = try TaskRecord.deleteOne(db, key: id)
+        }
+    }
+
+    public func replaceAll(_ tasks: [Task]) async throws {
+        let records = try tasks.map { try TaskRecord($0) }
+        try await dbWriter.write { db in
+            _ = try TaskRecord.deleteAll(db)
+            for record in records { try record.insert(db) }
         }
     }
 
