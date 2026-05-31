@@ -12,9 +12,17 @@ struct TaskEditorView: View {
     @State private var tags: [String]
     @State private var tagDraft = ""
     @State private var saveError: String?
+    // C2 — due date + recurrence
+    @State private var dueDate: Date?
+    @State private var recurrence: RecurrenceType
+    @State private var snoozedUntil: Date?
+    @State private var estimateText: String
     /// The task being edited (nil = creating a new one). Saving an edit mutates
     /// THIS value so non-edited (Phase-2) fields survive.
     private let original: Task?
+    /// Stable id for this editing session. For new tasks, reserved once so
+    /// the dependency graph the picker validates against matches the persisted task (C4).
+    private let editingTaskID: String
 
     init(request: EditorRequest) {
         switch request {
@@ -23,13 +31,23 @@ struct TaskEditorView: View {
             _description = State(initialValue: prefill?.descriptionAdditions.joined(separator: "\n") ?? "")
             _quadrant = State(initialValue: prefill.map { Quadrant(urgent: $0.urgent, important: $0.important) } ?? q)
             _tags = State(initialValue: prefill?.tags ?? [])
+            _dueDate = State(initialValue: nil)
+            _recurrence = State(initialValue: .none)
+            _snoozedUntil = State(initialValue: nil)
+            _estimateText = State(initialValue: "")
             original = nil
+            editingTaskID = IDGenerator.generate(size: IDGenerator.Size.task)
         case .edit(let t):
             _title = State(initialValue: t.title)
             _description = State(initialValue: t.description)
             _quadrant = State(initialValue: t.quadrant)
             _tags = State(initialValue: t.tags)
+            _dueDate = State(initialValue: t.dueDate)
+            _recurrence = State(initialValue: t.recurrence)
+            _snoozedUntil = State(initialValue: t.snoozedUntil)
+            _estimateText = State(initialValue: t.estimatedMinutes.map(String.init) ?? "")
             original = t
+            editingTaskID = t.id
         }
     }
 
@@ -46,6 +64,8 @@ struct TaskEditorView: View {
                     TextField(String(localized: "Description"), text: $description, axis: .vertical)
                         .lineLimit(3...8)
                 }
+                dueDateSection
+                recurrenceSection
                 if let saveError {
                     Section { Text(saveError).font(.caption).foregroundStyle(.red) }
                 }
@@ -100,6 +120,48 @@ struct TaskEditorView: View {
         }
     }
 
+    private var dueDateSection: some View {
+        Section(String(localized: "Due Date")) {
+            Toggle(String(localized: "Has due date"), isOn: Binding(
+                get: { dueDate != nil },
+                set: { dueDate = $0 ? (dueDate ?? Calendar.current.startOfDay(for: .now)) : nil }
+            ))
+            if dueDate != nil {
+                DatePicker(String(localized: "Due"),
+                           selection: Binding(get: { dueDate ?? .now }, set: { dueDate = $0 }),
+                           displayedComponents: .date)
+            }
+            HStack {
+                ForEach(DueDatePreset.allCases, id: \.self) { preset in
+                    Button(preset.label) {
+                        dueDate = DueDatePresets.resolve(preset, today: .now, calendar: .current)
+                    }
+                    .buttonStyle(.bordered)
+                    .font(.caption)
+                }
+            }
+        }
+    }
+
+    private var recurrenceSection: some View {
+        Section(String(localized: "Repeat")) {
+            Picker(String(localized: "Recurrence"), selection: $recurrence) {
+                ForEach(RecurrenceType.allCases, id: \.self) { kind in
+                    Text(recurrenceLabel(kind)).tag(kind)
+                }
+            }
+        }
+    }
+
+    private func recurrenceLabel(_ kind: RecurrenceType) -> String {
+        switch kind {
+        case .none:    String(localized: "Never")
+        case .daily:   String(localized: "Daily")
+        case .weekly:  String(localized: "Weekly")
+        case .monthly: String(localized: "Monthly")
+        }
+    }
+
     private func addTag() {
         let t = tagDraft.trimmingCharacters(in: CharacterSet(charactersIn: " ,#")).lowercased()
         tagDraft = ""
@@ -116,13 +178,24 @@ struct TaskEditorView: View {
             task.urgent = quadrant.isUrgent
             task.important = quadrant.isImportant
             task.tags = tags
+            // C2: due date + recurrence
+            // TODO: Phase-4 — editing dueDate should reset reminder state (§6.3); no reminder UI yet.
+            task.dueDate = dueDate
+            task.recurrence = recurrence
+            task.snoozedUntil = snoozedUntil
+            task.estimatedMinutes = FieldLimits.normalizedEstimate(Int(estimateText))
         } else {
             let now = Date.now
-            task = Task(id: IDGenerator.generate(size: IDGenerator.Size.task),
+            task = Task(id: editingTaskID,
                         title: title.trimmingCharacters(in: .whitespaces),
                         description: description,
                         urgent: quadrant.isUrgent, important: quadrant.isImportant,
-                        createdAt: now, updatedAt: now, tags: tags)
+                        createdAt: now, updatedAt: now,
+                        dueDate: dueDate,
+                        recurrence: recurrence,
+                        tags: tags,
+                        snoozedUntil: snoozedUntil,
+                        estimatedMinutes: FieldLimits.normalizedEstimate(Int(estimateText)))
         }
         _Concurrency.Task { @MainActor in
             do {
