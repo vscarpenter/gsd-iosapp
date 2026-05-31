@@ -76,11 +76,19 @@ public final class TaskStore {
     }
 
     public func toggleComplete(_ task: Task) async throws {
-        var t = task; let now = clock()
-        t.completed.toggle()
-        t.completedAt = t.completed ? now : nil
+        var t = task
+        let now = clock()
+        let willComplete = !t.completed
+        t.completed = willComplete
+        t.completedAt = willComplete ? now : nil
         t.updatedAt = now
-        try await repository.upsert(t)   // recurrence spawning on completion is Phase 2
+        try await repository.upsert(t)
+
+        // Completing a recurring task spawns the next instance (product spec §6.5).
+        guard willComplete,
+              let next = RecurrenceEngine.spawnNext(from: t, now: now, newID: newID(), calendar: calendar)
+        else { return }
+        try await repository.upsert(next)
     }
 
     public func move(_ task: Task, to quadrant: Quadrant) async throws {
