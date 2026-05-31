@@ -132,4 +132,93 @@ struct TaskStoreDepthTests {
         #expect(updated.timeEntries[0].endedAt == fixed)
         #expect(updated.timeSpent == 5)
     }
+
+    @Test func addSubtaskAppendsIncompleteItem() async throws {
+        let (store, repo) = try makeStore()
+        let task = Task(id: "orig", title: "Trip", urgent: false, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        try await repo.upsert(task)
+        try await store.addSubtask(to: task, title: "Pack bags")
+        let updated = try #require(try await repo.fetch(id: "orig"))
+        #expect(updated.subtasks.map(\.title) == ["Pack bags"])
+        #expect(updated.subtasks[0].completed == false)
+        #expect(updated.updatedAt == fixed)
+    }
+
+    @Test func toggleSubtaskFlipsCompletion() async throws {
+        let (store, repo) = try makeStore()
+        var task = Task(id: "orig", title: "Trip", urgent: false, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        task.subtasks = [Subtask(id: "s1", title: "Pack", completed: false)]
+        try await repo.upsert(task)
+        try await store.toggleSubtask(in: task, subtaskID: "s1")
+        #expect(try await repo.fetch(id: "orig")?.subtasks.first?.completed == true)
+    }
+
+    @Test func deleteSubtaskRemovesIt() async throws {
+        let (store, repo) = try makeStore()
+        var task = Task(id: "orig", title: "Trip", urgent: false, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        task.subtasks = [Subtask(id: "s1", title: "A"), Subtask(id: "s2", title: "B")]
+        try await repo.upsert(task)
+        try await store.deleteSubtask(in: task, subtaskID: "s1")
+        #expect(try await repo.fetch(id: "orig")?.subtasks.map(\.id) == ["s2"])
+    }
+
+    @Test func moveSubtaskReorders() async throws {
+        let (store, repo) = try makeStore()
+        var task = Task(id: "orig", title: "Trip", urgent: false, important: true,
+                        createdAt: fixed, updatedAt: fixed)
+        task.subtasks = [Subtask(id: "s1", title: "A"), Subtask(id: "s2", title: "B"),
+                         Subtask(id: "s3", title: "C")]
+        try await repo.upsert(task)
+        // Move the item at index 2 ("C") to the front.
+        try await store.moveSubtask(in: task, fromOffsets: IndexSet(integer: 2), toOffset: 0)
+        #expect(try await repo.fetch(id: "orig")?.subtasks.map(\.id) == ["s3", "s1", "s2"])
+    }
+
+    @Test func addDependencyValidatesAndPersists() async throws {
+        let (store, repo) = try makeStore()
+        let now = fixed
+        try await repo.upsert(Task(id: "A", title: "A", urgent: true, important: true,
+                                   createdAt: now, updatedAt: now))
+        try await repo.upsert(Task(id: "B", title: "B", urgent: true, important: true,
+                                   createdAt: now, updatedAt: now))
+        store.start()
+        var waited = 0
+        while store.tasks.count < 2 && waited < 100 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        let a = try #require(store.tasks.first { $0.id == "A" })
+        try await store.addDependency("B", to: a)
+        #expect(try await repo.fetch(id: "A")?.dependencies == ["B"])
+    }
+
+    @Test func addDependencyRejectsCycle() async throws {
+        let (store, repo) = try makeStore()
+        let now = fixed
+        // A depends on B already; adding A as a dependency of B closes a cycle.
+        try await repo.upsert(Task(id: "A", title: "A", urgent: true, important: true,
+                                   createdAt: now, updatedAt: now, dependencies: ["B"]))
+        try await repo.upsert(Task(id: "B", title: "B", urgent: true, important: true,
+                                   createdAt: now, updatedAt: now))
+        store.start()
+        var waited = 0
+        while store.tasks.count < 2 && waited < 100 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        let b = try #require(store.tasks.first { $0.id == "B" })
+        await #expect(throws: DependencyError.cycle) {
+            try await store.addDependency("A", to: b)
+        }
+    }
+
+    @Test func removeDependencyDropsIt() async throws {
+        let (store, repo) = try makeStore()
+        let task = Task(id: "A", title: "A", urgent: true, important: true,
+                        createdAt: fixed, updatedAt: fixed, dependencies: ["B", "C"])
+        try await repo.upsert(task)
+        try await store.removeDependency("B", from: task)
+        #expect(try await repo.fetch(id: "A")?.dependencies == ["C"])
+    }
 }

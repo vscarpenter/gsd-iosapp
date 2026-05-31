@@ -153,6 +153,66 @@ public final class TaskStore {
         size == IDGenerator.Size.task ? newID() : IDGenerator.generate(size: size)
     }
 
+    // MARK: Subtasks (product spec §6.6)
+
+    public func addSubtask(to task: Task, title: String) async throws {
+        var t = task
+        t.subtasks.append(Subtask(id: newID(), title: title, completed: false))
+        try await persist(t)
+    }
+
+    public func toggleSubtask(in task: Task, subtaskID: String) async throws {
+        var t = task
+        guard let index = t.subtasks.firstIndex(where: { $0.id == subtaskID }) else { return }
+        t.subtasks[index].completed.toggle()
+        try await persist(t)
+    }
+
+    public func deleteSubtask(in task: Task, subtaskID: String) async throws {
+        var t = task
+        t.subtasks.removeAll { $0.id == subtaskID }
+        try await persist(t)
+    }
+
+    public func moveSubtask(in task: Task, fromOffsets: IndexSet, toOffset: Int) async throws {
+        var t = task
+        // `Array.move(fromOffsets:toOffset:)` is SwiftUI-only; implement it with
+        // Foundation primitives so GSDStore stays SwiftUI-free.
+        let moved = fromOffsets.sorted(by: >).map { idx -> Subtask in
+            let item = t.subtasks[idx]; t.subtasks.remove(at: idx); return item
+        }.reversed()
+        let insertAt = toOffset > (fromOffsets.first ?? 0) ? toOffset - fromOffsets.count : toOffset
+        t.subtasks.insert(contentsOf: moved, at: insertAt)
+        try await persist(t)
+    }
+
+    // MARK: Dependencies (product spec §6.8)
+
+    /// Add a dependency edge after validating it against the live graph (no
+    /// self-reference, the id must exist, no cycle). Throws `DependencyError` on rejection.
+    public func addDependency(_ dependencyID: String, to task: Task) async throws {
+        let graph = DependencyGraph(tasks: tasks)
+        try graph.validateAdd(dependency: dependencyID, to: task.id)
+        var t = task
+        guard !t.dependencies.contains(dependencyID) else { return }
+        t.dependencies.append(dependencyID)
+        try await persist(t)
+    }
+
+    public func removeDependency(_ dependencyID: String, from task: Task) async throws {
+        var t = task
+        t.dependencies.removeAll { $0 == dependencyID }
+        try await persist(t)
+    }
+
+    /// Shared write path: stamp `updatedAt` and upsert. (Subtask/dependency edits do
+    /// not re-validate field limits here — the editor's Save path does, via `save`.)
+    private func persist(_ task: Task) async throws {
+        var t = task
+        t.updatedAt = clock()
+        try await repository.upsert(t)
+    }
+
     // MARK: Reads
 
     public func tasks(in quadrant: Quadrant, showCompleted: Bool) -> [Task] {
