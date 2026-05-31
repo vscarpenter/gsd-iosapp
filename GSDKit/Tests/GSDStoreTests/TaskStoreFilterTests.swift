@@ -39,4 +39,22 @@ struct TaskStoreFilterTests {
         let active = store.tasks(matching: FilterCriteria(status: .active))
         #expect(active.map(\.id) == ["active"])
     }
+
+    @Test func tasksMatchingUsesInjectedClockForDatePredicates() async throws {
+        let (store, repo) = try makeStore()
+        // Build due dates in UTC (matching the store's injected calendar).
+        func due(_ y: Int, _ m: Int, _ d: Int) -> Date {
+            var c = DateComponents(); c.year = y; c.month = m; c.day = d; c.hour = 12
+            var cal = Calendar(identifier: .gregorian); cal.timeZone = TimeZone(identifier: "UTC")!
+            return cal.date(from: c)!
+        }
+        // Store clock = 2026-06-15 09:00 UTC. due 6/14 is overdue; 6/20 is not.
+        try await repo.upsert(Task(id: "overdue", title: "O", urgent: true, important: true,
+                                   createdAt: now, updatedAt: now, dueDate: due(2026, 6, 14)))
+        try await repo.upsert(Task(id: "future", title: "F", urgent: true, important: true,
+                                   createdAt: now, updatedAt: now, dueDate: due(2026, 6, 20)))
+        try await waitForTasks(store, count: 2)
+        // `overdue` is resolved against the store's INJECTED clock (2026-06-15), not Date().
+        #expect(store.tasks(matching: FilterCriteria(overdue: true)).map(\.id) == ["overdue"])
+    }
 }
