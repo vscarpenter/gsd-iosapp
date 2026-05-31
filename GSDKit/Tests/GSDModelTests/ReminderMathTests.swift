@@ -82,6 +82,28 @@ struct ReminderMathTests {
         #expect(q(at(2026,6,15,22,0), "22:00", "22:00") == at(2026,6,15,22,0))
     }
 
+    // MARK: applyQuietHours across DST transitions — locks wall-clock reconstruction
+    @Test func quietHoursDefersToWallClockEndAcrossDST() {
+        // America/New_York observes DST, so the window-end must be rebuilt as a wall-clock
+        // time (07:00 local) rather than by adding elapsed hours. With the elapsed-time bug
+        // the resolved hour would be 08 (spring-forward) or 06 (fall-back) instead of 07.
+        var ny = Calendar(identifier: .gregorian)
+        ny.timeZone = TimeZone(identifier: "America/New_York")!
+        func nyAt(_ y: Int, _ mo: Int, _ d: Int, _ h: Int, _ mi: Int) -> Date {
+            ny.date(from: DateComponents(year: y, month: mo, day: d, hour: h, minute: mi))!
+        }
+        func deferredHour(_ fire: Date) -> Int {
+            let target = ReminderMath.applyQuietHours(fire, quietStart: "22:00", quietEnd: "07:00", calendar: ny)
+            return ny.component(.hour, from: target)
+        }
+        // Spring-forward night: clocks jump 02:00 → 03:00 on 2026-03-08. A 23:30 fire defers
+        // to 07:00 EDT the next morning, not 08:00.
+        #expect(deferredHour(nyAt(2026, 3, 8, 23, 30)) == 7)
+        // Fall-back night: clocks fall 02:00 → 01:00 on 2026-11-01. A 23:30 fire defers to
+        // 07:00 EST the next morning, not 06:00.
+        #expect(deferredHour(nyAt(2026, 11, 1, 23, 30)) == 7)
+    }
+
     // MARK: badgeCount — probe badge 8/8
     private func dueTask(_ due: Date?, completed: Bool = false) -> Task {
         Task(id: UUID().uuidString, title: "t", urgent: false, important: false, completed: completed,

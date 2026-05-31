@@ -55,8 +55,8 @@ public enum ReminderMath {
         guard inWindow else { return fire }
 
         let startOfDay = calendar.startOfDay(for: fire)
-        var target = calendar.date(byAdding: DateComponents(hour: end.hour, minute: end.minute),
-                                   to: startOfDay)!
+        var target = calendar.date(bySettingHour: end.hour, minute: end.minute, second: 0,
+                                   of: startOfDay)!
         if target <= fire { target = calendar.date(byAdding: .day, value: 1, to: target)! }
         return target
     }
