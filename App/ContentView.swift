@@ -34,19 +34,17 @@ private struct RegularRootView: View {
                 Label(String(localized: "Matrix"), systemImage: "square.grid.2x2").tag(Item.matrix)
                 if !store.pinnedViews.isEmpty {
                     Section(String(localized: "Pinned")) {
-                        ForEach(store.pinnedViews) { view in
-                            SmartViewRow(view: view).tag(Item.smartView(view.id))
-                        }
+                        ForEach(store.pinnedViews) { view in sidebarRow(view) }
                     }
                 }
                 Section(String(localized: "Built-in")) {
                     ForEach(BuiltInSmartViews.all.filter { !store.pinnedSmartViewIds.contains($0.id) }) { view in
-                        SmartViewRow(view: view).tag(Item.smartView(view.id))
+                        sidebarRow(view)
                     }
                 }
                 Section(String(localized: "Custom")) {
                     ForEach(store.customViews.filter { !store.pinnedSmartViewIds.contains($0.id) }) { view in
-                        SmartViewRow(view: view).tag(Item.smartView(view.id))
+                        sidebarRow(view)
                     }
                     Button { editorTarget = .create } label: {
                         Label(String(localized: "New Smart View"), systemImage: "plus")
@@ -67,5 +65,29 @@ private struct RegularRootView: View {
                 MatrixGridView()
             }
         }
+    }
+
+    @ViewBuilder private func sidebarRow(_ view: SmartView) -> some View {
+        SmartViewRow(view: view)
+            .tag(Item.smartView(view.id))
+            .contextMenu {
+                let isPinned = store.pinnedSmartViewIds.contains(view.id)
+                Button {
+                    if isPinned { store.unpin(view.id) } else { store.pin(view.id) }
+                } label: {
+                    Label(isPinned ? String(localized: "Unpin") : String(localized: "Pin"),
+                          systemImage: isPinned ? "pin.slash" : "pin")
+                }
+                if !view.isBuiltIn {
+                    Button { editorTarget = .edit(view) } label: {
+                        Label(String(localized: "Edit"), systemImage: "pencil")
+                    }
+                    Button(role: .destructive) {
+                        _Concurrency.Task { try? await store.deleteView(id: view.id) }
+                    } label: {
+                        Label(String(localized: "Delete"), systemImage: "trash")
+                    }
+                }
+            }
     }
 }

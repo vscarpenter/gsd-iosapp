@@ -27,6 +27,7 @@ struct SmartViewEditorView: View {
     @State private var hasStart: Bool
     @State private var hasEnd: Bool
     @State private var saveError: String?
+    @State private var isSaving = false
 
     private let editingID: String?
 
@@ -34,6 +35,20 @@ struct SmartViewEditorView: View {
     private let iconChoices = ["star", "flag", "bolt", "tag", "tray.full", "list.bullet",
                                "calendar", "clock", "checkmark.circle", "exclamationmark.triangle"]
     private let maxNameLength = 60
+
+    /// Human-readable VoiceOver labels for each icon choice.
+    private let iconLabels: [String: String] = [
+        "star": String(localized: "Star"),
+        "flag": String(localized: "Flag"),
+        "bolt": String(localized: "Lightning bolt"),
+        "tag": String(localized: "Tag"),
+        "tray.full": String(localized: "Inbox"),
+        "list.bullet": String(localized: "List"),
+        "calendar": String(localized: "Calendar"),
+        "clock": String(localized: "Clock"),
+        "checkmark.circle": String(localized: "Checkmark"),
+        "exclamationmark.triangle": String(localized: "Warning"),
+    ]
 
     init(target: SmartViewEditorTarget) {
         switch target {
@@ -83,7 +98,7 @@ struct SmartViewEditorView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "Save"), action: save)
-                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || isSaving)
                 }
             }
         }
@@ -100,7 +115,7 @@ struct SmartViewEditorView: View {
                             .background(icon == choice ? Color.accentColor.opacity(0.2) : .clear,
                                         in: RoundedRectangle(cornerRadius: 8))
                     }
-                    .accessibilityLabel(choice)
+                    .accessibilityLabel(iconLabels[choice] ?? choice)
                     .accessibilityAddTraits(icon == choice ? .isSelected : [])
                 }
             }
@@ -122,7 +137,9 @@ struct SmartViewEditorView: View {
                 let on = criteria.quadrants.contains(q)
                 Button { toggle(q, in: \.quadrants) } label: {
                     Label(q.title, systemImage: QuadrantStyle.symbol(q))
-                        .frame(maxWidth: .infinity).padding(8)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .contentShape(Rectangle())
+                        .padding(8)
                         .background(on ? QuadrantStyle.accent(q).opacity(0.2) : .clear,
                                     in: RoundedRectangle(cornerRadius: 8))
                 }
@@ -182,6 +199,8 @@ struct SmartViewEditorView: View {
                 let on = criteria.recurrence.contains(kind)
                 Button { toggle(kind, in: \.recurrence) } label: {
                     Text(recurrenceLabel(kind))
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
                         .padding(.horizontal, 12).padding(.vertical, 6)
                         .background(on ? Color.accentColor.opacity(0.2) : .clear,
                                     in: Capsule())
@@ -247,7 +266,10 @@ struct SmartViewEditorView: View {
         guard trimmed.count <= maxNameLength else {
             saveError = String(localized: "Name must be 60 characters or fewer."); return
         }
+        guard !isSaving else { return }
+        isSaving = true
         _Concurrency.Task { @MainActor in
+            defer { isSaving = false }
             do {
                 if let editingID {
                     try await store.updateView(SmartView(id: editingID, name: trimmed, icon: icon,
