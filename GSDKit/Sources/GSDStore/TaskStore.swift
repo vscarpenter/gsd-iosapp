@@ -405,17 +405,23 @@ public final class TaskStore {
 
     // MARK: Notification settings (App-Group UserDefaults; mirrors archiveSettings, product spec §5.4)
 
+    /// Read `NotificationSettings` from a `UserDefaults` suite without a store instance — used
+    /// by the App's live scheduler (which captures the App-Group suite directly to avoid a
+    /// store-construction cycle). The instance getter delegates here so the shape can't drift.
+    /// `nonisolated` so it can be called from the scheduler's non-MainActor `@Sendable` closure.
+    nonisolated public static func readNotificationSettings(from defaults: UserDefaults) -> NotificationSettings {
+        NotificationSettings(
+            enabled: defaults.object(forKey: AppGroupDefaults.Key.notificationsEnabled) as? Bool ?? true,
+            defaultReminder: defaults.object(forKey: AppGroupDefaults.Key.notificationDefaultReminder) as? Int ?? 15,
+            soundEnabled: defaults.object(forKey: AppGroupDefaults.Key.notificationSoundEnabled) as? Bool ?? true,
+            quietHoursStart: defaults.string(forKey: AppGroupDefaults.Key.notificationQuietHoursStart),
+            quietHoursEnd: defaults.string(forKey: AppGroupDefaults.Key.notificationQuietHoursEnd),
+            permissionAsked: defaults.bool(forKey: AppGroupDefaults.Key.notificationPermissionAsked)
+        )
+    }
+
     public var notificationSettings: NotificationSettings {
-        get {
-            NotificationSettings(
-                enabled: defaults.object(forKey: AppGroupDefaults.Key.notificationsEnabled) as? Bool ?? true,
-                defaultReminder: defaults.object(forKey: AppGroupDefaults.Key.notificationDefaultReminder) as? Int ?? 15,
-                soundEnabled: defaults.object(forKey: AppGroupDefaults.Key.notificationSoundEnabled) as? Bool ?? true,
-                quietHoursStart: defaults.string(forKey: AppGroupDefaults.Key.notificationQuietHoursStart),
-                quietHoursEnd: defaults.string(forKey: AppGroupDefaults.Key.notificationQuietHoursEnd),
-                permissionAsked: defaults.bool(forKey: AppGroupDefaults.Key.notificationPermissionAsked)
-            )
-        }
+        get { TaskStore.readNotificationSettings(from: defaults) }
         set {
             defaults.set(newValue.enabled, forKey: AppGroupDefaults.Key.notificationsEnabled)
             defaults.set(newValue.defaultReminder, forKey: AppGroupDefaults.Key.notificationDefaultReminder)
@@ -436,6 +442,20 @@ public final class TaskStore {
     public func refreshBadge() async {
         let count = ReminderMath.badgeCount(tasks: tasks, now: clock(), calendar: calendar)
         await reminders.setBadge(count)
+    }
+
+    /// Request OS notification authorization (contextual — product spec §9.2) and stamp
+    /// `permissionAsked`. Routes through the injected scheduler so `GSDStore` stays free of
+    /// `UserNotifications`. Returns whether reminders are authorized after the request. The
+    /// scheduler's own `requestAuthorizationIfNeeded` no-ops when already determined, so calling
+    /// this repeatedly (e.g. on every editor enable) only prompts once.
+    @discardableResult
+    public func requestNotificationAuthorization() async -> Bool {
+        let granted = await reminders.requestAuthorizationIfNeeded()
+        var settings = notificationSettings
+        settings.permissionAsked = true
+        notificationSettings = settings
+        return granted
     }
 
     // MARK: Bulk operations (multi-select; each op is per-task, validated, stamps updatedAt)
