@@ -44,9 +44,9 @@ struct QuadrantCell: View {
                 .draggable(task.id)
                 .contextMenu { cellMenu(task) }
                 .accessibilityActions {
-                    Button(task.completed ? "Uncomplete" : "Complete") { actions.toggle(task) }
-                    Button("Edit") { onEdit(task) }
-                    Button("Delete") { actions.delete(task) }
+                    Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
+                    Button(String(localized: "Edit")) { onEdit(task) }
+                    Button(String(localized: "Delete")) { actions.delete(task) }
                     Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
                     if TimeTracking.runningEntry(task.timeEntries) == nil {
                         Button(String(localized: "Start timer")) { actions.startTimer(task) }
@@ -70,9 +70,9 @@ struct QuadrantCell: View {
     }
 
     @ViewBuilder private func cellMenu(_ task: Task) -> some View {
-        Button { onEdit(task) } label: { Label("Edit", systemImage: "pencil") }
+        Button { onEdit(task) } label: { Label(String(localized: "Edit"), systemImage: "pencil") }
         Button { actions.toggle(task) } label: {
-            Label(task.completed ? "Uncomplete" : "Complete", systemImage: "checkmark")
+            Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"), systemImage: "checkmark")
         }
         if TimeTracking.runningEntry(task.timeEntries) == nil {
             Button(String(localized: "Start Timer")) { actions.startTimer(task) }
@@ -84,7 +84,7 @@ struct QuadrantCell: View {
                 Button(snoozeMenuPresets[i].0) { actions.snooze(task, by: snoozeMenuPresets[i].1) }
             }
         }
-        Button(role: .destructive) { actions.delete(task) } label: { Label("Delete", systemImage: "trash") }
+        Button(role: .destructive) { actions.delete(task) } label: { Label(String(localized: "Delete"), systemImage: "trash") }
     }
 
     /// Six §6.7 snooze presets. Intentionally NOT extracted to a shared constant

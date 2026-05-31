@@ -36,7 +36,7 @@ struct QuadrantSection: View {
                     .onTapGesture { onEdit(task) }
                     .swipeActions(edge: .leading) {
                         Button { actions.toggle(task) } label: {
-                            Label(task.completed ? "Uncomplete" : "Complete",
+                            Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"),
                                   systemImage: task.completed ? "arrow.uturn.left" : "checkmark")
                         }
                         .tint(QuadrantStyle.accent(quadrant))
@@ -50,9 +50,9 @@ struct QuadrantSection: View {
                     }
                     .contextMenu { rowMenu(task) }
                     .accessibilityActions {
-                        Button(task.completed ? "Uncomplete" : "Complete") { actions.toggle(task) }
-                        Button("Edit") { onEdit(task) }
-                        Button("Delete") { actions.delete(task) }
+                        Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
+                        Button(String(localized: "Edit")) { onEdit(task) }
+                        Button(String(localized: "Delete")) { actions.delete(task) }
                         Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
                         if TimeTracking.runningEntry(task.timeEntries) == nil {
                             Button(String(localized: "Start timer")) { actions.startTimer(task) }
@@ -76,9 +76,9 @@ struct QuadrantSection: View {
     }
 
     @ViewBuilder private func rowMenu(_ task: Task) -> some View {
-        Button { onEdit(task) } label: { Label("Edit", systemImage: "pencil") }
+        Button { onEdit(task) } label: { Label(String(localized: "Edit"), systemImage: "pencil") }
         Button { actions.toggle(task) } label: {
-            Label(task.completed ? "Uncomplete" : "Complete", systemImage: "checkmark")
+            Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"), systemImage: "checkmark")
         }
         if TimeTracking.runningEntry(task.timeEntries) == nil {
             Button(String(localized: "Start Timer")) { actions.startTimer(task) }
@@ -95,7 +95,7 @@ struct QuadrantSection: View {
                 Button(q.title) { actions.move(task, to: q) }
             }
         }
-        Button(role: .destructive) { actions.delete(task) } label: { Label("Delete", systemImage: "trash") }
+        Button(role: .destructive) { actions.delete(task) } label: { Label(String(localized: "Delete"), systemImage: "trash") }
     }
 
     /// Six §6.7 snooze presets. Intentionally NOT extracted to a shared constant
