@@ -47,7 +47,7 @@ struct TaskCardView: View {
                 }
 
                 // --- Phase 2 indicators ---
-                metadataRow
+                if hasMetadata { metadataRow }
                 if !task.subtasks.isEmpty { subtaskProgress }
             }
 
@@ -64,6 +64,14 @@ struct TaskCardView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var hasMetadata: Bool {
+        task.dueDate != nil || task.recurrence != .none
+            || blockedByCount > 0 || blockingCount > 0
+            || TimeTracking.runningEntry(task.timeEntries) != nil
+            || (task.timeSpent ?? 0) > 0
+            || (task.snoozedUntil.map { $0 > now } ?? false)
     }
 
     @ViewBuilder private var metadataRow: some View {
@@ -129,7 +137,22 @@ struct TaskCardView: View {
         let state = task.completed ? String(localized: "completed") : String(localized: "active")
         var parts = ["\(task.title)", task.quadrant.title, state]
         if let dueDate = task.dueDate { parts.append(RelativeDate.dueString(for: dueDate, reference: now)) }
+        if task.recurrence != .none { parts.append(String(localized: "repeats")) }
         if isBlocked { parts.append(String(localized: "blocked by \(blockedByCount)")) }
+        if blockingCount > 0 { parts.append(String(localized: "blocking \(blockingCount)")) }
+        if !task.subtasks.isEmpty {
+            let done = task.subtasks.filter(\.completed).count
+            parts.append(String(localized: "\(done) of \(task.subtasks.count) subtasks done"))
+        }
+        if let runningStart = TimeTracking.runningEntry(task.timeEntries)?.startedAt {
+            let elapsed = Int(now.timeIntervalSince(runningStart) / 60.0)
+            parts.append(String(localized: "timer running \(TimeTracking.format(minutes: elapsed))"))
+        } else if let timeSpent = task.timeSpent, timeSpent > 0 {
+            parts.append(String(localized: "tracked \(TimeTracking.format(minutes: timeSpent))"))
+        }
+        if let snoozedUntil = task.snoozedUntil, snoozedUntil > now {
+            parts.append(String(localized: "snoozed \(RelativeDate.remainingString(until: snoozedUntil, reference: now))"))
+        }
         return parts.joined(separator: ", ")
     }
 }
