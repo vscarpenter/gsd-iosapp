@@ -17,6 +17,9 @@ struct TaskEditorView: View {
     @State private var recurrence: RecurrenceType
     @State private var snoozedUntil: Date?
     @State private var estimateText: String
+    // C3 — subtasks
+    @State private var subtasks: [Subtask]
+    @State private var subtaskDraft = ""
     /// The task being edited (nil = creating a new one). Saving an edit mutates
     /// THIS value so non-edited (Phase-2) fields survive.
     private let original: Task?
@@ -35,6 +38,7 @@ struct TaskEditorView: View {
             _recurrence = State(initialValue: .none)
             _snoozedUntil = State(initialValue: nil)
             _estimateText = State(initialValue: "")
+            _subtasks = State(initialValue: [])
             original = nil
             editingTaskID = IDGenerator.generate(size: IDGenerator.Size.task)
         case .edit(let t):
@@ -46,6 +50,7 @@ struct TaskEditorView: View {
             _recurrence = State(initialValue: t.recurrence)
             _snoozedUntil = State(initialValue: t.snoozedUntil)
             _estimateText = State(initialValue: t.estimatedMinutes.map(String.init) ?? "")
+            _subtasks = State(initialValue: t.subtasks)
             original = t
             editingTaskID = t.id
         }
@@ -66,12 +71,16 @@ struct TaskEditorView: View {
                 }
                 dueDateSection
                 recurrenceSection
+                subtasksSection
+                estimateSection
+                snoozeSection
                 if let saveError {
                     Section { Text(saveError).font(.caption).foregroundStyle(.red) }
                 }
             }
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) { EditButton() }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "Cancel")) { dismiss() }
                 }
@@ -153,6 +162,99 @@ struct TaskEditorView: View {
         }
     }
 
+    private var subtasksSection: some View {
+        Section(String(localized: "Subtasks")) {
+            ForEach($subtasks) { $subtask in
+                HStack {
+                    Button {
+                        subtask.completed.toggle()
+                    } label: {
+                        Image(systemName: subtask.completed ? "checkmark.circle.fill" : "circle")
+                    }
+                    .buttonStyle(.plain)
+                    TextField(String(localized: "Subtask"), text: $subtask.title)
+                        .strikethrough(subtask.completed)
+                }
+            }
+            .onDelete { subtasks.remove(atOffsets: $0) }
+            .onMove { subtasks.move(fromOffsets: $0, toOffset: $1) }
+            HStack {
+                TextField(String(localized: "Add subtask"), text: $subtaskDraft)
+                    .onSubmit(addSubtask)
+                Button(String(localized: "Add"), action: addSubtask)
+                    .disabled(subtaskDraft.trimmingCharacters(in: .whitespaces).isEmpty
+                              || subtasks.count >= FieldLimits.maxSubtasks)
+            }
+        }
+    }
+
+    private var estimateSection: some View {
+        Section(String(localized: "Estimate")) {
+            HStack {
+                TextField(String(localized: "Minutes"), text: $estimateText)
+                    .keyboardType(.numberPad)
+                Spacer()
+                Text(trackedReadout).font(.caption).foregroundStyle(trackedColor)
+            }
+        }
+    }
+
+    private var snoozeSection: some View {
+        Section(String(localized: "Snooze")) {
+            if let snoozedUntil, snoozedUntil > .now {
+                HStack {
+                    Text(RelativeDate.remainingString(until: snoozedUntil))
+                    Spacer()
+                    Button(String(localized: "Clear"), role: .destructive) {
+                        self.snoozedUntil = nil
+                    }
+                }
+            }
+            Menu(String(localized: "Snooze for…")) {
+                ForEach(snoozeMenuPresets, id: \.0) { label, preset in
+                    Button(label) {
+                        snoozedUntil = Date.now.addingTimeInterval(
+                            min(preset.interval, FieldLimits.maxSnoozeInterval))
+                    }
+                }
+            }
+        }
+    }
+
+    private func addSubtask() {
+        let title = subtaskDraft.trimmingCharacters(in: .whitespaces)
+        subtaskDraft = ""
+        guard !title.isEmpty, subtasks.count < FieldLimits.maxSubtasks else { return }
+        subtasks.append(Subtask(id: IDGenerator.generate(size: IDGenerator.Size.task),
+                                title: String(title.prefix(FieldLimits.subtaskTitleRange.upperBound)),
+                                completed: false))
+    }
+
+    /// "Tracked Xm of Ym estimated" — over-estimate styled in the alert color (§6.9).
+    private var trackedMinutes: Int { TimeTracking.timeSpentMinutes(original?.timeEntries ?? []) }
+    private var trackedReadout: String {
+        let tracked = TimeTracking.format(minutes: trackedMinutes)
+        guard let estimate = Int(estimateText), estimate > 0 else {
+            return String(localized: "Tracked \(tracked)")
+        }
+        return String(localized: "Tracked \(tracked) of \(TimeTracking.format(minutes: estimate))")
+    }
+    private var trackedColor: Color {
+        guard let estimate = Int(estimateText), estimate > 0 else { return .secondary }
+        return trackedMinutes > estimate ? .red : .secondary
+    }
+
+    /// The six §6.7 snooze presets, labels localized. (The matrix row in Group D
+    /// uses the same list; a six-entry UI literal is clearer duplicated than shared.)
+    private var snoozeMenuPresets: [(String, SnoozePreset)] {
+        [(String(localized: "15 minutes"), .fifteenMinutes),
+         (String(localized: "30 minutes"), .thirtyMinutes),
+         (String(localized: "1 hour"), .oneHour),
+         (String(localized: "3 hours"), .threeHours),
+         (String(localized: "Tomorrow"), .tomorrow),
+         (String(localized: "Next week"), .nextWeek)]
+    }
+
     private func recurrenceLabel(_ kind: RecurrenceType) -> String {
         switch kind {
         case .none:    String(localized: "Never")
@@ -184,6 +286,8 @@ struct TaskEditorView: View {
             task.recurrence = recurrence
             task.snoozedUntil = snoozedUntil
             task.estimatedMinutes = FieldLimits.normalizedEstimate(Int(estimateText))
+            // C3: subtasks
+            task.subtasks = subtasks
         } else {
             let now = Date.now
             task = Task(id: editingTaskID,
@@ -194,6 +298,7 @@ struct TaskEditorView: View {
                         dueDate: dueDate,
                         recurrence: recurrence,
                         tags: tags,
+                        subtasks: subtasks,
                         snoozedUntil: snoozedUntil,
                         estimatedMinutes: FieldLimits.normalizedEstimate(Int(estimateText)))
         }
