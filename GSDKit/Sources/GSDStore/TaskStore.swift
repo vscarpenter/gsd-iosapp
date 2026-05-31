@@ -95,9 +95,15 @@ public final class TaskStore {
     }
 
     public func toggleComplete(_ task: Task) async throws {
-        var t = task
         let now = clock()
-        let willComplete = !t.completed
+        // Decide the completion transition from the PERSISTED row, not the
+        // (async-lagging) snapshot the caller holds — otherwise a double-fired
+        // complete spawns duplicate recurrence instances (mirrors addDependency's
+        // ground-truth read).
+        let persisted = try await repository.fetch(id: task.id)
+        let willComplete = !(persisted?.completed ?? task.completed)
+
+        var t = task
         t.completed = willComplete
         t.completedAt = willComplete ? now : nil
         t.updatedAt = now
