@@ -14,17 +14,20 @@ public final class TaskStore {
     private let repository: any TaskRepository
     private let clock: @Sendable () -> Date
     private let newID: @Sendable () -> String
+    private let calendar: Calendar
     // nonisolated(unsafe) so deinit can cancel it without a MainActor hop.
     nonisolated(unsafe) private var observerTask: _Concurrency.Task<Void, Never>?
 
     public init(
         repository: any TaskRepository,
         clock: @escaping @Sendable () -> Date = { Date() },
-        newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.task) }
+        newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.task) },
+        calendar: Calendar = .current
     ) {
         self.repository = repository
         self.clock = clock
         self.newID = newID
+        self.calendar = calendar
     }
 
     /// Begin observing the repository. Idempotent; call once from the app root.
