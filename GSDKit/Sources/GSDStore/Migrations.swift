@@ -6,7 +6,22 @@ extension AppDatabase {
     static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
         registerV1(&migrator)
+        registerV2(&migrator)
         return migrator
+    }
+
+    static func registerV2(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v2") { db in
+            try db.create(table: "smartViews") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("icon", .text).notNull()
+                t.column("criteria", .text).notNull()          // FilterCriteria JSON
+                t.column("isBuiltIn", .boolean).notNull().defaults(to: false)
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull().indexed()
+            }
+        }
     }
 
     static func registerV1(_ migrator: inout DatabaseMigrator) {
