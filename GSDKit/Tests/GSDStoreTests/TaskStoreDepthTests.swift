@@ -76,6 +76,26 @@ struct TaskStoreDepthTests {
         #expect(try await repo.fetch(id: "spawned-id") == nil)
     }
 
+    @Test func completingFromStaleCompletedSnapshotDoesNotDoubleSpawn() async throws {
+        let (store, repo) = try makeStore()
+        // Persisted row is ALREADY completed (e.g. a prior complete already spawned).
+        let persisted = Task(id: "orig", title: "Standup", urgent: true, important: true,
+                             completed: true, completedAt: fixed,
+                             createdAt: fixed, updatedAt: fixed,
+                             dueDate: dueDate(2026, 1, 31), recurrence: .monthly)
+        try await repo.upsert(persisted)
+        // Caller holds a STALE snapshot that still thinks the task is incomplete
+        // (the @Observable store lags the async write). A double-fired "complete"
+        // looks exactly like this.
+        var stale = persisted
+        stale.completed = false
+        try await store.toggleComplete(stale)
+        // Ground truth says it was already complete, so this is a true→false toggle,
+        // NOT a completion — no duplicate recurrence instance may be spawned.
+        #expect(try await repo.fetch(id: "spawned-id") == nil)
+        #expect(try await repo.fetch(id: "orig")?.completed == false)
+    }
+
     @Test func snoozeSetsSnoozedUntilFromPreset() async throws {
         let (store, repo) = try makeStore()
         let task = Task(id: "orig", title: "Ping", urgent: true, important: false,
