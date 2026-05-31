@@ -1,10 +1,11 @@
 import SwiftUI
+import UserNotifications
 import GSDModel
 import GSDStore
 
-/// The full Settings screen (design-spec §3 scope call): Appearance, Archive, Data &
-/// Storage, About. Notifications + Cloud Sync are intentionally absent (Phase 4/5 — the
-/// project ships no control that does nothing). `reshowOnboarding` flips the App-owned flag.
+/// The full Settings screen (design-spec §3 scope call): Appearance, Archive, Notifications,
+/// Data & Storage, About. Cloud Sync is intentionally absent (Phase 5 — the project ships no
+/// control that does nothing). `reshowOnboarding` flips the App-owned flag.
 struct SettingsView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
@@ -16,17 +17,27 @@ struct SettingsView: View {
     @State private var archiveSettings: ArchiveSettings = .init()
     @State private var archiveStatus: String?
 
+    @State private var notificationSettings: NotificationSettings = .init()
+    /// OS authorization status, refreshed on appear (nil = not yet read).
+    @State private var authStatusText: String?
+    @State private var authIsDenied = false
+
     var body: some View {
         NavigationStack {
             Form {
                 appearanceSection
                 archiveSection
+                notificationSection
                 DataStorageView()          // Group D sections
                 aboutSection
             }
             .navigationTitle(String(localized: "Settings"))
             .toolbar { paletteButton(palette) }
-            .onAppear { archiveSettings = store.archiveSettings }
+            .onAppear {
+                archiveSettings = store.archiveSettings
+                notificationSettings = store.notificationSettings
+                refreshAuthStatus()
+            }
         }
     }
 
@@ -67,6 +78,128 @@ struct SettingsView: View {
                 Text(archiveStatus).font(.footnote).foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var notificationSection: some View {
+        Section(String(localized: "Notifications")) {
+            Toggle(String(localized: "Enable Reminders"), isOn: Binding(
+                get: { notificationSettings.enabled },
+                set: { notificationSettings.enabled = $0; flushNotificationSettings() }
+            ))
+            if notificationSettings.enabled {
+                Picker(String(localized: "Default Reminder"), selection: Binding(
+                    get: { notificationSettings.defaultReminder },
+                    set: { notificationSettings.defaultReminder = $0; flushNotificationSettings() }
+                )) {
+                    ForEach(NotificationSettings.allowedReminders, id: \.self) { minutes in
+                        Text(reminderLabel(minutes)).tag(minutes)
+                    }
+                }
+                Toggle(String(localized: "Sound"), isOn: Binding(
+                    get: { notificationSettings.soundEnabled },
+                    set: { notificationSettings.soundEnabled = $0; flushNotificationSettings() }
+                ))
+                quietHoursControls
+                authStatusRow
+            }
+        }
+    }
+
+    /// Quiet-hours start/end, each a toggle (nil ↔ a default time) + a `.hourAndMinute` picker.
+    @ViewBuilder private var quietHoursControls: some View {
+        Toggle(String(localized: "Quiet Hours"), isOn: Binding(
+            get: { notificationSettings.quietHoursStart != nil && notificationSettings.quietHoursEnd != nil },
+            set: { on in
+                if on {
+                    notificationSettings.quietHoursStart = notificationSettings.quietHoursStart ?? "22:00"
+                    notificationSettings.quietHoursEnd = notificationSettings.quietHoursEnd ?? "07:00"
+                } else {
+                    notificationSettings.quietHoursStart = nil
+                    notificationSettings.quietHoursEnd = nil
+                }
+                flushNotificationSettings()
+            }
+        ))
+        if notificationSettings.quietHoursStart != nil {
+            DatePicker(String(localized: "From"), selection: quietBinding(\.quietHoursStart, default: "22:00"),
+                       displayedComponents: .hourAndMinute)
+            DatePicker(String(localized: "To"), selection: quietBinding(\.quietHoursEnd, default: "07:00"),
+                       displayedComponents: .hourAndMinute)
+        }
+    }
+
+    /// The OS permission status + a contextual action (request when not-asked; open Settings when denied).
+    @ViewBuilder private var authStatusRow: some View {
+        if let authStatusText {
+            LabeledContent(String(localized: "System Permission"), value: authStatusText)
+        }
+        if authIsDenied {
+            Button(String(localized: "Open System Settings")) {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        } else if !store.notificationSettings.permissionAsked {
+            Button(String(localized: "Enable Notifications")) {
+                _Concurrency.Task { @MainActor in
+                    _ = await store.requestNotificationAuthorization()
+                    refreshAuthStatus()
+                }
+            }
+        }
+    }
+
+    /// Bind a `"HH:mm"` setting field to a `DatePicker` `Date` (today at that time, injected-tz-free
+    /// since the picker shows local). Reading parses HH:mm → today's date; writing formats back.
+    private func quietBinding(_ keyPath: WritableKeyPath<NotificationSettings, String?>,
+                              default fallback: String) -> Binding<Date> {
+        Binding(
+            get: { Self.dateFrom(notificationSettings[keyPath: keyPath] ?? fallback) },
+            set: { notificationSettings[keyPath: keyPath] = Self.hhmm(from: $0); flushNotificationSettings() }
+        )
+    }
+
+    private func flushNotificationSettings() { store.notificationSettings = notificationSettings }
+
+    private func refreshAuthStatus() {
+        _Concurrency.Task { @MainActor in
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
+            switch settings.authorizationStatus {
+            case .authorized, .provisional, .ephemeral:
+                authStatusText = String(localized: "Allowed"); authIsDenied = false
+            case .denied:
+                authStatusText = String(localized: "Denied"); authIsDenied = true
+            case .notDetermined:
+                authStatusText = String(localized: "Not requested"); authIsDenied = false
+            @unknown default:
+                authStatusText = nil; authIsDenied = false
+            }
+        }
+    }
+
+    private func reminderLabel(_ minutes: Int) -> String {
+        switch minutes {
+        case 15:   String(localized: "15 minutes before")
+        case 30:   String(localized: "30 minutes before")
+        case 60:   String(localized: "1 hour before")
+        case 120:  String(localized: "2 hours before")
+        case 1440: String(localized: "1 day before")
+        default:   String(localized: "\(minutes) minutes before")
+        }
+    }
+
+    /// Parse `"HH:mm"` → a Date at that time today (local). Malformed → start of today.
+    private static func dateFrom(_ hhmm: String) -> Date {
+        let parts = hhmm.split(separator: ":")
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: .now)
+        comps.hour = parts.count == 2 ? Int(parts[0]) : 0
+        comps.minute = parts.count == 2 ? Int(parts[1]) : 0
+        return Calendar.current.date(from: comps) ?? .now
+    }
+    /// Format a Date → `"HH:mm"` (local, zero-padded).
+    private static func hhmm(from date: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
     private var aboutSection: some View {
