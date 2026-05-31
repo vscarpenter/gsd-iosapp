@@ -16,6 +16,7 @@
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
 		359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */; };
 		3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */; };
+		4132C3E4E3012462A71F5C24 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */; };
 		58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */; };
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
@@ -59,6 +60,7 @@
 		BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorRequest.swift; sourceTree = "<group>"; };
 		BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixGridView.swift; sourceTree = "<group>"; };
 		BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixView.swift; sourceTree = "<group>"; };
+		EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
 		F13D65075CBAAF0DA403E950 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		F8FB17173BD410FDE2B3AD58 /* SmartViewListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartViewListView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -88,6 +90,7 @@
 				3CBE7AF1D884DE679CAEE64D /* Editor */,
 				CA9A551E91A1952A1BA0DAFB /* Effects */,
 				FA90F57386B51F3EB784FDB4 /* Matrix */,
+				34B0C6FC1C9DB00999F2B90A /* Palette */,
 				B04168E073460512D3FB1A61 /* Store */,
 				CAB18B8FF69C32795537F4B3 /* Support */,
 				90EBAFD44A99F0DBD17A24F5 /* Theme */,
@@ -111,6 +114,14 @@
 				923FB39E62F676CE76DDE26A /* ArchiveListView.swift */,
 			);
 			path = Archive;
+			sourceTree = "<group>";
+		};
+		34B0C6FC1C9DB00999F2B90A /* Palette */ = {
+			isa = PBXGroup;
+			children = (
+				EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */,
+			);
+			path = Palette;
 			sourceTree = "<group>";
 		};
 		3CBE7AF1D884DE679CAEE64D /* Editor */ = {
@@ -275,6 +286,7 @@
 				85FC74F90BC144FB514B2924 /* AppPreferences.swift in Sources */,
 				1995E0D8DB3D1CD07A579638 /* ArchiveListView.swift in Sources */,
 				046100EB23A8521EA8275EAE /* CaptureBar.swift in Sources */,
+				4132C3E4E3012462A71F5C24 /* CommandPaletteView.swift in Sources */,
 				C54C617DEC7531732CFC2822 /* ConfettiView.swift in Sources */,
 				2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */,
 				607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */,

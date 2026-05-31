@@ -6,15 +6,17 @@ import GSDStore
 /// to create a custom view and per-custom-row edit/delete/pin actions.
 struct SmartViewListView: View {
     @Environment(TaskStore.self) private var store
+    @Environment(PaletteController.self) private var palette
     @State private var editorTarget: SmartViewEditorTarget?
 
     var body: some View {
-        NavigationStack {
+        @Bindable var palette = palette
+        // Browse owns its NavigationStack path so the command palette can push a smart
+        // view or Archive into it (value-based links — a BrowseRoute carries both).
+        NavigationStack(path: $palette.browsePath) {
             List {
                 Section {
-                    NavigationLink {
-                        ArchiveListView()
-                    } label: {
+                    NavigationLink(value: BrowseRoute.archive) {
                         Label(String(localized: "Archive"), systemImage: "archivebox")
                     }
                 }
@@ -35,12 +37,18 @@ struct SmartViewListView: View {
                 }
             }
             .navigationTitle(String(localized: "Browse"))
-            .navigationDestination(for: String.self) { id in
-                if let view = store.allViews.first(where: { $0.id == id }) {
-                    FilteredTaskListView(view: view)
+            .navigationDestination(for: BrowseRoute.self) { route in
+                switch route {
+                case .view(let id):
+                    if let view = store.allViews.first(where: { $0.id == id }) {
+                        FilteredTaskListView(view: view)
+                    }
+                case .archive:
+                    ArchiveListView()
                 }
             }
             .toolbar {
+                paletteButton(palette)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { editorTarget = .create } label: {
                         Label(String(localized: "New Smart View"), systemImage: "plus")
@@ -57,7 +65,7 @@ struct SmartViewListView: View {
     }
 
     @ViewBuilder private func viewLink(_ view: SmartView) -> some View {
-        NavigationLink(value: view.id) { SmartViewRow(view: view) }
+        NavigationLink(value: BrowseRoute.view(view.id)) { SmartViewRow(view: view) }
             .swipeActions(edge: .leading) {
                 if store.pinnedSmartViewIds.contains(view.id) {
                     Button { store.unpin(view.id) } label: {
