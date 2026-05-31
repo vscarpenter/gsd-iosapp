@@ -3,9 +3,9 @@ import Foundation
 /// Predicate bundle powering smart views, filters, and search (product spec §5.9).
 /// All present criteria are ANDed. A `Bool` flag of `false` means "don't constrain on
 /// this" — only `true` adds a predicate. Empty arrays/`.all`/empty query = no constraint.
-public struct FilterCriteria: Equatable, Sendable {
-    public enum Status: Sendable, Equatable { case all, active, completed }
-    public struct DateRange: Equatable, Sendable {
+public struct FilterCriteria: Equatable, Sendable, Codable {
+    public enum Status: String, Sendable, Equatable, Codable, CaseIterable { case all, active, completed }
+    public struct DateRange: Equatable, Sendable, Codable {
         public var start: Date?
         public var end: Date?
         public init(start: Date? = nil, end: Date? = nil) { self.start = start; self.end = end }
