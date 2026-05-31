@@ -39,6 +39,7 @@ public final class TaskStore {
     private let clock: @Sendable () -> Date
     private let newID: @Sendable () -> String
     private let calendar: Calendar
+    private let reminders: any ReminderScheduling
     // Stored var so @Observable tracks mutations; UserDefaults is the persistence backing.
     private var pinnedIDs: [String] = []
     // nonisolated(unsafe) so deinit can cancel without a MainActor hop.
@@ -53,7 +54,8 @@ public final class TaskStore {
         defaults: UserDefaults = AppGroupDefaults.shared,
         clock: @escaping @Sendable () -> Date = { Date() },
         newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.smartView) },
-        calendar: Calendar = .current
+        calendar: Calendar = .current,
+        reminders: any ReminderScheduling = NoopReminderScheduler()
     ) {
         self.repository = repository
         self.smartViewRepository = smartViewRepository
@@ -62,6 +64,7 @@ public final class TaskStore {
         self.clock = clock
         self.newID = newID
         self.calendar = calendar
+        self.reminders = reminders
         self.pinnedIDs = defaults.stringArray(forKey: AppGroupDefaults.Key.pinnedSmartViewIds) ?? []
     }
 
@@ -122,12 +125,14 @@ public final class TaskStore {
         t.updatedAt = now
         try TaskValidator.validate(t)
         try await repository.upsert(t)
+        await reminders.schedule(t)
     }
 
     public func save(_ task: Task) async throws {
         var t = task; t.updatedAt = clock()
         try TaskValidator.validate(t)
         try await repository.upsert(t)
+        await reminders.schedule(t)
     }
 
     public func toggleComplete(_ task: Task) async throws {
@@ -145,11 +150,15 @@ public final class TaskStore {
         t.updatedAt = now
         try await repository.upsert(t)
 
+        if willComplete { await reminders.cancel(taskID: t.id) }
+        else { await reminders.schedule(t) }
+
         // Completing a recurring task spawns the next instance (product spec §6.5).
         guard willComplete,
               let next = RecurrenceEngine.spawnNext(from: t, now: now, newID: newID(), calendar: calendar)
         else { return }
         try await repository.upsert(next)
+        await reminders.schedule(next)
     }
 
     public func move(_ task: Task, to quadrant: Quadrant) async throws {
@@ -159,7 +168,10 @@ public final class TaskStore {
         try await repository.upsert(t)
     }
 
-    public func delete(_ task: Task) async throws { try await repository.delete(id: task.id) }
+    public func delete(_ task: Task) async throws {
+        try await repository.delete(id: task.id)
+        await reminders.cancel(taskID: task.id)
+    }
 
     /// Set `snoozedUntil = now + preset`, clamped to the 1-year max (product spec §6.7).
     public func snooze(_ task: Task, by preset: SnoozePreset) async throws {
@@ -169,6 +181,7 @@ public final class TaskStore {
         t.snoozedUntil = now.addingTimeInterval(interval)
         t.updatedAt = now
         try await repository.upsert(t)
+        await reminders.schedule(t)   // live impl schedules at snoozedUntil
     }
 
     /// Start a time-tracking entry; rejects a second concurrent timer (product spec §6.9).
