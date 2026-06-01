@@ -1,0 +1,19 @@
+{
+  "password": {"identityFields": ["email"], "enabled": true},
+  "oauth2": {
+    "providers": [
+      {"name": "google", "displayName": "Google", "state": "STATE_G",
+       "authURL": "https://accounts.google.com/o/oauth2/v2/auth?client_id=X&code_challenge=CH_G&code_challenge_method=S256&response_type=code&scope=email&state=STATE_G&redirect_uri=",
+       "authUrl": "https://accounts.google.com/o/oauth2/v2/auth?client_id=X&state=STATE_G&redirect_uri=",
+       "codeVerifier": "VERIFIER_G", "codeChallenge": "CH_G", "codeChallengeMethod": "S256"},
+      {"name": "github", "displayName": "GitHub", "state": "STATE_H",
+       "authURL": "https://github.com/login/oauth/authorize?client_id=Y&state=STATE_H&redirect_uri=",
+       "authUrl": "https://github.com/login/oauth/authorize?client_id=Y",
+       "codeVerifier": "VERIFIER_H", "codeChallenge": "CH_H", "codeChallengeMethod": "S256"}
+    ],
+    "enabled": true
+  },
+  "mfa": {"enabled": false, "duration": 0},
+  "otp": {"enabled": false, "duration": 0},
+  "authProviders": [], "usernamePassword": false, "emailPassword": true
+}
