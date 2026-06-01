@@ -2,7 +2,6 @@ import Foundation
 
 /// Stateful-PKCE auth orchestration over the seams (§8). Stateless across calls — per-attempt
 /// `{state, codeVerifier}` are LOCAL to `signIn`, never cached. `public`. PROBE-VERIFIED (17/17).
-/// (Refresh/validToken land in B2.)
 public struct AuthService: Sendable {
     private let client: PocketBaseClient
     private let presenter: WebAuthPresenting
