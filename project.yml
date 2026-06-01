@@ -33,6 +33,8 @@ targets:
         product: GSDModel
       - package: GSDKit
         product: GSDStore
+      - package: GSDKit
+        product: GSDSync
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd
