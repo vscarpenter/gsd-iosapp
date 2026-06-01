@@ -8,9 +8,14 @@ public struct AuthService: Sendable {
     private let presenter: WebAuthPresenting
     private let tokenStore: TokenStore
     private let config: AuthConfig
+    private let refreshSkew: TimeInterval
+    private let now: @Sendable () -> Date
 
-    public init(client: PocketBaseClient, presenter: WebAuthPresenting, tokenStore: TokenStore, config: AuthConfig) {
-        self.client = client; self.presenter = presenter; self.tokenStore = tokenStore; self.config = config
+    public init(client: PocketBaseClient, presenter: WebAuthPresenting, tokenStore: TokenStore,
+                config: AuthConfig, refreshSkew: TimeInterval = 60,
+                now: @escaping @Sendable () -> Date = { Date() }) {
+        self.client = client; self.presenter = presenter; self.tokenStore = tokenStore
+        self.config = config; self.refreshSkew = refreshSkew; self.now = now
     }
 
     /// ONE auth-methods fetch; hold `{state, codeVerifier}` locally; present; validate state; exchange; store.
@@ -31,6 +36,28 @@ public struct AuthService: Sendable {
     }
 
     public func signOut() { tokenStore.clear() }
+
+    /// A usable token, refreshing proactively near expiry; nil if signed out. Throws if refresh fails
+    /// (caller prompts re-auth).
+    public func validToken() async throws -> String? {
+        guard let token = tokenStore.load() else { return nil }
+        guard JWT.expiresWithin(refreshSkew, of: token, now: now()) else { return token }
+        return try await refresh().token
+    }
+
+    /// Extend a still-valid JWT (no refresh-token). On failure, clear + signal re-auth.
+    @discardableResult
+    public func refresh() async throws -> AuthResult {
+        guard let token = tokenStore.load() else { throw AuthError.notSignedIn }
+        do {
+            let result = try await client.authRefresh(token: token)
+            tokenStore.save(result.token)
+            return result
+        } catch {
+            tokenStore.clear()
+            throw error
+        }
+    }
 
     // MARK: helpers (internal — exercised via signIn; PROBE-VERIFIED)
     func buildAuthURL(_ base: String, redirectURI: String) throws -> URL {

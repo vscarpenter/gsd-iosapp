@@ -73,4 +73,56 @@ struct AuthServiceTests {
         let service = try makeService(presenter: presenter, store: store, exec: exec)
         await #expect(throws: AuthError.providerNotFound("apple")) { _ = try await service.signIn(provider: "apple") }
     }
+
+    private func makeJWT(exp: Int) -> String {
+        func b64url(_ d: Data) -> String {
+            d.base64EncodedString().replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+        }
+        let h = b64url(Data(#"{"alg":"HS256","typ":"JWT"}"#.utf8))
+        return "\(h).\(b64url(Data("{\"exp\":\(exp)}".utf8))).sig"
+    }
+    private func refreshService(store: TokenStore, exec: FakeExecutor, now: Date) -> AuthService {
+        AuthService(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
+                    presenter: FakePresenter(.failure(AuthError.cancelled)),
+                    tokenStore: store, config: .live, now: { now })
+    }
+
+    @Test func validTokenReturnsFreshTokenWithoutRefreshing() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let fresh = makeJWT(exp: 1_893_456_000)
+        let store = InMemoryTokenStore(fresh); let exec = FakeExecutor()
+        let token = try await refreshService(store: store, exec: exec, now: now).validToken()
+        #expect(token == fresh)
+    }
+
+    @Test func validTokenRefreshesWhenNearExpiry() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let store = InMemoryTokenStore(makeJWT(exp: 1_000_000_030)); let exec = FakeExecutor()
+        exec.routes["auth-refresh"] = (try fixture("auth_with_oauth2"), 200)
+        let token = try await refreshService(store: store, exec: exec, now: now).validToken()
+        #expect(token == "header.payload.signature")
+        #expect(store.token == "header.payload.signature")
+    }
+
+    @Test func validTokenNilWhenSignedOut() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let token = try await refreshService(store: InMemoryTokenStore(), exec: FakeExecutor(), now: now).validToken()
+        #expect(token == nil)
+    }
+
+    @Test func refreshFailureClearsTokenAndThrows() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let store = InMemoryTokenStore(makeJWT(exp: 1_000_000_030)); let exec = FakeExecutor()
+        exec.routes["auth-refresh"] = (try fixture("pb_error"), 401)
+        let service = refreshService(store: store, exec: exec, now: now)
+        await #expect(throws: PocketBaseError.self) { _ = try await service.refresh() }
+        #expect(store.token == nil)
+    }
+
+    @Test func signOutClearsToken() {
+        let store = InMemoryTokenStore("tok")
+        refreshService(store: store, exec: FakeExecutor(), now: Date(timeIntervalSince1970: 0)).signOut()
+        #expect(store.token == nil)
+    }
 }
