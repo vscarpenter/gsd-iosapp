@@ -8,6 +8,7 @@ import GSDStore
 /// control that does nothing). `reshowOnboarding` flips the App-owned flag.
 struct SettingsView: View {
     @Environment(TaskStore.self) private var store
+    @Environment(SessionStore.self) private var session
     @Environment(PaletteController.self) private var palette
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
@@ -26,6 +27,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 appearanceSection
+                accountSection
                 archiveSection
                 notificationSection
                 DataStorageView()          // Group D sections
@@ -47,6 +49,34 @@ struct SettingsView: View {
                 ForEach(AppTheme.allCases) { theme in Text(theme.label).tag(theme.rawValue) }
             }
             Toggle(String(localized: "Show Completed Tasks"), isOn: $showCompleted)
+        }
+    }
+
+    private var accountSection: some View {
+        Section(String(localized: "Account")) {
+            if session.isSignedIn {
+                LabeledContent(String(localized: "Signed in"),
+                               value: session.email ?? String(localized: "Account"))
+                Button(role: .destructive) {
+                    session.signOut()
+                } label: {
+                    Label(String(localized: "Sign Out"), systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            } else {
+                Button {
+                    _Concurrency.Task { await session.signIn(provider: "google") }
+                } label: {
+                    if session.inProgress {
+                        ProgressView()
+                    } else {
+                        Label(String(localized: "Sign in with Google"), systemImage: "person.crop.circle")
+                    }
+                }
+                .disabled(session.inProgress)
+            }
+            if let error = session.lastError {
+                Text(error).font(.footnote).foregroundStyle(.red)
+            }
         }
     }
 

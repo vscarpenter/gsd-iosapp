@@ -28,6 +28,7 @@
 		8036F79C226CB3A58EAD44E4 /* GSDSync in Frameworks */ = {isa = PBXBuildFile; productRef = 4D69B433643C83344AA85FF9 /* GSDSync */; };
 		83388C6EE74A09C1F6C7AC1E /* LiveWebAuthPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */; };
 		85FC74F90BC144FB514B2924 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */; };
+		863728DE9F16D23835B6548A /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 454069942C9F75AFFB235E5C /* SessionStore.swift */; };
 		88A8C4B6149243B4E448B079 /* TaskListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721AA423A1BF176E1CB41486 /* TaskListRow.swift */; };
 		897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92D91657DBB6423E6BBE725 /* DataStorageView.swift */; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
@@ -55,6 +56,7 @@
 		30A03169462530BB59EC808C /* CaptureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBar.swift; sourceTree = "<group>"; };
 		3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReminderScheduler.swift; sourceTree = "<group>"; };
+		454069942C9F75AFFB235E5C /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		53A151034146B4714F731EE2 /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -267,6 +269,7 @@
 			children = (
 				DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */,
 				BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */,
+				454069942C9F75AFFB235E5C /* SessionStore.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -395,6 +398,7 @@
 				FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */,
 				226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */,
 				7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */,
+				863728DE9F16D23835B6548A /* SessionStore.swift in Sources */,
 				A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */,
 				73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */,
 				B17361EAF4ABA6F4940F94B8 /* SmartViewListView.swift in Sources */,

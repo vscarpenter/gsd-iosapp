@@ -1,9 +1,11 @@
 import SwiftUI
 import GSDStore
+import GSDSync
 
 @main
 struct GSDApp: App {
     @State private var store: TaskStore
+    @State private var session: SessionStore
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -23,6 +25,14 @@ struct GSDApp: App {
             reminders: scheduler
         )
         _store = State(initialValue: store)
+        // Auth + transport (Phase 5b). Live seams; the pure AuthService logic is unit-tested.
+        let tokenStore = KeychainTokenStore()
+        let authService = AuthService(
+            client: PocketBaseClient(baseURL: AuthConfig.live.baseURL),
+            presenter: LiveWebAuthPresenter(),
+            tokenStore: tokenStore,
+            config: .live)
+        _session = State(initialValue: SessionStore(auth: authService, tokenStore: tokenStore))
         // BGTaskScheduler handlers MUST be registered before the app finishes launching —
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
         // and would trip "all launch handlers must be registered before application finishes
@@ -34,6 +44,7 @@ struct GSDApp: App {
         WindowGroup {
             ContentView()
                 .environment(store)
+                .environment(session)
                 .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme ?? nil)
                 .task {
                     store.start()
