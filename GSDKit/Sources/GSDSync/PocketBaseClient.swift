@@ -69,7 +69,7 @@ public final class PocketBaseClient: Sendable {
         return req
     }
 
-    private func send<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
+    func send<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
         let (data, http) = try await executor.execute(request)
         guard (200..<300).contains(http.statusCode) else {
             if let env = try? JSONDecoder().decode(PBErrorEnvelope.self, from: data) {

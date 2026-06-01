@@ -21,7 +21,7 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift"),
             ]
         ),
-        .target(name: "GSDSync", dependencies: ["GSDModel"]),
+        .target(name: "GSDSync", dependencies: ["GSDModel", "GSDStore"]),
         .testTarget(name: "GSDModelTests", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDStoreTests", dependencies: ["GSDStore"]),
         .testTarget(

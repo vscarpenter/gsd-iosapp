@@ -121,7 +121,7 @@ struct PocketBaseTaskRecord: Codable, Equatable {
 
 /// Decodes one element of an array independently, swallowing per-element errors so a single
 /// malformed record yields `nil` rather than aborting the whole batch (§7.4 skip-malformed).
-private struct Failable<T: Decodable>: Decodable {
+struct Failable<T: Decodable>: Decodable {
     let value: T?
     init(from decoder: Decoder) throws { value = try? T(from: decoder) }
 }
