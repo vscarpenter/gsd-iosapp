@@ -57,6 +57,16 @@ struct SettingsView: View {
             if session.isSignedIn {
                 LabeledContent(String(localized: "Signed in"),
                                value: session.email ?? String(localized: "Account"))
+                Button {
+                    _Concurrency.Task { await session.syncNow() }
+                } label: {
+                    if session.syncing {
+                        ProgressView()
+                    } else {
+                        Label(String(localized: "Sync Now"), systemImage: "arrow.triangle.2.circlepath")
+                    }
+                }
+                .disabled(session.syncing)
                 Button(role: .destructive) {
                     session.signOut()
                 } label: {
