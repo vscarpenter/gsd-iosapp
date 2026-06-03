@@ -28,7 +28,7 @@ struct SyncEnginePullTests {
     @Test func pullUpsertsNewRemoteTask() async throws {
         let db = try AppDatabase.inMemory(); let repo = GRDBTaskRepository(db); let exec = ListExecutor()
         exec.json = #"{"page":1,"perPage":200,"totalItems":1,"totalPages":1,"items":[\#(wire("r1", title: "Remote", updated: "2026-06-15T09:00:00.000Z"))]}"#
-        let (applied, maxApplied) = try await engine(exec, repo).pull(token: "TOK", since: "2026-01-01T00:00:00.000Z")
+        let (applied, _, maxApplied) = try await engine(exec, repo).pull(token: "TOK", since: "2026-01-01T00:00:00.000Z")
         #expect(applied == 1)
         let stored = try await repo.fetch(id: "r1")
         #expect(stored?.title == "Remote")

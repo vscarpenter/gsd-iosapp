@@ -12,6 +12,7 @@ struct TaskStoreEnqueueTests {
         func update(_ item: SyncQueueItem) async throws {}
         func remove(id: String) async throws {}
         func allTaskIds() async throws -> Set<String> { [] }
+        func all() async throws -> [SyncQueueItem] { [] }
     }
     private func makeStore(_ queue: RecordingQueue) throws -> TaskStore {
         let db = try AppDatabase.inMemory()

@@ -9,7 +9,26 @@ extension AppDatabase {
         registerV2(&migrator)
         registerV3(&migrator)
         registerV4(&migrator)
+        registerV5(&migrator)
         return migrator
+    }
+
+    static func registerV5(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v5") { db in
+            try db.create(table: "syncHistory") { t in
+                t.primaryKey("id", .text)
+                t.column("timestamp", .integer).notNull().indexed()
+                t.column("status", .text).notNull()
+                t.column("pushedCount", .integer).notNull().defaults(to: 0)
+                t.column("pulledCount", .integer).notNull().defaults(to: 0)
+                t.column("conflictsResolved", .integer).notNull().defaults(to: 0)
+                t.column("failedCount", .integer)
+                t.column("errorMessage", .text)
+                t.column("duration", .integer)
+                t.column("deviceId", .text).notNull()
+                t.column("triggeredBy", .text).notNull()
+            }
+        }
     }
 
     static func registerV2(_ migrator: inout DatabaseMigrator) {

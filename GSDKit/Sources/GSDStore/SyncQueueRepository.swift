@@ -11,6 +11,7 @@ public protocol SyncQueueRepository: Sendable {
     func update(_ item: SyncQueueItem) async throws
     func remove(id: String) async throws
     func allTaskIds() async throws -> Set<String>      // pending + failed — both protect from deletion-reconcile (5c)
+    func all() async throws -> [SyncQueueItem]          // every item (pending + failed), timestamp asc — health checks (5d)
 }
 
 public final class GRDBSyncQueueRepository: SyncQueueRepository {
@@ -49,6 +50,12 @@ public final class GRDBSyncQueueRepository: SyncQueueRepository {
             Set(try SyncQueueRecord.fetchAll(db).map(\.taskId))
         }
     }
+
+    public func all() async throws -> [SyncQueueItem] {
+        try await dbWriter.read { db in
+            try SyncQueueRecord.order(Column("timestamp")).fetchAll(db).map { try $0.toDomain() }
+        }
+    }
 }
 
 /// The default queue for `TaskStore` when no real sync is wired (mirrors `NoopReminderScheduler`).
@@ -59,4 +66,5 @@ public struct NoopSyncQueueRepository: SyncQueueRepository {
     public func update(_ item: SyncQueueItem) async throws {}
     public func remove(id: String) async throws {}
     public func allTaskIds() async throws -> Set<String> { [] }
+    public func all() async throws -> [SyncQueueItem] { [] }
 }

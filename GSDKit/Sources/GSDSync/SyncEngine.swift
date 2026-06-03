@@ -13,7 +13,7 @@ public struct SyncResult: Equatable, Sendable {
     public var error: String?
 }
 
-public enum SyncTrigger: Sendable { case launch, signIn, manual }
+public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, periodic, networkRegained, mutation }
 
 /// Bidirectional active-task sync (§7.4–7.5). Writes pulled tasks DIRECTLY via the repository
 /// (preserving the wire `client_updated_at`; never re-stamping; never enqueuing). `actor` for state
@@ -27,23 +27,28 @@ public actor SyncEngine {
     private let tokenProvider: @Sendable () async throws -> String?
     private let now: @Sendable () -> Date
     private let throttleMs: Int
+    private let history: any SyncHistoryRepository
     private var isSyncing = false
+    private var isErasing = false      // §3.4: suppresses pull during a destructive erase/replace drain (Group D)
 
     public init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
                 cursor: SyncCursor, deviceId: String,
                 tokenProvider: @escaping @Sendable () async throws -> String?,
                 now: @escaping @Sendable () -> Date = { Date() },
-                throttleMs: Int = 100) {
+                throttleMs: Int = 100,
+                history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
         self.client = client; self.tasks = tasks; self.queue = queue; self.cursor = cursor
         self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.now = now
-        self.throttleMs = throttleMs
+        self.throttleMs = throttleMs; self.history = history
     }
 
     /// Pull remote → local (upsert-only; no deletes). LWW vs local; device-local preserved via the
     /// mapper merge. Returns the applied count + the max `client_updated_at` seen (for cursor advance).
-    func pull(token: String, since: String) async throws -> (applied: Int, maxApplied: Date?) {
+    func pull(token: String, since: String) async throws -> (applied: Int, conflicts: Int, maxApplied: Date?) {
+        if isErasing { return (0, 0, nil) }       // §3.4 pull-suppression gate (set during a destructive drain)
         let records = try await client.listTasks(updatedSince: since, token: token)
         var applied = 0
+        var conflicts = 0
         var maxApplied: Date?
         for record in records {
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { continue }
@@ -52,10 +57,11 @@ public actor SyncEngine {
             // Upsert when there's no local copy, or the remote is strictly newer (LWW).
             let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
             guard local == nil || decision == .takeRemote else { continue }
+            if local != nil && decision == .takeRemote { conflicts += 1 }   // a real conflict resolved in remote's favor
             try await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
             applied += 1
         }
-        return (applied, maxApplied)
+        return (applied, conflicts, maxApplied)
     }
 
     /// First-sign-in data-wipe guard (§7.4/§7.5): enqueue every existing local active task as a push
@@ -148,18 +154,55 @@ public actor SyncEngine {
             result.error = "Could not derive owner from auth token"   // malformed token → fail fast (don't push owner:"")
             return result
         }
+        let start = now()
         do {
             if cursor.load() == nil { try await seedExistingTasks() }      // first-sync seed BEFORE pull/reconcile
             let since = cursor.load() ?? "1970-01-01T00:00:00.000Z"
-            let (pulled, maxApplied) = try await pull(token: token, since: since)
+            let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since)
             result.pulled = pulled
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
             result.deleted = try await reconcileDeletions(token: token)    // destructive — last
             cursor.advance(maxApplied: maxApplied, now: now())
+            await record(trigger: trigger, result: result, conflicts: conflicts, start: start)
         } catch {
             result.error = String("\(error)".prefix(200))
+            await record(trigger: trigger, result: result, conflicts: 0, start: start)
         }
         return result
+    }
+
+    // MARK: History (§7.7)
+
+    /// Map a trigger to history's user/auto axis. Only explicit Sync-Now / pull-to-refresh is "user".
+    private func triggeredBy(_ trigger: SyncTrigger) -> SyncHistoryEntry.TriggeredBy {
+        trigger == .manual ? .user : .auto
+    }
+
+    /// Build + persist one history entry for a completed attempt. Status precedence: error > partial
+    /// (some pushes failed) > conflict (LWW resolved a remote-wins overwrite) > success.
+    private func record(trigger: SyncTrigger, result: SyncResult, conflicts: Int, start: Date) async {
+        let end = now()
+        let status: SyncHistoryEntry.Status =
+            result.error != nil ? .error :
+            result.failed > 0   ? .partial :
+            conflicts > 0       ? .conflict : .success
+        let entry = SyncHistoryEntry(
+            id: UUID().uuidString,
+            timestamp: Int(end.timeIntervalSince1970 * 1000),
+            status: status, pushedCount: result.pushed, pulledCount: result.pulled,
+            conflictsResolved: conflicts, failedCount: result.failed > 0 ? result.failed : nil,
+            errorMessage: result.error, duration: Int(end.timeIntervalSince(start) * 1000),
+            deviceId: deviceId, triggeredBy: triggeredBy(trigger))
+        try? await history.insert(entry)
+        try? await history.prune(keeping: 500)
+    }
+
+    /// Read passthroughs for the Sync History screen (keeps GSDSync the single sync API surface).
+    public func recentHistory(limit: Int = 50) async -> [SyncHistoryEntry] {
+        (try? await history.recent(limit: limit)) ?? []
+    }
+    public func historyStats() async -> SyncHistoryStats {
+        (try? await history.stats()) ?? SyncHistoryStats()
     }
 }

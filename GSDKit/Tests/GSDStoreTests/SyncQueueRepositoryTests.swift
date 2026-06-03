@@ -85,4 +85,14 @@ struct SyncQueueRepositoryTests {
         #expect(try await noop.pending().isEmpty)
         #expect(try await noop.allTaskIds().isEmpty)
     }
+
+    @Test func allReturnsPendingAndFailed() async throws {
+        let repo = try makeRepo()
+        try await repo.enqueue(SyncQueueItem(id: "p", taskId: "t1", operation: .update, timestamp: 1))
+        var failed = SyncQueueItem(id: "f", taskId: "t2", operation: .update, timestamp: 2)
+        failed.status = .failed
+        try await repo.update(failed)
+        let all = try await repo.all()
+        #expect(Set(all.map(\.id)) == ["p", "f"])
+    }
 }

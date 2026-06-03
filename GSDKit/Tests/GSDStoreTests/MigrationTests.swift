@@ -94,4 +94,15 @@ struct MigrationTests {
             }
         }
     }
+
+    @Test func v5CreatesSyncHistoryTable() throws {
+        let db = try AppDatabase.inMemory()
+        try db.writer.read { d in
+            #expect(try d.tableExists("syncHistory"))
+            let columns = Set(try d.columns(in: "syncHistory").map(\.name))
+            #expect(columns == ["id", "timestamp", "status", "pushedCount", "pulledCount",
+                                "conflictsResolved", "failedCount", "errorMessage", "duration",
+                                "deviceId", "triggeredBy"])
+        }
+    }
 }
