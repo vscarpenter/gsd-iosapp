@@ -697,8 +697,14 @@ final class WidgetSnapshotRefresher {
         self.debounce = debounce
     }
 
-    /// Write an initial snapshot immediately so a freshly added widget has data.
-    func start() { writeNow() }
+    /// Trigger the first snapshot via the debounce — NOT a synchronous write. At launch
+    /// `store.tasks` is still `[]` (the GRDB observer emits its initial value asynchronously,
+    /// after `store.start()`), so a synchronous write here would clobber the last-good
+    /// snapshot with an empty one and flash "All clear". Going through `schedule()` means the
+    /// observer's first emission populates `tasks` (and itself fires `schedule()`), so the
+    /// debounced write always sees real data. (A widget can only be added after the app has
+    /// run once, so a last-good snapshot is already on disk — no synchronous write is needed.)
+    func start() { schedule() }
 
     /// Coalesce a burst of task changes into a single delayed write + reload.
     func schedule() {
@@ -995,6 +1001,16 @@ Expected: `** BUILD SUCCEEDED **`. (The `GSD` scheme builds `GSDWidgets` as an e
 
 If the build reports a missing-Info.plist for the extension, confirm `xcodegen generate` created `Widgets/Info.plist` (it is generated from the `info.properties` above).
 
+If the build fails with a signing/provisioning error like *"no profiles found for dev.vinny.gsd.widgets"* (the bundle id isn't registered in the portal yet), that is a signing stall, **not** a code problem — retry the simulator build with signing disabled:
+
+```bash
+xcodebuild -project GSD.xcodeproj -scheme GSD \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
+  CODE_SIGNING_ALLOWED=NO build 2>&1 | tail -8
+```
+
+(The existing `GSD` app target builds in-sim under the same `Automatic` + `DEVELOPMENT_TEAM` + App-Group setup, so this fallback is rarely needed; portal registration is part of the device live-gate.)
+
 - [ ] **Step 9: Commit**
 
 ```bash
@@ -1160,7 +1176,7 @@ After the live-gate passes: merge (fast-forward/linear) + tag `phase-6a-widget-f
 ## Self-Review
 
 **Spec coverage:**
-- §3.1 module graph → Tasks 2 (GSDSnapshot), 8 (GSDWidgets). §4.1 AppGroup → Task 1. §4.2 contract (WidgetSnapshot/Store/Builder/DeepLink) → Tasks 2–5. §4.3 onTasksChanged → Task 6. §4.4 refresher → Task 7. §4.5 extension → Task 8. §4.6 deep-link wiring → Task 9. §4.7 project.yml/Package.swift → Tasks 2/7/8/9. §5 query → Task 3. §6 debounce → Task 7. §7 OAuth gate → Tasks 5 (parser), 9 (scheme), 10 + live-gate. §8 timeline → Task 8. §9 error handling → Tasks 4 (nil/throws), 7 (skip-on-no-container). §10 testing → Tasks 1–6 + 10. §11 build/portal → Task 10 + live-gate. All sections covered.
+- §3.1 module graph → Tasks 2 (GSDSnapshot), 8 (GSDWidgets). §4.1 AppGroup → Task 1. §4.2 contract (WidgetSnapshot/Store/Builder/DeepLink) → Tasks 2–5. §4.3 onTasksChanged → Task 6. §4.4 refresher → Task 7. §4.5 extension → Task 8. §4.6 deep-link wiring → Task 9. §4.7 project.yml/Package.swift → Tasks 2/7/8/9. §5 query → Task 3. §6 debounce → Task 7. §7 OAuth gate → Tasks 5 (parser), 9 (scheme), 10 + live-gate. §8 timeline → Task 8. §9 error handling → Task 4 (nil/throws, unit-tested) + Task 7 (skip-on-no-container, build-verified only — no app test target, so don't claim it as *tested* in the memory note). §10 testing → Tasks 1–6 + 10. §11 build/portal → Task 10 + live-gate. All sections covered.
 
 **Placeholder scan:** No TBD/TODO; every code step has complete code; no "similar to Task N".
 
