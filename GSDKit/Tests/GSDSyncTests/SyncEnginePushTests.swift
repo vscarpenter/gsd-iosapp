@@ -31,4 +31,60 @@ struct SyncEnginePushTests {
         let queued = try await queue.allTaskIds()
         #expect(queued.contains("offline-1"))   // protected from deletion-reconcile + will be pushed
     }
+
+    final class CRUDExecutor: RequestExecuting, @unchecked Sendable {
+        var indexJSON = #"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#
+        var writeStatus = 200
+        private(set) var writes: [(method: String, path: String)] = []
+        func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            let m = request.httpMethod ?? "GET"
+            if m == "GET" {   // listTasks (remoteIndex)
+                return (Data(indexJSON.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
+            writes.append((m, request.url!.path))
+            let body = #"{"id":"rec_x","task_id":"a","title":"t","urgent":false,"important":false}"#
+            return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: writeStatus, httpVersion: nil, headerFields: nil)!)
+        }
+    }
+    private func remoteItem(taskId: String, recordId: String, updated: String) -> String {
+        #"{"task_id":"\#(taskId)","id":"\#(recordId)","title":"remote","urgent":false,"important":false,"client_updated_at":"\#(updated)"}"#
+    }
+
+    @Test func pushSkipsAndDropsStaleItemWhenRemoteNewer() async throws {   // THE seed-clobber data-loss guard
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let exec = CRUDExecutor()
+        exec.indexJSON = #"{"page":1,"perPage":200,"totalItems":1,"totalPages":1,"items":[\#(remoteItem(taskId: "a", recordId: "rec_a", updated: "2026-06-15T09:00:00.000Z"))]}"#
+        let stale = Task(id: "a", title: "stale local", urgent: false, important: false,
+                         createdAt: Date(timeIntervalSince1970: 1_000_000), updatedAt: Date(timeIntervalSince1970: 1_000_000))  // day 1
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update, timestamp: 9_999_999_999, payload: stale))
+        let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
+        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
+        #expect(pushed == 0 && failed == 0)
+        #expect(!exec.writes.contains { $0.method == "PATCH" })       // remote(day2) > payload(day1) → NO clobber
+        #expect(try await queue.pending().isEmpty)                    // stale item dropped; next pull delivers remote
+    }
+
+    @Test func pushCreatesWhenNoRemote() async throws {
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let exec = CRUDExecutor()   // empty remote index
+        let t = Task(id: "a", title: "new local", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
+        let (pushed, _) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u")
+        #expect(pushed == 1)
+        #expect(exec.writes.contains { $0.method == "POST" })
+        #expect(try await queue.pending().isEmpty)
+    }
+
+    @Test func pushFailureBumpsRetryCountAndKeepsPending() async throws {
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let exec = CRUDExecutor(); exec.writeStatus = 500   // server error
+        let t = Task(id: "a", title: "x", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
+        let (pushed, failed) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u")
+        #expect(pushed == 0 && failed == 1)
+        let pending = try await queue.pending()
+        #expect(pending.count == 1 && pending[0].retryCount == 1)   // kept, retryCount bumped (across-sync retry)
+    }
 }

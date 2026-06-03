@@ -68,4 +68,48 @@ public actor SyncEngine {
                 timestamp: Int(now().timeIntervalSince1970 * 1000), payload: task))
         }
     }
+
+    private static let backoffSeconds: [TimeInterval] = [5, 10, 30, 60, 300]
+    private func isDue(_ item: SyncQueueItem, nowMs: Int) -> Bool {
+        guard let last = item.lastAttemptAt else { return true }        // never attempted → due
+        let wait = Self.backoffSeconds[min(max(item.retryCount - 1, 0), Self.backoffSeconds.count - 1)]
+        return nowMs >= last + Int(wait * 1000)
+    }
+
+    /// Drain the pending queue → remote (§7.5). Payload-LWW-guard (skip+drop a stale upsert iff remote
+    /// `client_updated_at` > the payload's `updatedAt`); create(no recordId)/update(by recordId)/delete;
+    /// ~throttle; 429 aborts the loop; across-sync retry (5/10/30/60/300 s) → `failed` after 5 (kept).
+    func push(token: String, owner: String) async throws -> (pushed: Int, failed: Int) {
+        let index = try await client.remoteIndex(token: token)
+        let nowMs = Int(now().timeIntervalSince1970 * 1000)
+        var pushed = 0, failed = 0
+        for item in try await queue.pending() where isDue(item, nowMs: nowMs) {
+            let remote = index[item.taskId]
+            // payload-LWW-guard (upserts only): remote strictly newer than what we'd write → drop, let pull win.
+            if item.operation != .delete, let payload = item.payload, let remoteUpdated = remote?.clientUpdatedAt,
+               Int(remoteUpdated.timeIntervalSince1970 * 1000) > Int(payload.updatedAt.timeIntervalSince1970 * 1000) {
+                try await queue.remove(id: item.id); continue
+            }
+            do {
+                switch item.operation {
+                case .delete:
+                    if let recordId = remote?.recordId { try await client.deleteTask(recordId: recordId, token: token) }
+                case .create, .update:
+                    guard let payload = item.payload else { break }
+                    let wire = TaskWireMapper.toWire(payload, owner: owner, deviceId: deviceId, recordId: remote?.recordId ?? "")
+                    if let recordId = remote?.recordId { try await client.updateTask(recordId: recordId, record: wire, token: token) }
+                    else { _ = try await client.createTask(wire, token: token) }
+                }
+                try await queue.remove(id: item.id); pushed += 1
+                if throttleMs > 0 { try? await _Concurrency.Task.sleep(for: .milliseconds(throttleMs)) }
+            } catch let e as PocketBaseError {
+                if case .http(429, _) = e { break }                    // 429 → abort
+                if case .pocketBase(429, _) = e { break }
+                var f = item; f.retryCount += 1; f.lastAttemptAt = nowMs; f.lastError = String("\(e)".prefix(200))
+                if f.retryCount >= 5 { f.status = .failed; f.failedAt = nowMs }
+                try await queue.update(f); failed += 1
+            }
+        }
+        return (pushed, failed)
+    }
 }
