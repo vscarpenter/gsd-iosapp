@@ -19,6 +19,8 @@ final class SyncCoordinator {
     private(set) var health = SyncHealth(level: .ok, message: nil)
 
     private let engine: SyncEngine
+    private let realtime: PocketBaseRealtime
+    private let tokenProvider: @Sendable () async -> String?
     private let signedIn: @MainActor () -> Bool
 
     /// The engine, for the read-only Sync History screen.
@@ -26,12 +28,17 @@ final class SyncCoordinator {
 
     @ObservationIgnored private var cadenceTask: _Concurrency.Task<Void, Never>?
     @ObservationIgnored private var debounceTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var sseTask: _Concurrency.Task<Void, Never>?
     @ObservationIgnored private var monitor: NWPathMonitor?
     @ObservationIgnored private var online = true
     @ObservationIgnored private var active = false
 
-    init(engine: SyncEngine, signedIn: @escaping @MainActor () -> Bool) {
+    init(engine: SyncEngine, realtime: PocketBaseRealtime,
+         tokenProvider: @escaping @Sendable () async -> String?,
+         signedIn: @escaping @MainActor () -> Bool) {
         self.engine = engine
+        self.realtime = realtime
+        self.tokenProvider = tokenProvider
         self.signedIn = signedIn
     }
 
@@ -43,6 +50,7 @@ final class SyncCoordinator {
         active = true
         startReachability()
         startCadence()
+        startSSE()
         _Concurrency.Task { await self.runSync(trigger: trigger) }
     }
 
@@ -51,6 +59,7 @@ final class SyncCoordinator {
         active = false
         cadenceTask?.cancel(); cadenceTask = nil
         debounceTask?.cancel(); debounceTask = nil
+        sseTask?.cancel(); sseTask = nil
         monitor?.cancel(); monitor = nil
         phase = .idle; pendingCount = 0
     }
@@ -67,12 +76,14 @@ final class SyncCoordinator {
         active = true
         startReachability()
         startCadence()
+        startSSE()
         _Concurrency.Task { await self.runSync(trigger: .foreground) }
     }
 
     func enteredBackground() {
         active = false
         cadenceTask?.cancel(); cadenceTask = nil
+        sseTask?.cancel(); sseTask = nil
         monitor?.cancel(); monitor = nil
     }
 
@@ -101,6 +112,29 @@ final class SyncCoordinator {
                 try? await _Concurrency.Task.sleep(for: .seconds(120))
                 guard let self, !_Concurrency.Task.isCancelled, self.active else { return }
                 await self.runSync(trigger: .periodic)
+            }
+        }
+    }
+
+    /// Foreground-only realtime: stream `tasks` events → `applyRealtime`; on stream end/error run a
+    /// full sync (catch missed events) and reconnect with capped backoff while active + signed-in.
+    private func startSSE() {
+        sseTask?.cancel()
+        sseTask = _Concurrency.Task { [weak self] in
+            var backoff = 1.0
+            while let self, !_Concurrency.Task.isCancelled, self.signedIn(), self.active {
+                guard let token = await self.tokenProvider() else { break }
+                do {
+                    for try await data in self.realtime.events(token: token) {
+                        if _Concurrency.Task.isCancelled { return }
+                        await self.engine.applyRealtime(rawData: data)
+                        await self.refreshStatus()
+                    }
+                } catch { /* fall through to reconnect */ }
+                if _Concurrency.Task.isCancelled { return }
+                await self.runSync(trigger: .foreground)   // reconnect → catch missed events
+                try? await _Concurrency.Task.sleep(for: .seconds(min(backoff, 30)))
+                backoff = min(backoff * 2, 30)
             }
         }
     }

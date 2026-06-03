@@ -52,9 +52,13 @@ struct GSDApp: App {
             tokenProvider: { try await authService.validToken() },
             history: historyRepo)
         _syncEngine = State(initialValue: syncEngine)
-        // SyncCoordinator (Phase 5d) owns when sync fires (cadence/foreground/network/debounced push)
+        // SyncCoordinator (Phase 5d) owns when sync fires (cadence/foreground/network/debounced push/SSE)
         // and the status surface; SessionStore delegates start/stop to it on sign-in/out.
-        let coordinator = SyncCoordinator(engine: syncEngine, signedIn: { tokenStore.load() != nil })
+        let realtime = PocketBaseRealtime(baseURL: AuthConfig.live.baseURL)
+        let coordinator = SyncCoordinator(
+            engine: syncEngine, realtime: realtime,
+            tokenProvider: { try? await authService.validToken() },
+            signedIn: { tokenStore.load() != nil })
         _coordinator = State(initialValue: coordinator)
         store.onMutation = { coordinator.scheduleDebouncedPush() }
         _session = State(initialValue: SessionStore(auth: authService, tokenStore: tokenStore, coordinator: coordinator))
