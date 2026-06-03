@@ -33,11 +33,14 @@ public final class PocketBaseRealtime: Sendable {
                         if _Concurrency.Task.isCancelled { break }
                         guard let event = parser.feed(line) else { continue }
                         if event.event == "PB_CONNECT" || event.data.contains("\"clientId\"") {
-                            if let clientId = Self.clientId(from: event.data) {
-                                try await Self.subscribe(baseURL: baseURL, session: session,
-                                                         clientId: clientId, token: token)
-                                subscribed = true
+                            guard let clientId = Self.clientId(from: event.data) else {
+                                // Connected but no parseable clientId (protocol drift) → fail so the
+                                // coordinator reconnects/backs off rather than consuming forever.
+                                throw PocketBaseError.network("realtime: PB_CONNECT without clientId")
                             }
+                            try await Self.subscribe(baseURL: baseURL, session: session,
+                                                     clientId: clientId, token: token)
+                            subscribed = true
                             continue
                         }
                         if subscribed, event.event == "tasks" || event.data.contains("\"action\"") {

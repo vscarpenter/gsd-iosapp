@@ -44,9 +44,16 @@ final class SyncCoordinator {
 
     // MARK: Lifecycle
 
-    /// Launch / after-sign-in: begin cadence + reachability and run an initial sync. (SSE start: Group C.)
+    /// Launch / after-sign-in: begin cadence + reachability + SSE and run an initial sync.
     func start(trigger: SyncTrigger = .launch) {
         guard signedIn() else { return }
+        resume(trigger: trigger)
+    }
+
+    /// Shared bring-up for launch and foreground-return (kept in one place so the two entry points
+    /// never diverge in which subsystems they spin up). Cadence/SSE cancel-and-restart; reachability
+    /// is idempotent (`guard monitor == nil`).
+    private func resume(trigger: SyncTrigger) {
         active = true
         startReachability()
         startCadence()
@@ -73,11 +80,7 @@ final class SyncCoordinator {
 
     func enteredForeground() {
         guard signedIn() else { return }
-        active = true
-        startReachability()
-        startCadence()
-        startSSE()
-        _Concurrency.Task { await self.runSync(trigger: .foreground) }
+        resume(trigger: .foreground)
     }
 
     func enteredBackground() {
@@ -92,11 +95,27 @@ final class SyncCoordinator {
     /// Manual "Sync Now" + pull-to-refresh.
     func syncNow() async { await runSync(trigger: .manual) }
 
-    /// §3.4 erase everywhere: wipe remote (pull suppressed) THEN clear local. Signed-out → local only.
-    func eraseEverywhere(store: TaskStore) async {
-        _ = await engine.eraseAllRemote()
+    /// §3.4 erase everywhere: wipe remote (pull suppressed) THEN clear local. Returns whether the erase
+    /// completed. Wipes local ONLY when the remote side is handled — signed-out (local-only erase is the
+    /// intent) or a clean signed-in wipe — so a remote wipe dropped by single-flight (a cadence/SSE/
+    /// debounced sync was in-flight) or failed by network does NOT leave local empty while remote is
+    /// intact (which would just re-pull every task back). Retries a single-flight skip a few times.
+    @discardableResult
+    func eraseEverywhere(store: TaskStore) async -> Bool {
+        var result = await engine.eraseAllRemote()
+        var tries = 0
+        while result.skipped && tries < 5 {
+            try? await _Concurrency.Task.sleep(for: .milliseconds(400))
+            result = await engine.eraseAllRemote()
+            tries += 1
+        }
+        guard result.notSignedIn || (result.error == nil && !result.skipped) else {
+            await refreshStatus()
+            return false
+        }
         try? await store.eraseAllData()
         await refreshStatus()
+        return true
     }
 
     /// §3.4 after a destructive import-replace: drain the cleared-task deletes under the gate.
@@ -136,10 +155,17 @@ final class SyncCoordinator {
         sseTask = _Concurrency.Task { [weak self] in
             var backoff = 1.0
             while let self, !_Concurrency.Task.isCancelled, self.signedIn(), self.active {
-                guard let token = await self.tokenProvider() else { break }
+                guard let token = await self.tokenProvider() else {
+                    // Transient token gap (refresh in flight) — back off and retry; don't kill realtime
+                    // for the whole foreground session. A real sign-out drops `signedIn()` → loop exits.
+                    try? await _Concurrency.Task.sleep(for: .seconds(min(backoff, 30)))
+                    backoff = min(backoff * 2, 30)
+                    continue
+                }
                 do {
                     for try await data in self.realtime.events(token: token) {
                         if _Concurrency.Task.isCancelled { return }
+                        backoff = 1.0                       // a healthy stream resets the reconnect backoff
                         await self.engine.applyRealtime(rawData: data)
                         await self.refreshStatus()
                     }
@@ -184,7 +210,8 @@ final class SyncCoordinator {
     }
 
     private func apply(_ result: SyncResult) {
-        if !result.skipped { lastSync = result }
+        if result.skipped { return }                  // a concurrent in-flight sync owns the phase
+        if !result.notSignedIn { lastSync = result }  // a no-op (no token) isn't a successful sync
         phase = result.error != nil ? .error : .idle
         _Concurrency.Task { await self.refreshStatus() }
     }

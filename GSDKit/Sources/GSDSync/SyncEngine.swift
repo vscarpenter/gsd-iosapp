@@ -86,7 +86,7 @@ public actor SyncEngine {
     /// `client_updated_at` > the payload's `updatedAt`); create(no recordId)/update(by recordId)/delete;
     /// ~throttle; 429 aborts the loop; across-sync retry (5/10/30/60/300 s) → `failed` after 5 (kept).
     func push(token: String, owner: String) async throws -> (pushed: Int, failed: Int) {
-        let index = try await client.remoteIndex(token: token)
+        var index = try await client.remoteIndex(token: token)
         let nowMs = Int(now().timeIntervalSince1970 * 1000)
         var pushed = 0, failed = 0
         for item in try await queue.pending() where isDue(item, nowMs: nowMs) {
@@ -104,7 +104,12 @@ public actor SyncEngine {
                     guard let payload = item.payload else { break }
                     let wire = TaskWireMapper.toWire(payload, owner: owner, deviceId: deviceId, recordId: remote?.recordId ?? "")
                     if let recordId = remote?.recordId { try await client.updateTask(recordId: recordId, record: wire, token: token) }
-                    else { _ = try await client.createTask(wire, token: token) }
+                    else {
+                        // Record the new recordId in the live index so a later same-drain DELETE for the
+                        // same task_id finds it (else the create leaks an orphan remote record).
+                        let newRecordId = try await client.createTask(wire, token: token)
+                        index[item.taskId] = (recordId: newRecordId, clientUpdatedAt: payload.updatedAt)
+                    }
                 }
                 try await queue.remove(id: item.id); pushed += 1
                 if throttleMs > 0 { try? await _Concurrency.Task.sleep(for: .milliseconds(throttleMs)) }
@@ -176,10 +181,15 @@ public actor SyncEngine {
     /// same LWW-guard / throttle / 429-abort / across-sync-retry as `sync()`, but does NOT pull or
     /// reconcile. Shares the single-flight flag (a concurrent full `sync()` drops it). Records history.
     public func pushNow(trigger: SyncTrigger = .mutation) async -> SyncResult {
-        guard !isSyncing else { return SyncResult(skipped: true) }
-        isSyncing = true
-        defer { isSyncing = false }
+        await drain(suppressPull: false, trigger: trigger)
+    }
 
+    /// Shared single-flight queue-drain (token → owner → push → record). `suppressPull` holds the
+    /// §3.4 gate for the duration so a concurrent `sync()`'s pull can't interleave (import-replace).
+    private func drain(suppressPull: Bool, trigger: SyncTrigger) async -> SyncResult {
+        guard !isSyncing else { return SyncResult(skipped: true) }
+        isSyncing = true; isErasing = suppressPull
+        defer { isSyncing = false; isErasing = false }
         var result = SyncResult()
         let token: String
         do {
@@ -203,9 +213,10 @@ public actor SyncEngine {
 
     // MARK: Destructive ops (§3.4)
 
-    /// Erase-all remote wipe: while pull is suppressed, enqueue a delete for every local task, then
-    /// drain (push-only) so a concurrent sync can't re-add them mid-flight. Signed-out → no-op (the
-    /// App still clears local). The App calls this BEFORE `TaskStore.eraseAllData`.
+    /// Erase-all remote wipe: with pull suppressed, AUTHORITATIVELY delete every remote record from a
+    /// fresh index, then clear the local queue so no stale pending op can resurrect a task after the
+    /// App wipes local. Direct deletes (not via the queue) avoid a create-then-delete orphan race and
+    /// give an honest success/failure the caller checks BEFORE clearing local. Signed-out → no-op.
     public func eraseAllRemote() async -> SyncResult {
         guard !isSyncing else { return SyncResult(skipped: true) }
         isSyncing = true; isErasing = true
@@ -216,19 +227,20 @@ public actor SyncEngine {
             guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
             token = t
         } catch { result.notSignedIn = true; return result }
-        guard let owner = JWT.userId(token) else {
+        guard JWT.userId(token) != nil else {
             result.error = "Could not derive owner from auth token"; return result
-        }
-        if let all = try? await tasks.fetchAll() {
-            for task in all {
-                try? await queue.enqueue(SyncQueueItem(id: UUID().uuidString, taskId: task.id,
-                    operation: .delete, timestamp: Int(now().timeIntervalSince1970 * 1000)))
-            }
         }
         let start = now()
         do {
-            let (pushed, failed) = try await push(token: token, owner: owner)
-            result.pushed = pushed; result.failed = failed
+            let index = try await client.remoteIndex(token: token)
+            for (_, ref) in index {
+                try await client.deleteTask(recordId: ref.recordId, token: token)
+                result.pushed += 1
+                if throttleMs > 0 { try? await _Concurrency.Task.sleep(for: .milliseconds(throttleMs)) }
+            }
+            // Full wipe → no pending op should survive (they'd recreate/clobber). Clear the queue only
+            // after every remote delete succeeded; a partial failure throws first → queue intact → retry.
+            for item in try await queue.all() { try await queue.remove(id: item.id) }
             await record(trigger: .manual, result: result, conflicts: 0, start: start)
         } catch {
             result.error = String("\(error)".prefix(200))
@@ -240,28 +252,7 @@ public actor SyncEngine {
     /// Drain pending deletes (from a destructive import-replace) with pull suppressed. The deletes
     /// were already enqueued by `TaskStore.importTasks(replace)`; this just pushes them safely.
     public func flushDeletes() async -> SyncResult {
-        guard !isSyncing else { return SyncResult(skipped: true) }
-        isSyncing = true; isErasing = true
-        defer { isSyncing = false; isErasing = false }
-        var result = SyncResult()
-        let token: String
-        do {
-            guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
-            token = t
-        } catch { result.notSignedIn = true; return result }
-        guard let owner = JWT.userId(token) else {
-            result.error = "Could not derive owner from auth token"; return result
-        }
-        let start = now()
-        do {
-            let (pushed, failed) = try await push(token: token, owner: owner)
-            result.pushed = pushed; result.failed = failed
-            await record(trigger: .manual, result: result, conflicts: 0, start: start)
-        } catch {
-            result.error = String("\(error)".prefix(200))
-            await record(trigger: .manual, result: result, conflicts: 0, start: start)
-        }
-        return result
+        await drain(suppressPull: true, trigger: .manual)
     }
 
     /// Test seam (§3.4): set the pull-suppression gate directly so the suppression is unit-testable.
@@ -270,27 +261,31 @@ public actor SyncEngine {
     // MARK: Realtime (§7.6)
 
     /// Apply one realtime (SSE) message. Same rules as pull: write via the repo directly (no enqueue,
-    /// no re-stamp), LWW vs local, device-local preserved by the mapper merge. Echo-filters our own
-    /// `device_id` (non-empty match only), enforces the owner check, and a realtime DELETE for a task
-    /// with a pending/failed queue item is skipped (queue-aware, like reconcile). Malformed or
-    /// task_id-less payloads are skipped (the cadence safety-net reconciles).
+    /// no re-stamp), LWW vs local, device-local preserved by the mapper merge. Enforces the owner check;
+    /// echo-filters our own `device_id` on create/update (a DELETE event carries the last *writer's*
+    /// device_id, not the deleter's, so it must NOT be echo-filtered). A create/update is skipped when a
+    /// local `.delete` is pending (don't resurrect a just-deleted task); a delete is skipped when ANY op
+    /// is pending for that task (queue-aware, like reconcile). Malformed/task_id-less payloads are
+    /// skipped (the cadence safety-net reconciles).
     public func applyRealtime(rawData: String) async {
         guard let data = rawData.data(using: .utf8),
               let event = try? JSONDecoder().decode(RealtimeEvent.self, from: data),
               let record = event.record else { return }
-        if !record.deviceId.isEmpty && record.deviceId == deviceId { return }   // echo-filter
         if !record.owner.isEmpty, let token = try? await tokenProvider(),
            let owner = JWT.userId(token), record.owner != owner { return }       // owner check
+        let pending = (try? await queue.all()) ?? []
         switch event.action {
         case .create, .update:
+            if !record.deviceId.isEmpty && record.deviceId == deviceId { return }   // echo-filter own writes
+            // Don't resurrect a task the user just deleted locally (its .delete is queued, not yet pushed).
+            if pending.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return }
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { return }
             let local = try? await tasks.fetch(id: record.taskId)
             let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
             guard local == nil || decision == .takeRemote else { return }
-            try? await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local ?? nil))
+            try? await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
         case .delete:
-            let queued = (try? await queue.allTaskIds()) ?? []
-            if queued.contains(record.taskId) { return }   // queue-aware: don't drop a locally-pending task
+            if pending.contains(where: { $0.taskId == record.taskId }) { return }   // queue-aware
             try? await tasks.delete(id: record.taskId)
         }
     }
@@ -303,13 +298,14 @@ public actor SyncEngine {
     }
 
     /// Build + persist one history entry for a completed attempt. Status precedence: error > partial
-    /// (some pushes failed) > conflict (LWW resolved a remote-wins overwrite) > success.
+    /// (some pushes failed) > success. `conflictsResolved` is recorded as an informational count of
+    /// remote updates LWW applied over an existing local copy — a routine multi-device pull, NOT an
+    /// error condition, so it does not downgrade an otherwise-clean sync away from `.success`.
     private func record(trigger: SyncTrigger, result: SyncResult, conflicts: Int, start: Date) async {
         let end = now()
         let status: SyncHistoryEntry.Status =
             result.error != nil ? .error :
-            result.failed > 0   ? .partial :
-            conflicts > 0       ? .conflict : .success
+            result.failed > 0   ? .partial : .success
         let entry = SyncHistoryEntry(
             id: UUID().uuidString,
             timestamp: Int(end.timeIntervalSince1970 * 1000),

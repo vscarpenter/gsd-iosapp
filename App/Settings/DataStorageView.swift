@@ -70,8 +70,9 @@ struct DataStorageView: View {
             Button(String(localized: "Erase"), role: .destructive) {
                 guard resetConfirmText == "RESET" else { return }
                 _Concurrency.Task {
-                    await sync.eraseEverywhere(store: store)
-                    statusMessage = String(localized: "All data erased.")
+                    let ok = await sync.eraseEverywhere(store: store)
+                    statusMessage = ok ? String(localized: "All data erased.")
+                                       : String(localized: "Couldn't erase right now — a sync was in progress. Please try again.")
                 }
             }
             .disabled(resetConfirmText != "RESET")
