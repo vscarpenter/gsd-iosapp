@@ -10,6 +10,7 @@ public protocol SyncQueueRepository: Sendable {
     func pending() async throws -> [SyncQueueItem]     // status == .pending, ordered by timestamp asc
     func update(_ item: SyncQueueItem) async throws
     func remove(id: String) async throws
+    func allTaskIds() async throws -> Set<String>      // pending + failed — both protect from deletion-reconcile (5c)
 }
 
 public final class GRDBSyncQueueRepository: SyncQueueRepository {
@@ -42,4 +43,20 @@ public final class GRDBSyncQueueRepository: SyncQueueRepository {
     public func remove(id: String) async throws {
         try await dbWriter.write { db in _ = try SyncQueueRecord.deleteOne(db, key: id) }
     }
+
+    public func allTaskIds() async throws -> Set<String> {
+        try await dbWriter.read { db in
+            Set(try SyncQueueRecord.fetchAll(db).map(\.taskId))
+        }
+    }
+}
+
+/// The default queue for `TaskStore` when no real sync is wired (mirrors `NoopReminderScheduler`).
+public struct NoopSyncQueueRepository: SyncQueueRepository {
+    public init() {}
+    public func enqueue(_ item: SyncQueueItem) async throws {}
+    public func pending() async throws -> [SyncQueueItem] { [] }
+    public func update(_ item: SyncQueueItem) async throws {}
+    public func remove(id: String) async throws {}
+    public func allTaskIds() async throws -> Set<String> { [] }
 }

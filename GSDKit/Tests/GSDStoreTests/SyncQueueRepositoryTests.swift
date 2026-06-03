@@ -69,4 +69,20 @@ struct SyncQueueRepositoryTests {
         #expect(try await taskRepo.fetchAll().count == 1)
         #expect(try await queueRepo.pending().count == 1)
     }
+
+    @Test func allTaskIdsReturnsPendingAndFailed() async throws {
+        let repo = try makeRepo()
+        try await repo.enqueue(SyncQueueItem(id: "q1", taskId: "t1", operation: .create, timestamp: 1))
+        var failed = SyncQueueItem(id: "q2", taskId: "t2", operation: .update, timestamp: 2)
+        failed.status = .failed
+        try await repo.update(failed)   // upsert as failed
+        #expect(try await repo.allTaskIds() == ["t1", "t2"])   // both states protect from reconcile
+    }
+
+    @Test func noopRepositoryDoesNothing() async throws {
+        let noop = NoopSyncQueueRepository()
+        try await noop.enqueue(SyncQueueItem(id: "x", taskId: "t", operation: .create, timestamp: 1))
+        #expect(try await noop.pending().isEmpty)
+        #expect(try await noop.allTaskIds().isEmpty)
+    }
 }
