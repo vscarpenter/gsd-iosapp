@@ -80,4 +80,15 @@ public final class PocketBaseClient: Sendable {
         do { return try JSONDecoder().decode(T.self, from: data) }
         catch { throw PocketBaseError.decoding(String(describing: error)) }
     }
+
+    /// Send a request expecting no body (204 DELETE). Maps non-2xx to `PocketBaseError` like `send`.
+    func sendNoContent(_ request: URLRequest) async throws {
+        let (data, http) = try await executor.execute(request)
+        guard (200..<300).contains(http.statusCode) else {
+            if let env = try? JSONDecoder().decode(PBErrorEnvelope.self, from: data) {
+                throw PocketBaseError.pocketBase(status: http.statusCode, message: env.message)
+            }
+            throw PocketBaseError.http(status: http.statusCode, body: String(decoding: data, as: UTF8.self))
+        }
+    }
 }

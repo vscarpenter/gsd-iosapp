@@ -19,6 +19,15 @@ enum JWT {
         return exp.timeIntervalSince(now) <= skew
     }
 
+    /// The PocketBase user record id (`id` claim) — the `owner` for pushed records.
+    static func userId(_ token: String) -> String? {
+        let parts = token.split(separator: ".")
+        guard parts.count == 3, let payload = base64urlDecode(String(parts[1])),
+              let obj = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+              let id = obj["id"] as? String else { return nil }
+        return id
+    }
+
     private static func base64urlDecode(_ s: String) -> Data? {
         var str = s.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         while str.count % 4 != 0 { str += "=" }
