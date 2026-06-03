@@ -8,6 +8,7 @@ let package = Package(
         .library(name: "GSDModel", targets: ["GSDModel"]),
         .library(name: "GSDStore", targets: ["GSDStore"]),
         .library(name: "GSDSync", targets: ["GSDSync"]),
+        .library(name: "GSDSnapshot", targets: ["GSDSnapshot"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
@@ -22,6 +23,7 @@ let package = Package(
             ]
         ),
         .target(name: "GSDSync", dependencies: ["GSDModel", "GSDStore"]),
+        .target(name: "GSDSnapshot", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDModelTests", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDStoreTests", dependencies: ["GSDStore"]),
         .testTarget(
@@ -29,5 +31,6 @@ let package = Package(
             dependencies: ["GSDSync"],
             resources: [.copy("Fixtures")]
         ),
+        .testTarget(name: "GSDSnapshotTests", dependencies: ["GSDSnapshot"]),
     ]
 )
