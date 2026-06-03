@@ -125,4 +125,38 @@ public actor SyncEngine {
         }
         return deleted
     }
+
+    /// Clear the pull cursor (sign-out) so the next sign-in re-seeds + full-pulls. Local tasks are
+    /// NOT wiped (offline-first).
+    public func resetCursor() { cursor.clear() }
+
+    /// Single-flight bidirectional sync (§7.4–7.7). A concurrent trigger is DROPPED (`skipped`),
+    /// not queued. Sequence: token → seed-if-first → pull → push → deletion-reconcile → advance cursor.
+    public func sync(trigger: SyncTrigger) async -> SyncResult {
+        guard !isSyncing else { return SyncResult(skipped: true) }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        var result = SyncResult()
+        let token: String
+        do {
+            guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
+            token = t
+        } catch { result.notSignedIn = true; return result }
+
+        let owner = JWT.userId(token) ?? ""
+        do {
+            if cursor.load() == nil { try await seedExistingTasks() }      // first-sync seed BEFORE pull/reconcile
+            let since = cursor.load() ?? "1970-01-01T00:00:00.000Z"
+            let (pulled, maxApplied) = try await pull(token: token, since: since)
+            result.pulled = pulled
+            let (pushed, failed) = try await push(token: token, owner: owner)
+            result.pushed = pushed; result.failed = failed
+            result.deleted = try await reconcileDeletions(token: token)    // destructive — last
+            cursor.advance(maxApplied: maxApplied, now: now())
+        } catch {
+            result.error = String("\(error)".prefix(200))
+        }
+        return result
+    }
 }
