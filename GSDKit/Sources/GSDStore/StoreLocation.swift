@@ -1,11 +1,12 @@
 import Foundation
+import GSDModel
 
 /// Resolves the on-disk database location. Prefers the App Group container so
 /// Phase 6 widgets/extensions share one store; falls back to Application Support
 /// when the group is unavailable (e.g. a plain simulator run without the
 /// entitlement). This is the single place the path is decided (increment spec §3.1).
 public enum StoreLocation {
-    public static let appGroupID = "group.dev.vinny.gsd"
+    public static let appGroupID = AppGroup.id
     public static let databaseFileName = "gsd.sqlite"
 
     public static func databaseURL(fileManager: FileManager = .default) throws -> URL {
