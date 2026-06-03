@@ -38,6 +38,8 @@ targets:
         product: GSDSync
       - package: GSDKit
         product: GSDSnapshot
+      - target: GSDWidgets
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd
@@ -47,3 +49,30 @@ targets:
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: App/GSD.entitlements
         CODE_SIGN_STYLE: Automatic
+  GSDWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - Widgets
+    info:
+      path: Widgets/Info.plist
+      properties:
+        CFBundleDisplayName: GSD Widgets
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd.widgets
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGN_ENTITLEMENTS: Widgets/GSDWidgets.entitlements
+        CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - package: GSDKit
+        product: GSDModel
+      - package: GSDKit
+        product: GSDSnapshot
