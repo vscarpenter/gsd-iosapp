@@ -1,11 +1,23 @@
-Captured live from GET https://api.vinny.io/api/realtime (Probe P1, unauthenticated, 2026-06-03).
-Note: PocketBase emits NO space after the field colon, and includes an `id:` line.
+PocketBase realtime protocol — FULLY captured live from https://api.vinny.io (Probe P1, 2026-06-03).
+Note: PocketBase emits NO space after the field colon, and includes an `id:` line per frame.
 
-id:zvAqCYJ3FIM8WOaLNqggbHZkTEXi0uzhcLKlV9AO
+1) Connect (unauthenticated GET /api/realtime):
+id:E8l3SlXgnrkfMk54WPDGCVg76vyTCSu0GhsbsRDg
 event:PB_CONNECT
-data:{"clientId":"zvAqCYJ3FIM8WOaLNqggbHZkTEXi0uzhcLKlV9AO"}
+data:{"clientId":"E8l3SlXgnrkfMk54WPDGCVg76vyTCSu0GhsbsRDg"}
 
-Still to confirm with a live token at the A74 gate:
-- POST /api/realtime {"clientId":"...","subscriptions":["tasks"]} with `Authorization: <jwt>` → 204
-- collection event shape: `event:tasks` (or `tasks/...`) + `data:{"action":"create|update|delete","record":{…§7.1…}}`
-- whether a `delete` event's `record` carries `task_id`
+2) Subscribe (authenticated POST /api/realtime, Authorization: <jwt>):
+   body: {"clientId":"<id>","subscriptions":["tasks"]}  ->  HTTP 204 (No Content)
+
+3) Collection event (after a tasks-collection change):
+event:tasks
+data:{"record":{ ...full §7.1 record incl. task_id, owner, device_id... },"action":"create"}
+
+   - event name is exactly `tasks` (collection subscription).
+   - envelope is {"record":{…},"action":"create|update|delete"} (record first, action last).
+   - CONFIRMED: a DELETE event carries the FULL record INCLUDING task_id, so realtime deletes
+     apply directly (no need to fall back to the cadence reconcile).
+   - absent number fields (notify_before / estimated_minutes) come back as 0, not null.
+
+Verified against the implementation: SSEParser (no-space split), RealtimeEvent ({action,record}),
+PocketBaseRealtime (PB_CONNECT->clientId->subscribe->`tasks` events), SyncEngine.applyRealtime.
