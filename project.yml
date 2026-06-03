@@ -8,6 +8,7 @@ settings:
   base:
     SWIFT_VERSION: "6.0"
     CODE_SIGN_IDENTITY: "Apple Development"
+    DEVELOPMENT_TEAM: "52HVJ3VDSM"   # owner's Apple Developer team — applies to all targets (incl. Phase 6 extensions)
 packages:
   GSDKit:
     path: GSDKit
@@ -44,4 +45,3 @@ targets:
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: App/GSD.entitlements
         CODE_SIGN_STYLE: Automatic
-        # DEVELOPMENT_TEAM: <your Team ID>   # set before device builds; simulator works without it
