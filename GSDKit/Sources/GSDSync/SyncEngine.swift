@@ -144,7 +144,10 @@ public actor SyncEngine {
             token = t
         } catch { result.notSignedIn = true; return result }
 
-        let owner = JWT.userId(token) ?? ""
+        guard let owner = JWT.userId(token) else {
+            result.error = "Could not derive owner from auth token"   // malformed token → fail fast (don't push owner:"")
+            return result
+        }
         do {
             if cursor.load() == nil { try await seedExistingTasks() }      // first-sync seed BEFORE pull/reconcile
             let since = cursor.load() ?? "1970-01-01T00:00:00.000Z"

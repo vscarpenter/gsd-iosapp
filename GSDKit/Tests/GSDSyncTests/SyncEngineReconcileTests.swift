@@ -123,4 +123,18 @@ struct SyncEngineReconcileTests {
         await engine.resetCursor()
         #expect(cursor.load() == nil)   // shared UserDefaults backing: clearing on the actor's copy is visible here
     }
+
+    @Test func syncErrorsWhenTokenHasNoOwnerClaim() async throws {
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db)
+        try await tasks.upsert(task("local-1"))
+        let exec = StatefulExecutor()
+        let tokenNoId = "h.\(Data(#"{"exp":9999999999}"#.utf8).base64EncodedString().replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")).s"
+        let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
+                                tasks: tasks, queue: GRDBSyncQueueRepository(db),
+                                cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
+                                deviceId: "d", tokenProvider: { tokenNoId }, now: { Date(timeIntervalSince1970: 2_000_000_000) }, throttleMs: 0)
+        let result = await engine.sync(trigger: .manual)
+        #expect(result.notSignedIn == false)
+        #expect(result.error != nil)   // failed fast on a missing owner claim — did NOT push owner:""
+    }
 }

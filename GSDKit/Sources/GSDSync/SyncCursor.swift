@@ -1,9 +1,11 @@
 import Foundation
 import GSDStore   // AppGroupDefaults
 
-/// The pull cursor (`lastSyncAt`), persisted as an ISO-8601 string in App-Group defaults. Compared
-/// and filtered as ISO (lexicographic == chronological, given the consistent fractional+Z format).
-/// `nil` ⇒ never synced (triggers the first-sign-in seed). Cleared on sign-out. PROBE-VERIFIED.
+/// The pull cursor (`lastSyncAt`), persisted as an ISO-8601 string (always fractional `.SSSZ` via
+/// `WireDate.format`) in App-Group defaults. Client-side it's only parsed back to a `Date` or sent as
+/// the server-side `since` filter (the server does the comparison) — no client code relies on string
+/// ordering (raw ISO is NOT lexicographically chronological across mixed precision: '.' < 'Z').
+/// `nil` ⇒ never synced (triggers the first-sign-in seed). Cleared on sign-out.
 // @unchecked Sendable: the engine (an actor) holds this as a dependency and the App constructs it in
 // a different isolation domain (C3). It wraps a thread-safe `UserDefaults` (mirrors the
 // `nonisolated(unsafe)` treatment of `AppGroupDefaults.shared`) + an immutable key — safe to send.
