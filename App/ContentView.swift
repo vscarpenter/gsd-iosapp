@@ -1,6 +1,7 @@
 import SwiftUI
 import GSDModel
 import GSDStore
+import GSDSnapshot
 
 /// Adaptive root. Compact (iPhone): a TabView (Matrix · Browse · Dashboard). Regular (iPad):
 /// a NavigationSplitView (sidebar Matrix + Dashboard + Smart Views → detail grid / filtered list).
@@ -36,6 +37,14 @@ struct ContentView: View {
                 CommandPaletteView(onSelect: handle)
             }
             .sheet(item: $paletteEditor) { TaskEditorView(request: $0) }
+            .onOpenURL { handleDeepLink($0) }
+    }
+
+    private func handleDeepLink(_ url: URL) {
+        guard let route = DeepLinkParser.route(from: url) else { return }  // ignores gsd://oauth-callback
+        switch route {
+        case .focus: navigate(to: .matrix)   // the Matrix's Q1 quadrant IS today's focus
+        }
     }
 
     @ViewBuilder private var rootContent: some View {

@@ -29,6 +29,10 @@ targets:
           - processing
         BGTaskSchedulerPermittedIdentifiers:
           - dev.vinny.gsd.refresh
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.vinny.gsd
+            CFBundleURLSchemes:
+              - gsd
     dependencies:
       - package: GSDKit
         product: GSDModel
