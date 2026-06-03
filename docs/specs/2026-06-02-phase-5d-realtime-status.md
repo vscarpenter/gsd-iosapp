@@ -1,6 +1,6 @@
 # Phase 5d — Realtime, Cadence & Sync Observability (Design Spec)
 
-> **Date:** 2026-06-02 · **Status:** design approved in brainstorming; **NOT yet planned or implemented**. Basis for the implementation plan. Next: write the plan (`docs/superpowers/plans/2026-06-02-phase-5d-realtime-status.md`), then execute. **Final slice of Phase 5 (Sync & Backend)** — 5a (foundation) + 5b (auth/transport) + 5c (sync engine) done; **5d makes sync feel live and observable, and closes the two deferred destructive behaviors.**
+> **Date:** 2026-06-02 · **Status:** ✅ **IMPLEMENTED + A74 live gate PASSED on the owner's device (2026-06-03); merged to `main`.** Plan: `docs/superpowers/plans/2026-06-02-phase-5d-realtime-status.md`. Built TDD (Groups A–D, 400 tests green); high-effort code review run + data-loss findings fixed; full SSE protocol confirmed live (Probe P1). **Final slice of Phase 5 (Sync & Backend)** — 5a (foundation) + 5b (auth/transport) + 5c (sync engine) + **5d (realtime/observability/destructive ops)** all DONE → **Phase 5 COMPLETE.**
 
 ## 1. Purpose & scope
 Make sync **feel instant and trustworthy**. Phase 5c made tasks flow both ways on launch / after-sign-in / manual "Sync Now"; 5d adds the layers that make it disappear into the background and become legible to the user:
