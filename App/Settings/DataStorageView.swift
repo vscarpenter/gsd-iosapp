@@ -8,6 +8,7 @@ import GSDStore
 /// be embedded in `SettingsView` or shown standalone. All actions go through the store.
 struct DataStorageView: View {
     @Environment(TaskStore.self) private var store
+    @Environment(SyncCoordinator.self) private var sync
 
     @State private var exportURL: URL?
     @State private var showImporter = false
@@ -62,21 +63,21 @@ struct DataStorageView: View {
             Button(String(localized: "Replace (erase existing)"), role: .destructive) { runImport(mode: .replace) }
             Button(String(localized: "Cancel"), role: .cancel) { pendingImportData = nil }
         } message: {
-            Text(String(localized: "Merge keeps your current tasks and adds the imported ones. Replace deletes your current tasks first."))
+            Text(String(localized: "Merge keeps your current tasks and adds the imported ones. Replace deletes your current tasks first — and, if you're signed in, deletes them on all your devices."))
         }
         .alert(String(localized: "Erase All Data"), isPresented: $showEraseAlert) {
             TextField(String(localized: "Type RESET to confirm"), text: $resetConfirmText)
             Button(String(localized: "Erase"), role: .destructive) {
                 guard resetConfirmText == "RESET" else { return }
                 _Concurrency.Task {
-                    try? await store.eraseAllData()
+                    await sync.eraseEverywhere(store: store)
                     statusMessage = String(localized: "All data erased.")
                 }
             }
             .disabled(resetConfirmText != "RESET")
             Button(String(localized: "Cancel"), role: .cancel) {}
         } message: {
-            Text(String(localized: "This cannot be undone. Type RESET to confirm. Consider exporting first."))
+            Text(String(localized: "This cannot be undone and, if you're signed in, erases your tasks on all your devices. Type RESET to confirm. Consider exporting first."))
         }
     }
 
@@ -113,6 +114,7 @@ struct DataStorageView: View {
         _Concurrency.Task {
             do {
                 let result = try await store.importTasks(data, mode: mode)
+                if mode == .replace { await sync.flushAfterReplace() }   // §3.4 drain cleared-task deletes under the gate
                 statusMessage = result.skipped == 0
                     ? String(localized: "Imported \(result.tasks.count) tasks.")
                     : String(localized: "Imported \(result.tasks.count) tasks (\(result.skipped) skipped).")

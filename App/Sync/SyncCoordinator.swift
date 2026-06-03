@@ -92,6 +92,19 @@ final class SyncCoordinator {
     /// Manual "Sync Now" + pull-to-refresh.
     func syncNow() async { await runSync(trigger: .manual) }
 
+    /// §3.4 erase everywhere: wipe remote (pull suppressed) THEN clear local. Signed-out → local only.
+    func eraseEverywhere(store: TaskStore) async {
+        _ = await engine.eraseAllRemote()
+        try? await store.eraseAllData()
+        await refreshStatus()
+    }
+
+    /// §3.4 after a destructive import-replace: drain the cleared-task deletes under the gate.
+    func flushAfterReplace() async {
+        _ = await engine.flushDeletes()
+        await refreshStatus()
+    }
+
     /// Debounced post-mutation push — called from `TaskStore.onMutation`. Coalesces rapid edits.
     func scheduleDebouncedPush() {
         guard signedIn() else { return }

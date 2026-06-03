@@ -546,13 +546,18 @@ public final class TaskStore {
     public func importTasks(_ data: Data, mode: ImportMode) async throws -> ImportResult {
         switch mode {
         case .replace:
+            let existingIDs = Set(try await repository.fetchAll().map(\.id))
             let result = try TaskImporter.replace(from: data)
+            let importedIDs = Set(result.tasks.map(\.id))
             let now = clock()
             let stamped = result.tasks.map { task -> Task in
                 var t = task; t.updatedAt = now; return t
             }
             try await repository.replaceAll(stamped)
             for t in stamped { await enqueue(t.id, .update, payload: t) }
+            // §3.4: cleared-but-not-imported tasks must be deleted remotely too (the App drains via
+            // SyncCoordinator.flushAfterReplace under the pull-suppression gate).
+            for removed in existingIDs.subtracting(importedIDs) { await enqueue(removed, .delete, payload: nil) }
             return result
         case .merge:
             let existing = Set(try await repository.fetchAll().map(\.id))

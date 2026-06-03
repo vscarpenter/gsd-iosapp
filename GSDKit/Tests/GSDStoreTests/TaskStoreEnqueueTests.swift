@@ -44,6 +44,21 @@ struct TaskStoreEnqueueTests {
         #expect(counter.n == 1)
     }
 
+    @Test func replaceEnqueuesDeletesForClearedTasks() async throws {
+        let q = RecordingQueue(); let store = try makeStore(q)
+        try await store.create(sample("A"))
+        try await store.create(sample("B"))
+        q.ops.removeAll()   // ignore the create ops; focus on the import
+        // import-replace with only B and a new C → A is cleared
+        let payload = try TaskExport.encode(TaskExport(tasks: [sample("B"), sample("C")],
+                                                       exportedAt: Date(timeIntervalSince1970: 2)))
+        _ = try await store.importTasks(payload, mode: .replace)
+        #expect(q.ops.contains { $0.op == .delete && $0.taskId == "A" })
+        #expect(q.ops.contains { $0.op == .update && $0.taskId == "B" })
+        #expect(q.ops.contains { $0.op == .update && $0.taskId == "C" })
+        #expect(!q.ops.contains { $0.op == .delete && $0.taskId == "B" })
+    }
+
     @Test func createEnqueuesCreate() async throws {
         let q = RecordingQueue(); let store = try makeStore(q)
         try await store.create(sample("a"))

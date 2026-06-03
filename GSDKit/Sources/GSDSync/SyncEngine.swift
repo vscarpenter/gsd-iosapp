@@ -201,6 +201,72 @@ public actor SyncEngine {
         return result
     }
 
+    // MARK: Destructive ops (§3.4)
+
+    /// Erase-all remote wipe: while pull is suppressed, enqueue a delete for every local task, then
+    /// drain (push-only) so a concurrent sync can't re-add them mid-flight. Signed-out → no-op (the
+    /// App still clears local). The App calls this BEFORE `TaskStore.eraseAllData`.
+    public func eraseAllRemote() async -> SyncResult {
+        guard !isSyncing else { return SyncResult(skipped: true) }
+        isSyncing = true; isErasing = true
+        defer { isSyncing = false; isErasing = false }
+        var result = SyncResult()
+        let token: String
+        do {
+            guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
+            token = t
+        } catch { result.notSignedIn = true; return result }
+        guard let owner = JWT.userId(token) else {
+            result.error = "Could not derive owner from auth token"; return result
+        }
+        if let all = try? await tasks.fetchAll() {
+            for task in all {
+                try? await queue.enqueue(SyncQueueItem(id: UUID().uuidString, taskId: task.id,
+                    operation: .delete, timestamp: Int(now().timeIntervalSince1970 * 1000)))
+            }
+        }
+        let start = now()
+        do {
+            let (pushed, failed) = try await push(token: token, owner: owner)
+            result.pushed = pushed; result.failed = failed
+            await record(trigger: .manual, result: result, conflicts: 0, start: start)
+        } catch {
+            result.error = String("\(error)".prefix(200))
+            await record(trigger: .manual, result: result, conflicts: 0, start: start)
+        }
+        return result
+    }
+
+    /// Drain pending deletes (from a destructive import-replace) with pull suppressed. The deletes
+    /// were already enqueued by `TaskStore.importTasks(replace)`; this just pushes them safely.
+    public func flushDeletes() async -> SyncResult {
+        guard !isSyncing else { return SyncResult(skipped: true) }
+        isSyncing = true; isErasing = true
+        defer { isSyncing = false; isErasing = false }
+        var result = SyncResult()
+        let token: String
+        do {
+            guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
+            token = t
+        } catch { result.notSignedIn = true; return result }
+        guard let owner = JWT.userId(token) else {
+            result.error = "Could not derive owner from auth token"; return result
+        }
+        let start = now()
+        do {
+            let (pushed, failed) = try await push(token: token, owner: owner)
+            result.pushed = pushed; result.failed = failed
+            await record(trigger: .manual, result: result, conflicts: 0, start: start)
+        } catch {
+            result.error = String("\(error)".prefix(200))
+            await record(trigger: .manual, result: result, conflicts: 0, start: start)
+        }
+        return result
+    }
+
+    /// Test seam (§3.4): set the pull-suppression gate directly so the suppression is unit-testable.
+    func setErasing(_ value: Bool) { isErasing = value }
+
     // MARK: Realtime (§7.6)
 
     /// Apply one realtime (SSE) message. Same rules as pull: write via the repo directly (no enqueue,
