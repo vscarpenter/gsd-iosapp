@@ -45,6 +45,9 @@ public final class TaskStore {
     private var pinnedIDs: [String] = []
     /// Fired after every enqueue so the App can schedule a debounced push (5d). Not observed.
     @ObservationIgnored public var onMutation: (() -> Void)?
+    /// Fired after every observed task-set change (local + remote + background sync), with the
+    /// new value already committed to `tasks`. Drives the widget snapshot (6a). Not observed.
+    @ObservationIgnored public var onTasksChanged: (() -> Void)?
     // nonisolated(unsafe) so deinit can cancel without a MainActor hop.
     nonisolated(unsafe) private var observerTask: _Concurrency.Task<Void, Never>?
     nonisolated(unsafe) private var smartViewObserverTask: _Concurrency.Task<Void, Never>?
@@ -84,7 +87,7 @@ public final class TaskStore {
         guard observerTask == nil else { return }
         let stream = repository.observeAll()
         observerTask = _Concurrency.Task { [weak self] in
-            do { for try await snapshot in stream { self?.tasks = snapshot } } catch {}
+            do { for try await snapshot in stream { self?.tasks = snapshot; self?.onTasksChanged?() } } catch {}
         }
     }
     private func startSmartViewObserver() {

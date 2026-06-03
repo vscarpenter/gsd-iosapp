@@ -44,6 +44,22 @@ struct TaskStoreEnqueueTests {
         #expect(counter.n == 1)
     }
 
+    @Test func observerFiresOnTasksChangedHook() async throws {
+        let q = RecordingQueue(); let store = try makeStore(q)
+        final class Counter: @unchecked Sendable { var n = 0 }
+        let counter = Counter()
+        store.onTasksChanged = { counter.n += 1 }
+        store.start()
+        try await store.add(ParsedCapture(title: "Quick", urgent: true, important: false,
+                                          tags: [], descriptionAdditions: []))
+        // The GRDB observer emits asynchronously; drain until the hook fires.
+        var waited = 0
+        while counter.n == 0 && waited < 100 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        #expect(counter.n >= 1)
+    }
+
     @Test func replaceEnqueuesDeletesForClearedTasks() async throws {
         let q = RecordingQueue(); let store = try makeStore(q)
         try await store.create(sample("A"))
