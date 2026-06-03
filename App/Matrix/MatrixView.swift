@@ -6,6 +6,7 @@ import GSDStore
 struct MatrixView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
+    @Environment(SyncCoordinator.self) private var sync
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
@@ -24,10 +25,15 @@ struct MatrixView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .refreshable { await sync.syncNow() }
                 .navigationTitle("Matrix")
                 .toolbar {
                     paletteButton(palette)
                     showCompletedToggle($showCompleted)
+                    ToolbarItem(placement: .topBarTrailing) {
+                        SyncStatusChip(phase: sync.phase, pendingCount: sync.pendingCount,
+                                       health: sync.health) { palette.compactTab = 3 }
+                    }
                 }
                 .safeAreaInset(edge: .top) {
                     CaptureBar { parsed, ov in

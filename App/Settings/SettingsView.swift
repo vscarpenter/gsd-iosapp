@@ -9,6 +9,7 @@ import GSDStore
 struct SettingsView: View {
     @Environment(TaskStore.self) private var store
     @Environment(SessionStore.self) private var session
+    @Environment(SyncCoordinator.self) private var sync
     @Environment(PaletteController.self) private var palette
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
@@ -57,16 +58,28 @@ struct SettingsView: View {
             if session.isSignedIn {
                 LabeledContent(String(localized: "Signed in"),
                                value: session.email ?? String(localized: "Account"))
+                if let last = sync.lastSync, last.error == nil {
+                    LabeledContent(String(localized: "Status"),
+                                   value: String(localized: "Synced · \(sync.pendingCount) pending"))
+                }
+                if let msg = sync.health.message {
+                    Text(msg).font(.footnote).foregroundStyle(.secondary)
+                }
                 Button {
                     _Concurrency.Task { await session.syncNow() }
                 } label: {
-                    if session.syncing {
+                    if sync.phase == .syncing {
                         ProgressView()
                     } else {
                         Label(String(localized: "Sync Now"), systemImage: "arrow.triangle.2.circlepath")
                     }
                 }
-                .disabled(session.syncing)
+                .disabled(sync.phase == .syncing)
+                NavigationLink {
+                    SyncHistoryView(engine: sync.engineForHistory)
+                } label: {
+                    Label(String(localized: "Sync History"), systemImage: "clock.arrow.circlepath")
+                }
                 Button(role: .destructive) {
                     session.signOut()
                 } label: {

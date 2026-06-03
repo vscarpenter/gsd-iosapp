@@ -115,6 +115,7 @@ struct ContentView: View {
 private struct RegularRootView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
+    @Environment(SyncCoordinator.self) private var sync
     @State private var editorTarget: SmartViewEditorTarget?
 
     var body: some View {
@@ -150,6 +151,10 @@ private struct RegularRootView: View {
                     Button { palette.showPalette = true } label: {
                         Label(String(localized: "Search"), systemImage: "magnifyingglass")
                     }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    SyncStatusChip(phase: sync.phase, pendingCount: sync.pendingCount,
+                                   health: sync.health) { palette.regularSelection = .settings }
                 }
             }
             .sheet(item: $editorTarget) { SmartViewEditorView(target: $0) }

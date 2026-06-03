@@ -8,6 +8,7 @@ struct GSDApp: App {
     @State private var store: TaskStore
     @State private var session: SessionStore
     @State private var syncEngine: SyncEngine
+    @State private var coordinator: SyncCoordinator
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -24,6 +25,7 @@ struct GSDApp: App {
         // observer, and the store's enqueues reach the engine's drain — same GRDB instances.
         let taskRepo = GRDBTaskRepository(database)
         let queueRepo = GRDBSyncQueueRepository(database)
+        let historyRepo = GRDBSyncHistoryRepository(database)
         let store = TaskStore(
             repository: taskRepo,
             smartViewRepository: GRDBSmartViewRepository(database),
@@ -47,9 +49,15 @@ struct GSDApp: App {
             tasks: taskRepo, queue: queueRepo,
             cursor: SyncCursor(),
             deviceId: DeviceIdentity.current(nameProvider: { deviceName }).deviceId,
-            tokenProvider: { try await authService.validToken() })
+            tokenProvider: { try await authService.validToken() },
+            history: historyRepo)
         _syncEngine = State(initialValue: syncEngine)
-        _session = State(initialValue: SessionStore(auth: authService, tokenStore: tokenStore, syncEngine: syncEngine))
+        // SyncCoordinator (Phase 5d) owns when sync fires (cadence/foreground/network/debounced push)
+        // and the status surface; SessionStore delegates start/stop to it on sign-in/out.
+        let coordinator = SyncCoordinator(engine: syncEngine, signedIn: { tokenStore.load() != nil })
+        _coordinator = State(initialValue: coordinator)
+        store.onMutation = { coordinator.scheduleDebouncedPush() }
+        _session = State(initialValue: SessionStore(auth: authService, tokenStore: tokenStore, coordinator: coordinator))
         // BGTaskScheduler handlers MUST be registered before the app finishes launching —
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
         // and would trip "all launch handlers must be registered before application finishes
@@ -62,18 +70,21 @@ struct GSDApp: App {
             ContentView()
                 .environment(store)
                 .environment(session)
+                .environment(coordinator)
                 .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme ?? nil)
                 .task {
                     store.start()
                     try? await store.runAutoArchiveSweep()
                     await store.refreshBadge()
-                    if session.isSignedIn { _ = await syncEngine.sync(trigger: .launch) }
+                    coordinator.start(trigger: .launch)
                 }
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
                     case .active:
+                        coordinator.enteredForeground()
                         _Concurrency.Task { await store.refreshBadge() }
                     case .background:
+                        coordinator.enteredBackground()
                         BackgroundRefresh.schedule()
                     default:
                         break

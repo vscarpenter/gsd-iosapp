@@ -1,0 +1,153 @@
+import Foundation
+import Observation
+import Network
+import GSDSync
+import GSDStore
+
+/// Owns *when* sync fires and *what status shows* (§7.6/§7.7). The pure `SyncEngine` stays the
+/// tested core; this is the app-lifecycle wrapper (the `SessionStore`-wraps-`AuthService` precedent).
+/// Owns the 2-min cadence, reachability, scenePhase reactions, the debounced post-mutation push, and
+/// (Group C) the SSE subscription lifecycle. `@MainActor @Observable` so the chip + Settings observe it.
+@MainActor
+@Observable
+final class SyncCoordinator {
+    enum Phase: Equatable { case idle, syncing, error }
+
+    private(set) var phase: Phase = .idle
+    private(set) var pendingCount = 0
+    private(set) var lastSync: SyncResult?
+    private(set) var health = SyncHealth(level: .ok, message: nil)
+
+    private let engine: SyncEngine
+    private let signedIn: @MainActor () -> Bool
+
+    /// The engine, for the read-only Sync History screen.
+    var engineForHistory: SyncEngine { engine }
+
+    @ObservationIgnored private var cadenceTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var debounceTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var monitor: NWPathMonitor?
+    @ObservationIgnored private var online = true
+    @ObservationIgnored private var active = false
+
+    init(engine: SyncEngine, signedIn: @escaping @MainActor () -> Bool) {
+        self.engine = engine
+        self.signedIn = signedIn
+    }
+
+    // MARK: Lifecycle
+
+    /// Launch / after-sign-in: begin cadence + reachability and run an initial sync. (SSE start: Group C.)
+    func start(trigger: SyncTrigger = .launch) {
+        guard signedIn() else { return }
+        active = true
+        startReachability()
+        startCadence()
+        _Concurrency.Task { await self.runSync(trigger: trigger) }
+    }
+
+    /// Sign-out / teardown: stop everything (local data is NOT wiped).
+    func stop() {
+        active = false
+        cadenceTask?.cancel(); cadenceTask = nil
+        debounceTask?.cancel(); debounceTask = nil
+        monitor?.cancel(); monitor = nil
+        phase = .idle; pendingCount = 0
+    }
+
+    /// Sign-out: tear down AND reset the engine's pull cursor (re-seed + full-pull next sign-in;
+    /// local tasks are NOT wiped). Keeps the engine out of `SessionStore`.
+    func signedOut() {
+        stop()
+        _Concurrency.Task { await engine.resetCursor() }
+    }
+
+    func enteredForeground() {
+        guard signedIn() else { return }
+        active = true
+        startReachability()
+        startCadence()
+        _Concurrency.Task { await self.runSync(trigger: .foreground) }
+    }
+
+    func enteredBackground() {
+        active = false
+        cadenceTask?.cancel(); cadenceTask = nil
+        monitor?.cancel(); monitor = nil
+    }
+
+    // MARK: Triggers
+
+    /// Manual "Sync Now" + pull-to-refresh.
+    func syncNow() async { await runSync(trigger: .manual) }
+
+    /// Debounced post-mutation push — called from `TaskStore.onMutation`. Coalesces rapid edits.
+    func scheduleDebouncedPush() {
+        guard signedIn() else { return }
+        debounceTask?.cancel()
+        debounceTask = _Concurrency.Task { [weak self] in
+            try? await _Concurrency.Task.sleep(for: .milliseconds(1500))
+            guard let self, !_Concurrency.Task.isCancelled else { return }
+            await self.runPush()
+        }
+    }
+
+    // MARK: Internals
+
+    private func startCadence() {
+        cadenceTask?.cancel()
+        cadenceTask = _Concurrency.Task { [weak self] in
+            while !_Concurrency.Task.isCancelled {
+                try? await _Concurrency.Task.sleep(for: .seconds(120))
+                guard let self, !_Concurrency.Task.isCancelled, self.active else { return }
+                await self.runSync(trigger: .periodic)
+            }
+        }
+    }
+
+    private func startReachability() {
+        guard monitor == nil else { return }
+        let m = NWPathMonitor()
+        m.pathUpdateHandler = { [weak self] path in
+            let nowOnline = path.status == .satisfied
+            _Concurrency.Task { @MainActor in
+                guard let self else { return }
+                let regained = nowOnline && !self.online
+                self.online = nowOnline
+                await self.refreshHealth()
+                if regained, self.signedIn(), self.active {
+                    await self.runSync(trigger: .networkRegained)
+                }
+            }
+        }
+        m.start(queue: DispatchQueue(label: "dev.vinny.gsd.reachability"))
+        monitor = m
+    }
+
+    private func runSync(trigger: SyncTrigger) async {
+        phase = .syncing
+        let result = await engine.sync(trigger: trigger)
+        apply(result)
+    }
+
+    private func runPush() async {
+        phase = .syncing
+        let result = await engine.pushNow()
+        apply(result)
+    }
+
+    private func apply(_ result: SyncResult) {
+        if !result.skipped { lastSync = result }
+        phase = result.error != nil ? .error : .idle
+        _Concurrency.Task { await self.refreshStatus() }
+    }
+
+    private func refreshStatus() async {
+        pendingCount = await engine.pendingCount()
+        await refreshHealth()
+    }
+
+    private func refreshHealth() async {
+        health = await engine.health(online: online)
+    }
+}
