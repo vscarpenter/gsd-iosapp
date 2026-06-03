@@ -48,7 +48,12 @@ struct CaptureBar: View {
                             .background(.quaternary, in: Capsule())
                     }
                     Spacer()
-                    Button(String(localized: "Details")) { onDetails(parsed, override) }
+                    Button(String(localized: "Details")) {
+                        onDetails(parsed, override)
+                        // Consume the capture: the editor now owns this task. Without this, the draft
+                        // lingers and a subsequent submit creates a duplicate (title-only) task.
+                        draft = ""; override = nil; captureError = nil
+                    }
                         .font(.caption)
                 }
             }
@@ -58,17 +63,23 @@ struct CaptureBar: View {
     }
 
     private func submit() {
-        let p = CaptureParser.parse(draft)
+        let raw = draft
+        let p = CaptureParser.parse(raw)
         guard !p.title.isEmpty else { return }
         let ov = override
+        // Consume the draft SYNCHRONOUSLY so the "Details" affordance disappears the instant Done is
+        // pressed — otherwise the field stays populated during the async add (incl. the Phase-5c sync
+        // enqueue) and a quick "Details" tap creates a SECOND task (title-only from add + details from
+        // the editor). Restore the raw text on failure so the user can retry.
+        draft = ""; override = nil; captureError = nil
         _Concurrency.Task { @MainActor in
             do {
                 try await store.add(p, override: ov)
-                draft = ""; override = nil; captureError = nil; focused = true
-            } catch let error as ValidationError {
-                captureError = error.message
                 focused = true
+            } catch let error as ValidationError {
+                draft = raw; override = ov; captureError = error.message; focused = true
             } catch {
+                draft = raw; override = ov
                 captureError = String(localized: "Couldn't add. Please try again.")
                 focused = true
             }
