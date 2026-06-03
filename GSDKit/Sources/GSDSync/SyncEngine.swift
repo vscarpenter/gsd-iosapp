@@ -112,4 +112,17 @@ public actor SyncEngine {
         }
         return (pushed, failed)
     }
+
+    /// §7.4 step 5 (destructive — runs LAST, over a FRESH post-push remote index): delete local
+    /// ACTIVE tasks absent remotely AND not in the queue. `fetchAll()` is the active table only
+    /// (archived is a separate repo, out of scope). `allTaskIds()` = pending + failed (both protect).
+    func reconcileDeletions(token: String) async throws -> Int {
+        let remoteIds = Set(try await client.remoteIndex(token: token).keys)
+        let queuedIds = try await queue.allTaskIds()
+        var deleted = 0
+        for task in try await tasks.fetchAll() where !remoteIds.contains(task.id) && !queuedIds.contains(task.id) {
+            try await tasks.delete(id: task.id); deleted += 1
+        }
+        return deleted
+    }
 }
