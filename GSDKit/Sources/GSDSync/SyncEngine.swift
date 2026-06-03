@@ -26,14 +26,17 @@ public actor SyncEngine {
     private let deviceId: String
     private let tokenProvider: @Sendable () async throws -> String?
     private let now: @Sendable () -> Date
+    private let throttleMs: Int
     private var isSyncing = false
 
     public init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
                 cursor: SyncCursor, deviceId: String,
                 tokenProvider: @escaping @Sendable () async throws -> String?,
-                now: @escaping @Sendable () -> Date = { Date() }) {
+                now: @escaping @Sendable () -> Date = { Date() },
+                throttleMs: Int = 100) {
         self.client = client; self.tasks = tasks; self.queue = queue; self.cursor = cursor
         self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.now = now
+        self.throttleMs = throttleMs
     }
 
     /// Pull remote → local (upsert-only; no deletes). LWW vs local; device-local preserved via the
@@ -53,5 +56,16 @@ public actor SyncEngine {
             applied += 1
         }
         return (applied, maxApplied)
+    }
+
+    /// First-sign-in data-wipe guard (§7.4/§7.5): enqueue every existing local active task as a push
+    /// BEFORE any pull/reconcile, so pre-sign-in tasks are both uploaded and protected (they're then
+    /// "in the queue" → deletion-reconcile skips them). Called by `sync()` only when the cursor is unset.
+    func seedExistingTasks() async throws {
+        for task in try await tasks.fetchAll() {
+            try await queue.enqueue(SyncQueueItem(
+                id: UUID().uuidString, taskId: task.id, operation: .update,
+                timestamp: Int(now().timeIntervalSince1970 * 1000), payload: task))
+        }
     }
 }
