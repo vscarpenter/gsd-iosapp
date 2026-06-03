@@ -40,6 +40,7 @@ public final class TaskStore {
     private let newID: @Sendable () -> String
     private let calendar: Calendar
     private let reminders: any ReminderScheduling
+    private let syncQueue: any SyncQueueRepository
     // Stored var so @Observable tracks mutations; UserDefaults is the persistence backing.
     private var pinnedIDs: [String] = []
     // nonisolated(unsafe) so deinit can cancel without a MainActor hop.
@@ -55,7 +56,8 @@ public final class TaskStore {
         clock: @escaping @Sendable () -> Date = { Date() },
         newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.smartView) },
         calendar: Calendar = .current,
-        reminders: any ReminderScheduling = NoopReminderScheduler()
+        reminders: any ReminderScheduling = NoopReminderScheduler(),
+        syncQueue: any SyncQueueRepository = NoopSyncQueueRepository()
     ) {
         self.repository = repository
         self.smartViewRepository = smartViewRepository
@@ -65,6 +67,7 @@ public final class TaskStore {
         self.newID = newID
         self.calendar = calendar
         self.reminders = reminders
+        self.syncQueue = syncQueue
         self.pinnedIDs = defaults.stringArray(forKey: AppGroupDefaults.Key.pinnedSmartViewIds) ?? []
     }
 
@@ -116,6 +119,7 @@ public final class TaskStore {
         )
         try TaskValidator.validate(task)
         try await repository.upsert(task)
+        await enqueue(task.id, .create, payload: task)   // capture-bar quick-add is a creation path → must enqueue (else reconcile deletes it)
     }
 
     public func create(_ task: Task) async throws {
@@ -125,6 +129,7 @@ public final class TaskStore {
         t.updatedAt = now
         try TaskValidator.validate(t)
         try await repository.upsert(t)
+        await enqueue(t.id, .create, payload: t)
         await reminders.schedule(t)
     }
 
@@ -132,6 +137,7 @@ public final class TaskStore {
         var t = task; t.updatedAt = clock()
         try TaskValidator.validate(t)
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
         await reminders.schedule(t)
     }
 
@@ -149,6 +155,7 @@ public final class TaskStore {
         t.completedAt = willComplete ? now : nil
         t.updatedAt = now
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
 
         if willComplete { await reminders.cancel(taskID: t.id) }
         else { await reminders.schedule(t) }
@@ -158,6 +165,7 @@ public final class TaskStore {
               let next = RecurrenceEngine.spawnNext(from: t, now: now, newID: newID(), calendar: calendar)
         else { return }
         try await repository.upsert(next)
+        await enqueue(next.id, .create, payload: next)   // spawned recurrence instance is a NEW local task
         await reminders.schedule(next)
     }
 
@@ -166,10 +174,12 @@ public final class TaskStore {
         t.urgent = quadrant.isUrgent; t.important = quadrant.isImportant
         t.updatedAt = clock()
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
     }
 
     public func delete(_ task: Task) async throws {
         try await repository.delete(id: task.id)
+        await enqueue(task.id, .delete, payload: nil)
         await reminders.cancel(taskID: task.id)
     }
 
@@ -181,6 +191,7 @@ public final class TaskStore {
         t.snoozedUntil = now.addingTimeInterval(interval)
         t.updatedAt = now
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
         await reminders.schedule(t)   // live impl schedules at snoozedUntil
     }
 
@@ -192,6 +203,7 @@ public final class TaskStore {
                                                newID: newID(size: IDGenerator.Size.timeEntry))
         t.updatedAt = now
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
     }
 
     /// Stop the running entry and recalculate `timeSpent` (product spec §6.9).
@@ -202,6 +214,7 @@ public final class TaskStore {
         t.timeSpent = TimeTracking.timeSpentMinutes(t.timeEntries)
         t.updatedAt = now
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
     }
 
     private func newID(size: Int) -> String {
@@ -272,6 +285,17 @@ public final class TaskStore {
         var t = task
         t.updatedAt = clock()
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
+    }
+
+    /// Enqueue a sync op for a local mutation (§7.5). `.delete` carries no payload. Best-effort —
+    /// a queue failure must not fail the user's mutation (the next sync's seed/reconcile self-heals).
+    private func enqueue(_ taskId: String, _ op: SyncQueueItem.Operation, payload: Task?) async {
+        let item = SyncQueueItem(id: IDGenerator.generate(size: IDGenerator.Size.task),
+                                 taskId: taskId, operation: op,
+                                 timestamp: Int(clock().timeIntervalSince1970 * 1000),
+                                 payload: op == .delete ? nil : payload)
+        try? await syncQueue.enqueue(item)
     }
 
     // MARK: Reads
@@ -358,7 +382,8 @@ public final class TaskStore {
 
     /// Move a task into the archive (removed from active). Goes through the archive
     /// repository's single-transaction move; the observers refresh `tasks`/`archivedTasks`.
-    /// NOTE (Phase 5): enqueue a sync op here.
+    /// Archive/restore are device-local (brainstorming decision — §7.1 has no `archived` column),
+    /// so they do NOT enqueue a sync op.
     public func archive(_ task: Task) async throws {
         try await archiveRepository.archive(task)
     }
@@ -508,8 +533,9 @@ public final class TaskStore {
     /// Parse + persist an import. Replace clears all tasks then bulk-inserts (single
     /// transaction); Merge regenerates colliding ids + remaps references, then upserts each
     /// (stamping `updatedAt` via the clock). Limits + lenient decode live in `TaskImporter`.
-    /// Returns the parse result so the UI can report skipped-count.
-    /// NOTE (Phase 5): enqueue a sync op for each written task here.
+    /// Returns the parse result so the UI can report skipped-count. Each written task enqueues an
+    /// `.update` so it pushes + survives deletion-reconcile (import-replace's remote-deletion of
+    /// cleared-but-not-imported tasks is deferred — §8; they re-pull).
     @discardableResult
     public func importTasks(_ data: Data, mode: ImportMode) async throws -> ImportResult {
         switch mode {
@@ -520,6 +546,7 @@ public final class TaskStore {
                 var t = task; t.updatedAt = now; return t
             }
             try await repository.replaceAll(stamped)
+            for t in stamped { await enqueue(t.id, .update, payload: t) }
             return result
         case .merge:
             let existing = Set(try await repository.fetchAll().map(\.id))
@@ -527,6 +554,7 @@ public final class TaskStore {
             for task in result.tasks {
                 var t = task; t.updatedAt = clock()
                 try await repository.upsert(t)
+                await enqueue(t.id, .update, payload: t)
             }
             return result
         }
