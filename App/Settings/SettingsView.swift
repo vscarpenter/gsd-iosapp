@@ -261,7 +261,7 @@ struct SettingsView: View {
     private var aboutSection: some View {
         Section(String(localized: "About")) {
             LabeledContent(String(localized: "Version"), value: appVersion)
-            Text(String(localized: "GSD stores all data locally on your device. Nothing is sent to a server."))
+            Text(String(localized: "GSD stores your data locally on your device. When you sign in, your tasks sync with your account; signed out, nothing leaves your device."))
                 .font(.footnote).foregroundStyle(.secondary)
             Link(String(localized: "Privacy Policy"), destination: URL(string: "https://vinny.dev/gsd/privacy")!)
             Button {
