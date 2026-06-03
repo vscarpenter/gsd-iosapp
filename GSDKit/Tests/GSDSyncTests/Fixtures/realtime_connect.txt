@@ -1,0 +1,11 @@
+Captured live from GET https://api.vinny.io/api/realtime (Probe P1, unauthenticated, 2026-06-03).
+Note: PocketBase emits NO space after the field colon, and includes an `id:` line.
+
+id:zvAqCYJ3FIM8WOaLNqggbHZkTEXi0uzhcLKlV9AO
+event:PB_CONNECT
+data:{"clientId":"zvAqCYJ3FIM8WOaLNqggbHZkTEXi0uzhcLKlV9AO"}
+
+Still to confirm with a live token at the A74 gate:
+- POST /api/realtime {"clientId":"...","subscriptions":["tasks"]} with `Authorization: <jwt>` → 204
+- collection event shape: `event:tasks` (or `tasks/...`) + `data:{"action":"create|update|delete","record":{…§7.1…}}`
+- whether a `delete` event's `record` carries `task_id`

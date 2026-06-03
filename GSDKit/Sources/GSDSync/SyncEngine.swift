@@ -201,6 +201,34 @@ public actor SyncEngine {
         return result
     }
 
+    // MARK: Realtime (§7.6)
+
+    /// Apply one realtime (SSE) message. Same rules as pull: write via the repo directly (no enqueue,
+    /// no re-stamp), LWW vs local, device-local preserved by the mapper merge. Echo-filters our own
+    /// `device_id` (non-empty match only), enforces the owner check, and a realtime DELETE for a task
+    /// with a pending/failed queue item is skipped (queue-aware, like reconcile). Malformed or
+    /// task_id-less payloads are skipped (the cadence safety-net reconciles).
+    public func applyRealtime(rawData: String) async {
+        guard let data = rawData.data(using: .utf8),
+              let event = try? JSONDecoder().decode(RealtimeEvent.self, from: data),
+              let record = event.record else { return }
+        if !record.deviceId.isEmpty && record.deviceId == deviceId { return }   // echo-filter
+        if !record.owner.isEmpty, let token = try? await tokenProvider(),
+           let owner = JWT.userId(token), record.owner != owner { return }       // owner check
+        switch event.action {
+        case .create, .update:
+            guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { return }
+            let local = try? await tasks.fetch(id: record.taskId)
+            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
+            guard local == nil || decision == .takeRemote else { return }
+            try? await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local ?? nil))
+        case .delete:
+            let queued = (try? await queue.allTaskIds()) ?? []
+            if queued.contains(record.taskId) { return }   // queue-aware: don't drop a locally-pending task
+            try? await tasks.delete(id: record.taskId)
+        }
+    }
+
     // MARK: History (§7.7)
 
     /// Map a trigger to history's user/auto axis. Only explicit Sync-Now / pull-to-refresh is "user".
