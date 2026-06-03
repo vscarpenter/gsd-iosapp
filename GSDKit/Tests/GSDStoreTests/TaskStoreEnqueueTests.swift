@@ -35,6 +35,15 @@ struct TaskStoreEnqueueTests {
         #expect(q.ops.filter { $0.op == .create }.count == 1)   // enqueued for push (else deletion-reconcile wipes it)
     }
 
+    @Test func mutationFiresOnMutationHook() async throws {
+        let q = RecordingQueue(); let store = try makeStore(q)
+        final class Counter: @unchecked Sendable { var n = 0 }
+        let counter = Counter()
+        store.onMutation = { counter.n += 1 }
+        try await store.add(ParsedCapture(title: "Quick", urgent: true, important: false, tags: [], descriptionAdditions: []))
+        #expect(counter.n == 1)
+    }
+
     @Test func createEnqueuesCreate() async throws {
         let q = RecordingQueue(); let store = try makeStore(q)
         try await store.create(sample("a"))

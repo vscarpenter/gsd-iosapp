@@ -172,6 +172,35 @@ public actor SyncEngine {
         return result
     }
 
+    /// Push-only fast path for the debounced post-mutation trigger (§7.6): drains the queue with the
+    /// same LWW-guard / throttle / 429-abort / across-sync-retry as `sync()`, but does NOT pull or
+    /// reconcile. Shares the single-flight flag (a concurrent full `sync()` drops it). Records history.
+    public func pushNow(trigger: SyncTrigger = .mutation) async -> SyncResult {
+        guard !isSyncing else { return SyncResult(skipped: true) }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        var result = SyncResult()
+        let token: String
+        do {
+            guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
+            token = t
+        } catch { result.notSignedIn = true; return result }
+        guard let owner = JWT.userId(token) else {
+            result.error = "Could not derive owner from auth token"; return result
+        }
+        let start = now()
+        do {
+            let (pushed, failed) = try await push(token: token, owner: owner)
+            result.pushed = pushed; result.failed = failed
+            await record(trigger: trigger, result: result, conflicts: 0, start: start)
+        } catch {
+            result.error = String("\(error)".prefix(200))
+            await record(trigger: trigger, result: result, conflicts: 0, start: start)
+        }
+        return result
+    }
+
     // MARK: History (§7.7)
 
     /// Map a trigger to history's user/auto axis. Only explicit Sync-Now / pull-to-refresh is "user".
@@ -204,5 +233,21 @@ public actor SyncEngine {
     }
     public func historyStats() async -> SyncHistoryStats {
         (try? await history.stats()) ?? SyncHistoryStats()
+    }
+
+    // MARK: Status (§7.7)
+
+    /// Pending push count for the status chip.
+    public func pendingCount() async -> Int { (try? await queue.pending().count) ?? 0 }
+
+    /// Compute current health (§7.7) from the queue + token + reachability (the App supplies `online`).
+    public func health(online: Bool) async -> SyncHealth {
+        let items = (try? await queue.all()) ?? []
+        let oldestPendingMs = items.filter { $0.status == .pending }.map(\.timestamp).min()
+        let failedCount = items.filter { $0.status == .failed }.count
+        let token = try? await tokenProvider()
+        let expiry = token.flatMap { $0 }.flatMap { JWT.expiry($0) }
+        return SyncHealth.evaluate(oldestPendingMs: oldestPendingMs, failedCount: failedCount,
+                                   tokenExpiry: expiry, online: online, now: now())
     }
 }

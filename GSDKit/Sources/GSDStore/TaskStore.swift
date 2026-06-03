@@ -43,6 +43,8 @@ public final class TaskStore {
     private let syncQueue: any SyncQueueRepository
     // Stored var so @Observable tracks mutations; UserDefaults is the persistence backing.
     private var pinnedIDs: [String] = []
+    /// Fired after every enqueue so the App can schedule a debounced push (5d). Not observed.
+    @ObservationIgnored public var onMutation: (() -> Void)?
     // nonisolated(unsafe) so deinit can cancel without a MainActor hop.
     nonisolated(unsafe) private var observerTask: _Concurrency.Task<Void, Never>?
     nonisolated(unsafe) private var smartViewObserverTask: _Concurrency.Task<Void, Never>?
@@ -296,6 +298,7 @@ public final class TaskStore {
                                  timestamp: Int(clock().timeIntervalSince1970 * 1000),
                                  payload: op == .delete ? nil : payload)
         try? await syncQueue.enqueue(item)
+        onMutation?()
     }
 
     // MARK: Reads
