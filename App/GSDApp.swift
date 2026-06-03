@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import GSDStore
 import GSDSync
+import GSDSnapshot
 
 @main
 struct GSDApp: App {
@@ -9,6 +10,7 @@ struct GSDApp: App {
     @State private var session: SessionStore
     @State private var syncEngine: SyncEngine
     @State private var coordinator: SyncCoordinator
+    @State private var widgetRefresher: WidgetSnapshotRefresher
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -61,6 +63,11 @@ struct GSDApp: App {
             signedIn: { tokenStore.load() != nil })
         _coordinator = State(initialValue: coordinator)
         store.onMutation = { coordinator.scheduleDebouncedPush() }
+        // Widget snapshot refresher (Phase 6a): rebuilds the App-Group snapshot + reloads
+        // widget timelines whenever the task set changes (local edits, remote sync, background).
+        let widgetRefresher = WidgetSnapshotRefresher(store: store)
+        _widgetRefresher = State(initialValue: widgetRefresher)
+        store.onTasksChanged = { widgetRefresher.schedule() }
         _session = State(initialValue: SessionStore(auth: authService, tokenStore: tokenStore, coordinator: coordinator))
         // BGTaskScheduler handlers MUST be registered before the app finishes launching —
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
@@ -78,6 +85,7 @@ struct GSDApp: App {
                 .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme ?? nil)
                 .task {
                     store.start()
+                    widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()
                     await store.refreshBadge()
                     coordinator.start(trigger: .launch)
