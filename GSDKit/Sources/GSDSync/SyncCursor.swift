@@ -4,11 +4,13 @@ import GSDStore   // AppGroupDefaults
 /// The pull cursor (`lastSyncAt`), persisted as an ISO-8601 string in App-Group defaults. Compared
 /// and filtered as ISO (lexicographic == chronological, given the consistent fractional+Z format).
 /// `nil` ⇒ never synced (triggers the first-sign-in seed). Cleared on sign-out. PROBE-VERIFIED.
-struct SyncCursor {
+public struct SyncCursor {
     private let defaults: UserDefaults
     private let key = "gsd.sync.lastSyncAt"
 
-    init(defaults: UserDefaults = AppGroupDefaults.shared) { self.defaults = defaults }
+    // public so the App can construct it (C3) and pass it to the public SyncEngine.init;
+    // load/advance/clear stay internal — only the same-module engine calls them.
+    public init(defaults: UserDefaults = AppGroupDefaults.shared) { self.defaults = defaults }
 
     func load() -> String? { defaults.string(forKey: key) }
 
