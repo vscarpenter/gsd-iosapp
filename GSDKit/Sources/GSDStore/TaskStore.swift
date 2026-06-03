@@ -382,20 +382,23 @@ public final class TaskStore {
 
     /// Move a task into the archive (removed from active). Goes through the archive
     /// repository's single-transaction move; the observers refresh `tasks`/`archivedTasks`.
-    /// Archive/restore are device-local (brainstorming decision — §7.1 has no `archived` column),
-    /// so they do NOT enqueue a sync op.
+    /// Archive is device-local — NO enqueue (§7.1 has no `archived` column; the archive STATE never
+    /// syncs). Note `restore` DOES enqueue (it re-activates the task — see below).
     public func archive(_ task: Task) async throws {
         try await archiveRepository.archive(task)
     }
 
     /// Restore an archived task to active, stamping `updatedAt` so it sorts fresh.
     /// Two writes: the repository re-inserts the stored row, then we upsert the freshened
-    /// `updatedAt` (the active observer coalesces both into one snapshot).
+    /// `updatedAt` (the active observer coalesces both into one snapshot). The task is active again,
+    /// so it enqueues `.update` — it's re-pushed and survives deletion-reconcile (closes the
+    /// archive-here / delete-remotely / restore-here edge; the archive STATE itself still never syncs).
     public func restore(_ task: Task) async throws {
         var t = task
         t.updatedAt = clock()
         try await archiveRepository.restore(id: task.id)
         try await repository.upsert(t)
+        await enqueue(t.id, .update, payload: t)
     }
 
     public func deletePermanently(_ task: Task) async throws {
