@@ -11,6 +11,7 @@ struct GSDApp: App {
     @State private var syncEngine: SyncEngine
     @State private var coordinator: SyncCoordinator
     @State private var widgetRefresher: WidgetSnapshotRefresher
+    @State private var shareInbox: ShareInbox
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -68,6 +69,10 @@ struct GSDApp: App {
         let widgetRefresher = WidgetSnapshotRefresher(store: store)
         _widgetRefresher = State(initialValue: widgetRefresher)
         store.onTasksChanged = { widgetRefresher.schedule() }
+        // Share Extension inbox (Phase 6d): drains the App-Group outbox through the SAME
+        // create() path on launch + foreground. Trivial glue; the logic is the tested ShareInbox.
+        let shareInbox = ShareInbox(store: ShareOutboxStore())
+        _shareInbox = State(initialValue: shareInbox)
         _session = State(initialValue: SessionStore(auth: authService, tokenStore: tokenStore, coordinator: coordinator))
         // BGTaskScheduler handlers MUST be registered before the app finishes launching —
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
@@ -85,6 +90,7 @@ struct GSDApp: App {
                 .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme ?? nil)
                 .task {
                     store.start()
+                    await shareInbox.drain { try await store.create($0) }
                     widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()
                     await store.refreshBadge()
@@ -95,6 +101,7 @@ struct GSDApp: App {
                     case .active:
                         coordinator.enteredForeground()
                         _Concurrency.Task { await store.refreshBadge() }
+                        _Concurrency.Task { await shareInbox.drain { try await store.create($0) } }
                     case .background:
                         coordinator.enteredBackground()
                         BackgroundRefresh.schedule()
