@@ -25,7 +25,9 @@
 		3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */; };
 		4132C3E4E3012462A71F5C24 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */; };
 		4A297BF5B9DB7F065BC85EE1 /* TodaysFocusProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA24761F3BB6078DC0F318A8 /* TodaysFocusProvider.swift */; };
+		511369ABE5B10E9AB12EEE51 /* ShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */; };
 		52058F06635130DE73D6A92D /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */; };
+		52AD5212537B728E13851A19 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A706546D6BC547A4D13660DC /* ShareViewController.swift */; };
 		58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */; };
 		59071E4849DBEB9BD62E330F /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90129986F7968EDDC63918F0 /* SyncCoordinator.swift */; };
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
@@ -38,6 +40,7 @@
 		863728DE9F16D23835B6548A /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 454069942C9F75AFFB235E5C /* SessionStore.swift */; };
 		88A8C4B6149243B4E448B079 /* TaskListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721AA423A1BF176E1CB41486 /* TaskListRow.swift */; };
 		897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92D91657DBB6423E6BBE725 /* DataStorageView.swift */; };
+		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
 		A6BD5A7B14A9BEC633DE1C66 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
 		A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D97811D144C615B847BA217 /* SettingsView.swift */; };
@@ -50,8 +53,10 @@
 		CD46F261D6842C4865DDACB6 /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */; };
 		D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD99A69FF72AB17AB5968 /* DashboardView.swift */; };
 		D1A08D8A25028DD6A0CF3B82 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 98C26FEAF665B149C1D46E83 /* GSDSnapshot */; };
+		DAD1C4162E0C6658137A4C21 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = A10EBE9AD3F19E9BF692E87E /* GSDModel */; };
 		E63F93C1AFC3CD88D00DE943 /* BulkActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30895EFC952028C78E9F99EE /* BulkActionBar.swift */; };
 		E85D86A3C5BC5FC8E8E6A062 /* SyncStatusChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */; };
+		EA4E73E505B881123C11206C /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 772006EE80317C193341A8F4 /* GSDSnapshot */; };
 		EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6988BDFABF5E325C967D8EA /* TaskCardView.swift */; };
 		EA9DA80415D88FF601FCBF70 /* GSDWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E77900FA416C5BD27D556B5F /* GSDWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EEED564CCDE3349B5B966A0C /* SyncHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */; };
@@ -67,6 +72,13 @@
 			remoteGlobalIDString = FB5769502DA33695CDF99A6E;
 			remoteInfo = GSDWidgets;
 		};
+		F84A37D89CDEAAC02B1DA7F2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0765B2E5667333C3066967A2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3C9C23BC1E54FC4FB785F94F;
+			remoteInfo = GSDShareExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -77,6 +89,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				EA9DA80415D88FF601FCBF70 /* GSDWidgets.appex in Embed Foundation Extensions */,
+				8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -85,10 +98,12 @@
 
 /* Begin PBXFileReference section */
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
+		085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		1E44544249232FE202E59EB0 /* GSD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSD.entitlements; sourceTree = "<group>"; };
 		1FA0D2F82C759037F6A2DD38 /* GSDWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWidgetBundle.swift; sourceTree = "<group>"; };
+		2429471CF154E2FD234BA738 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		249F029B40FD9FDAA6A68A25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		30895EFC952028C78E9F99EE /* BulkActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkActionBar.swift; sourceTree = "<group>"; };
 		30A03169462530BB59EC808C /* CaptureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBar.swift; sourceTree = "<group>"; };
@@ -96,6 +111,7 @@
 		399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReminderScheduler.swift; sourceTree = "<group>"; };
 		3D312C99EDD96DCCCA77715B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		454069942C9F75AFFB235E5C /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDShareExtension.entitlements; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusEntry.swift; sourceTree = "<group>"; };
 		53A151034146B4714F731EE2 /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
@@ -119,6 +135,7 @@
 		94ED783FE5C2324C295B0273 /* RelativeDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeDate.swift; sourceTree = "<group>"; };
 		9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusChip.swift; sourceTree = "<group>"; };
 		9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredTaskListView.swift; sourceTree = "<group>"; };
+		A706546D6BC547A4D13660DC /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A92D91657DBB6423E6BBE725 /* DataStorageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStorageView.swift; sourceTree = "<group>"; };
 		ABCFD2CB1A7F53B54E6E1725 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
@@ -127,6 +144,7 @@
 		BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWebAuthPresenter.swift; sourceTree = "<group>"; };
 		BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixGridView.swift; sourceTree = "<group>"; };
 		BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixView.swift; sourceTree = "<group>"; };
+		D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
 		DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
 		E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncHistoryView.swift; sourceTree = "<group>"; };
 		E77900FA416C5BD27D556B5F /* GSDWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -143,6 +161,15 @@
 			files = (
 				2DAC8455D9EDB41A5278D652 /* GSDModel in Frameworks */,
 				38C43AD20BE29AACB50F60F3 /* GSDSnapshot in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		1E2B9DE3E141C148262BAACD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DAD1C4162E0C6658137A4C21 /* GSDModel in Frameworks */,
+				EA4E73E505B881123C11206C /* GSDSnapshot in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -256,6 +283,17 @@
 			path = Bulk;
 			sourceTree = "<group>";
 		};
+		7A441FD94D17954A83BEB281 /* ShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */,
+				2429471CF154E2FD234BA738 /* Info.plist */,
+				D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */,
+				A706546D6BC547A4D13660DC /* ShareViewController.swift */,
+			);
+			path = ShareExtension;
+			sourceTree = "<group>";
+		};
 		90EBAFD44A99F0DBD17A24F5 /* Theme */ = {
 			isa = PBXGroup;
 			children = (
@@ -295,6 +333,7 @@
 			isa = PBXGroup;
 			children = (
 				5786EAF6D1A1869947855193 /* GSD.app */,
+				085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */,
 				E77900FA416C5BD27D556B5F /* GSDWidgets.appex */,
 			);
 			name = Products;
@@ -321,6 +360,7 @@
 			children = (
 				0408C7043A3AAB9AC827D964 /* App */,
 				D515A28E5AA76CE02716A6EF /* Packages */,
+				7A441FD94D17954A83BEB281 /* ShareExtension */,
 				1EB3D99838DFC3431761508F /* Widgets */,
 				A8F4EE28B10703F63C52EDE9 /* Products */,
 			);
@@ -395,6 +435,26 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2F978B0D68A80588D394D45A /* Build configuration list for PBXNativeTarget "GSDShareExtension" */;
+			buildPhases = (
+				8B25347A3EE417C3002FDC8B /* Sources */,
+				1E2B9DE3E141C148262BAACD /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GSDShareExtension;
+			packageProductDependencies = (
+				A10EBE9AD3F19E9BF692E87E /* GSDModel */,
+				772006EE80317C193341A8F4 /* GSDSnapshot */,
+			);
+			productName = GSDShareExtension;
+			productReference = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		C9092E2A5E48E2CA69F326A5 /* GSD */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5212041C283BCD7F5730074B /* Build configuration list for PBXNativeTarget "GSD" */;
@@ -408,6 +468,7 @@
 			);
 			dependencies = (
 				4E68D6359FE50C2C55CABBEF /* PBXTargetDependency */,
+				23293F0D3E5D5FC728EE1818 /* PBXTargetDependency */,
 			);
 			name = GSD;
 			packageProductDependencies = (
@@ -449,6 +510,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					3C9C23BC1E54FC4FB785F94F = {
+						DevelopmentTeam = 52HVJ3VDSM;
+						ProvisioningStyle = Automatic;
+					};
 					C9092E2A5E48E2CA69F326A5 = {
 						DevelopmentTeam = 52HVJ3VDSM;
 						ProvisioningStyle = Automatic;
@@ -477,6 +542,7 @@
 			projectRoot = "";
 			targets = (
 				C9092E2A5E48E2CA69F326A5 /* GSD */,
+				3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */,
 				FB5769502DA33695CDF99A6E /* GSDWidgets */,
 			);
 		};
@@ -503,6 +569,15 @@
 				4A297BF5B9DB7F065BC85EE1 /* TodaysFocusProvider.swift in Sources */,
 				A6BD5A7B14A9BEC633DE1C66 /* TodaysFocusView.swift in Sources */,
 				B6AF4EA8BD5D386DBF3D1310 /* TodaysFocusWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8B25347A3EE417C3002FDC8B /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				511369ABE5B10E9AB12EEE51 /* ShareComposeView.swift in Sources */,
+				52AD5212537B728E13851A19 /* ShareViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -553,6 +628,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		23293F0D3E5D5FC728EE1818 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */;
+			targetProxy = F84A37D89CDEAAC02B1DA7F2 /* PBXContainerItemProxy */;
+		};
 		4E68D6359FE50C2C55CABBEF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = FB5769502DA33695CDF99A6E /* GSDWidgets */;
@@ -684,6 +764,48 @@
 			};
 			name = Release;
 		};
+		A5368D9B6128867E69E13387 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/GSDShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.share;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AC87EC629162C420D7BB3F39 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/GSDShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShareExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.share;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		B244DBFF48CCA8354DEF68E3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -782,6 +904,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		2F978B0D68A80588D394D45A /* Build configuration list for PBXNativeTarget "GSDShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A5368D9B6128867E69E13387 /* Debug */,
+				AC87EC629162C420D7BB3F39 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		5212041C283BCD7F5730074B /* Build configuration list for PBXNativeTarget "GSD" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -826,9 +957,17 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = GSDModel;
 		};
+		772006EE80317C193341A8F4 /* GSDSnapshot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GSDSnapshot;
+		};
 		98C26FEAF665B149C1D46E83 /* GSDSnapshot */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GSDSnapshot;
+		};
+		A10EBE9AD3F19E9BF692E87E /* GSDModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GSDModel;
 		};
 		BF8FC602D80E3FC0BFC933BC /* GSDSnapshot */ = {
 			isa = XCSwiftPackageProductDependency;
