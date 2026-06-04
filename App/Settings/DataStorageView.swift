@@ -85,7 +85,13 @@ struct DataStorageView: View {
     /// Write the export JSON to a temp `.json` file so `ShareLink(item: URL)` (URL is
     /// `Transferable`, FileDocument is not) can share it with a real filename.
     private func makeExportURL() -> URL? {
-        guard let data = try? store.exportJSON() else { return nil }
+        let data: Data
+        do {
+            data = try store.exportJSON()
+        } catch {
+            statusMessage = String(localized: "Couldn’t prepare the export file: \(error.localizedDescription)")
+            return nil
+        }
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("GSD-Tasks.json")
         do {
             try data.write(to: url, options: .atomic)

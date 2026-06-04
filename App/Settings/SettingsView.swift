@@ -18,6 +18,7 @@ struct SettingsView: View {
     /// Local mirror of the store's archive settings (UserDefaults-backed); writes flush back.
     @State private var archiveSettings: ArchiveSettings = .init()
     @State private var archiveStatus: String?
+    @State private var archiveStatusIsError = false
 
     @State private var notificationSettings: NotificationSettings = .init()
     /// OS authorization status, refreshed on appear (nil = not yet read).
@@ -121,14 +122,22 @@ struct SettingsView: View {
             }
             Button {
                 _Concurrency.Task {
-                    try? await store.runAutoArchiveSweep()
-                    archiveStatus = String(localized: "Archive sweep complete.")
+                    do {
+                        try await store.runAutoArchiveSweep()
+                        archiveStatus = String(localized: "Archive sweep complete.")
+                        archiveStatusIsError = false
+                    } catch {
+                        archiveStatus = String(localized: "Couldn’t run auto-archive: \(error.localizedDescription)")
+                        archiveStatusIsError = true
+                    }
                 }
             } label: {
                 Label(String(localized: "Archive Now"), systemImage: "archivebox")
             }
             if let archiveStatus {
-                Text(archiveStatus).font(.footnote).foregroundStyle(.secondary)
+                Text(archiveStatus)
+                    .font(.footnote)
+                    .foregroundStyle(archiveStatusIsError ? .red : .secondary)
             }
         }
     }

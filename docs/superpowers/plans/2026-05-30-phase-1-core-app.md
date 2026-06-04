@@ -12,7 +12,7 @@
 - `GSDModel`: `Task` (full init at `Task.swift`), `Subtask`, `TimeEntry`, `Quadrant(urgent:important:)` + `.title` + raw values + `CaseIterable` (Q1→Q4), `RecurrenceType`, `IDGenerator.generate(size:)` / `IDGenerator.Size.task`, `FieldLimits`, `TaskValidator.validate(_:) throws`, `ValidationError`.
 - `GSDStore`: `AppDatabase.live()` / `.inMemory()`, `TaskRepository` protocol (`upsert`/`fetchAll`/`fetch`/`delete`/`observeAll`), `GRDBTaskRepository(_ database:now:)`.
 
-**Reference:** increment spec `docs/specs/2026-05-30-phase-0-2-foundations-core-depth.md` (§5–6); product spec `2026-05-30-native-ios-app-design.md` (§4 navigation, §6.1 matrix, §6.2 capture/parser, §6.3 editor, §6.4 completion, §12.3 accessibility).
+**Reference:** increment spec `docs/specs/2026-05-30-phase-0-2-foundations-core-depth.md` (§5–6); product spec `spec.md` (§4 navigation, §6.1 matrix, §6.2 capture/parser, §6.3 editor, §6.4 completion, §12.3 accessibility).
 
 ---
 

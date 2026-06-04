@@ -7,7 +7,7 @@
 
 ### References (authoritative for behavior)
 
-- **Product spec:** `2026-05-30-native-ios-app-design.md` — the source of truth for every behavioral rule, limit, and enumeration. Section references below (e.g. §6.2) point into it.
+- **Product spec:** `spec.md` — the source of truth for every behavioral rule, limit, and enumeration. Section references below (e.g. §6.2) point into it.
 - **Coding standards:** `coding-standards.md` — process and quality bar (TDD, spec-driven, elegance check, Definition of Done).
 
 This spec governs *what we build first and how we verify it*. Where it is silent on a behavior, the product spec governs.

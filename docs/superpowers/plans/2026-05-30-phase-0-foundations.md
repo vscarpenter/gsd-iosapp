@@ -8,7 +8,7 @@
 
 **Tech Stack:** Swift 6, SwiftUI, GRDB 7 (SQLite), Swift Testing (`@Test`), XcodeGen (project generation), iOS 26 deployment target.
 
-**Reference:** Increment spec `docs/specs/2026-05-30-phase-0-2-foundations-core-depth.md`; product spec `2026-05-30-native-ios-app-design.md` (§5 data model, Appendix B limits).
+**Reference:** Increment spec `docs/specs/2026-05-30-phase-0-2-foundations-core-depth.md`; product spec `spec.md` (§5 data model, Appendix B limits).
 
 ---
 

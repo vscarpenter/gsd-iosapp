@@ -13,7 +13,7 @@
 - `GSDStore`: `TaskStore` (`@MainActor @Observable`; observable `tasks: [Task]`, `private let clock: @Sendable () -> Date`, `private let calendar: Calendar`, `tasks(in:showCompleted:)`).
 - App: `MatrixView` (NavigationStack + List + `QuadrantSection`, owns `@State editor: EditorRequest?` + `.sheet(item:) { TaskEditorView(request:) }` + `ConfettiView(trigger:)`), `MatrixGridView` (iPad grid), `QuadrantSection`/`QuadrantCell`, `TaskCardView(task:now:blockedByCount:blockingCount:)`, `TaskActions(store:onCompleted:)` (`toggle`/`delete`/`move`/`snooze`/`startTimer`/`stopTimer`), `EditorRequest` (`.edit(Task)`/`.new(Quadrant, prefill:)`, `Identifiable`), `QuadrantStyle.accent(_:)`/`.symbol(_:)`, `ContentView` (compact → `MatrixView`, regular → `MatrixGridView`).
 
-**Reference:** design spec `docs/specs/2026-05-30-phase-3a-filtering-navigation.md`; product spec `2026-05-30-native-ios-app-design.md` (§5.6 SmartView, §5.9 FilterCriteria, §6.13 smart views, §6.14 search note).
+**Reference:** design spec `docs/specs/2026-05-30-phase-3a-filtering-navigation.md`; product spec `spec.md` (§5.6 SmartView, §5.9 FilterCriteria, §6.13 smart views, §6.14 search note).
 
 ---
 

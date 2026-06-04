@@ -12,6 +12,7 @@ struct ArchiveListView: View {
     @State private var pendingDelete: Task?
     @State private var selection = Set<String>()
     @State private var showBulkDeleteConfirm = false
+    @State private var actionFailure: TaskActionFailure?
     @Environment(\.editMode) private var editMode
 
     private var results: [Task] {
@@ -34,7 +35,9 @@ struct ArchiveListView: View {
                             .tag(task.id)
                             .swipeActions(edge: .leading) {
                                 Button {
-                                    _Concurrency.Task { try? await store.restore(task) }
+                                    runArchiveAction(String(localized: "Couldn’t restore that task")) {
+                                        try await store.restore(task)
+                                    }
                                 } label: { Label(String(localized: "Restore"), systemImage: "arrow.uturn.backward") }
                                 .tint(.blue)
                             }
@@ -60,11 +63,13 @@ struct ArchiveListView: View {
             if !selection.isEmpty {
                 HStack {
                     Button(String(localized: "Restore")) {
-                        let ids = selection; selection.removeAll()
-                        _Concurrency.Task {
+                        let ids = selection
+                        runArchiveAction(String(localized: "Couldn’t restore selected tasks")) {
                             for task in store.archivedTasks where ids.contains(task.id) {
-                                try? await store.restore(task)
+                                try await store.restore(task)
                             }
+                        } onSuccess: {
+                            selection.subtract(ids)
                         }
                     }
                     Spacer()
@@ -82,11 +87,13 @@ struct ArchiveListView: View {
         .confirmationDialog(String(localized: "Delete \(selection.count) tasks permanently?"),
                             isPresented: $showBulkDeleteConfirm, titleVisibility: .visible) {
             Button(String(localized: "Delete"), role: .destructive) {
-                let ids = selection; selection.removeAll()
-                _Concurrency.Task {
+                let ids = selection
+                runArchiveAction(String(localized: "Couldn’t delete selected tasks")) {
                     for task in store.archivedTasks where ids.contains(task.id) {
-                        try? await store.deletePermanently(task)
+                        try await store.deletePermanently(task)
                     }
+                } onSuccess: {
+                    selection.subtract(ids)
                 }
             }
             Button(String(localized: "Cancel"), role: .cancel) {}
@@ -99,7 +106,9 @@ struct ArchiveListView: View {
                             titleVisibility: .visible) {
             Button(String(localized: "Delete"), role: .destructive) {
                 if let task = pendingDelete {
-                    _Concurrency.Task { try? await store.deletePermanently(task) }
+                    runArchiveAction(String(localized: "Couldn’t delete that task")) {
+                        try await store.deletePermanently(task)
+                    }
                 }
                 pendingDelete = nil
             }
@@ -110,6 +119,7 @@ struct ArchiveListView: View {
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }
         }
+        .taskActionFailureAlert($actionFailure)
     }
 
     @ViewBuilder private var archiveSettingsMenu: some View {
@@ -117,13 +127,32 @@ struct ArchiveListView: View {
             Toggle(String(localized: "Auto-archive"), isOn: Binding(
                 get: { store.archiveSettings.autoEnabled },
                 set: { var s = store.archiveSettings; s.autoEnabled = $0; store.archiveSettings = s
-                       _Concurrency.Task { try? await store.runAutoArchiveSweep() } }))
+                       runArchiveAction(String(localized: "Couldn’t run auto-archive")) {
+                           try await store.runAutoArchiveSweep()
+                       } }))
             Picker(String(localized: "Archive after"), selection: Binding(
                 get: { store.archiveSettings.afterDays },
                 set: { var s = store.archiveSettings; s.afterDays = $0; store.archiveSettings = s
-                       _Concurrency.Task { try? await store.runAutoArchiveSweep() } })) {
+                       runArchiveAction(String(localized: "Couldn’t run auto-archive")) {
+                           try await store.runAutoArchiveSweep()
+                       } })) {
                 ForEach(ArchiveSettings.allowedDays, id: \.self) { Text("\($0) days").tag($0) }
             }
         } label: { Label(String(localized: "Archive settings"), systemImage: "gearshape") }
+    }
+
+    private func runArchiveAction(
+        _ failureMessage: String,
+        operation: @escaping () async throws -> Void,
+        onSuccess: @escaping () -> Void = {}
+    ) {
+        _Concurrency.Task { @MainActor in
+            do {
+                try await operation()
+                onSuccess()
+            } catch {
+                actionFailure = TaskActionFailure("\(failureMessage): \(error.localizedDescription)")
+            }
+        }
     }
 }

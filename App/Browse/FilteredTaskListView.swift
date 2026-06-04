@@ -12,6 +12,7 @@ struct FilteredTaskListView: View {
     @State private var confettiTrigger = 0
     @State private var searchText = ""
     @State private var selection = Set<String>()
+    @State private var actionFailure: TaskActionFailure?
     @Environment(\.editMode) private var editMode
 
     private var tasks: [Task] {
@@ -23,7 +24,11 @@ struct FilteredTaskListView: View {
     private var graph: DependencyGraph { DependencyGraph(tasks: store.tasks) }
 
     var body: some View {
-        let rowActions = TaskActions(store: store) { confettiTrigger += 1 }
+        let rowActions = TaskActions(
+            store: store,
+            onCompleted: { confettiTrigger += 1 },
+            onError: { actionFailure = TaskActionFailure($0) }
+        )
         ZStack {
             Group {
                 if tasks.isEmpty {
@@ -63,6 +68,7 @@ struct FilteredTaskListView: View {
             }
         }
         .sheet(item: $editor) { TaskEditorView(request: $0) }
+        .taskActionFailureAlert($actionFailure)
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }
         }

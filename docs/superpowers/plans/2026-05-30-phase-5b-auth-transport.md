@@ -14,7 +14,7 @@
 - App: `GSDApp` (`@State store`, `.task` launch hooks, injected deps — extend this for the session), `SettingsView` (`Form` of `Section`s: Appearance/Archive/Data&Storage/Notifications/About — add **Account**), the `ReminderScheduling` protocol + `LiveReminderScheduler` **seam precedent** (5b mirrors it exactly).
 - `project.yml` (XcodeGen source of truth; `GENERATE_INFOPLIST_FILE: NO`, `info.path: App/Info.plist`) — add the `gsd` URL scheme.
 
-**Reference:** spec `docs/specs/2026-05-30-phase-5b-auth-transport.md` (Groups A–C, A49–A56); product spec `2026-05-30-native-ios-app-design.md` §7–8; the captured `auth-methods` response (PocketBase ≥0.23, `oauth2.providers[]`).
+**Reference:** spec `docs/specs/2026-05-30-phase-5b-auth-transport.md` (Groups A–C, A49–A56); product spec `spec.md` §7–8; the captured `auth-methods` response (PocketBase ≥0.23, `oauth2.providers[]`).
 
 ---
 

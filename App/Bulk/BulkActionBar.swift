@@ -18,12 +18,13 @@ struct BulkActionBar: View {
     @State private var showSetDue = false
     @State private var tagDraft = ""
     @State private var dueDraft = Date.now
+    @State private var actionFailure: TaskActionFailure?
 
     private var count: Int { selection.count }
 
     var body: some View {
         HStack(spacing: 16) {
-            Button { run { try await store.bulkComplete(ids: selection) } } label: {
+            Button { run { try await store.bulkComplete(ids: $0) } } label: {
                 Label(String(localized: "Complete"), systemImage: "checkmark.circle")
             }
             Menu {
@@ -48,13 +49,13 @@ struct BulkActionBar: View {
         .confirmationDialog(String(localized: "Delete \(count) tasks?"),
                             isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button(String(localized: "Delete"), role: .destructive) {
-                run { try await store.bulkDelete(ids: selection) }
+                run { try await store.bulkDelete(ids: $0) }
             }
             Button(String(localized: "Cancel"), role: .cancel) {}
         }
         .confirmationDialog(String(localized: "Move to…"), isPresented: $showMove, titleVisibility: .visible) {
             ForEach(Quadrant.allCases, id: \.self) { q in
-                Button(q.title) { run { try await store.bulkMove(ids: selection, to: q) } }
+                Button(q.title) { run { try await store.bulkMove(ids: $0, to: q) } }
             }
             Button(String(localized: "Cancel"), role: .cancel) {}
         }
@@ -62,7 +63,7 @@ struct BulkActionBar: View {
             TextField(String(localized: "comma,separated"), text: $tagDraft)
             Button(String(localized: "Add")) {
                 let tags = parseTags(tagDraft); tagDraft = ""
-                run { try await store.bulkAddTags(ids: selection, tags: tags) }
+                run { try await store.bulkAddTags(ids: $0, tags: tags) }
             }
             Button(String(localized: "Cancel"), role: .cancel) { tagDraft = "" }
         }
@@ -70,7 +71,7 @@ struct BulkActionBar: View {
             TextField(String(localized: "comma,separated"), text: $tagDraft)
             Button(String(localized: "Remove")) {
                 let tags = parseTags(tagDraft); tagDraft = ""
-                run { try await store.bulkRemoveTags(ids: selection, tags: tags) }
+                run { try await store.bulkRemoveTags(ids: $0, tags: tags) }
             }
             Button(String(localized: "Cancel"), role: .cancel) { tagDraft = "" }
         }
@@ -83,7 +84,7 @@ struct BulkActionBar: View {
                         ToolbarItem(placement: .confirmationAction) {
                             Button(String(localized: "Set")) {
                                 showSetDue = false
-                                run { try await store.bulkSetDue(ids: selection, to: dueDraft) }
+                                run { try await store.bulkSetDue(ids: $0, to: dueDraft) }
                             }
                         }
                         ToolbarItem(placement: .cancellationAction) {
@@ -93,6 +94,7 @@ struct BulkActionBar: View {
             }
             .presentationDetents([.medium])
         }
+        .taskActionFailureAlert($actionFailure)
     }
 
     private func parseTags(_ raw: String) -> [String] {
@@ -100,10 +102,15 @@ struct BulkActionBar: View {
             $0.trimmingCharacters(in: CharacterSet(charactersIn: " #")).lowercased()
         }.filter { !$0.isEmpty }
     }
-    private func run(_ op: @escaping () async throws -> Void) {
+    private func run(_ op: @escaping (Set<String>) async throws -> Void) {
+        let ids = selection
         _Concurrency.Task { @MainActor in
-            try? await op()
-            selection.removeAll()
+            do {
+                try await op(ids)
+                selection.subtract(ids)
+            } catch {
+                actionFailure = TaskActionFailure(String(localized: "Couldn’t update selected tasks: \(error.localizedDescription)"))
+            }
         }
     }
 }

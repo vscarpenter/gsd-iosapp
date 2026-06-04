@@ -13,7 +13,7 @@
 - `GSDStore`: `AppDatabase` (`writer`, `inMemory()`, `live()`, `migrator` → `registerV1`), `Migrations.swift` (`registerV1` `tasks` table), `TaskRecord` (Codable/Fetchable/Persistable; `init(_:)` + `toDomain()`), `GSDJSON` (`string(_:)`/`value(_:_:)`, ms-truncating ISO-8601), `StoreLocation` (`appGroupID = "group.dev.vinny.gsd"`), `TaskRepository`/`GRDBTaskRepository` (observe via `ValueObservation` → `AsyncThrowingStream`), `TaskStore` (`@MainActor @Observable`; `tasks`, injected `clock`/`calendar`/`newID`, `start()` observe bridge, mutations, `tasks(in:showCompleted:)`, `tasks(matching:)`).
 - App: `ContentView` (iPhone `TabView` Matrix·Browse; iPad `NavigationSplitView` sidebar Matrix + Smart Views → detail), `MatrixView`/`MatrixGridView`/`QuadrantSection`/`QuadrantCell`, `TaskListRow(task:blockedByCount:blockingCount:actions:onEdit:)`, `TaskActions(store:onCompleted:)`, `SmartViewListView`/`SmartViewRow(view:)`, `FilteredTaskListView(view:)`, `TaskEditorView(request:)`/`EditorRequest`, `QuadrantStyle.accent/.symbol`, `ConfettiView(trigger:)`, `AppPreferences.swift` (`UserDefaults.shared`, `AppGroup.id`), `Theme.swift` (`AppTheme`), `showCompletedToggle(_:)`.
 
-**Reference:** design spec `docs/specs/2026-05-30-phase-3b-organize.md`; exemplar `docs/superpowers/plans/2026-05-30-phase-3a-filtering-navigation.md`; product spec `2026-05-30-native-ios-app-design.md` (§5.6, §5.9, §6.13, §6.14).
+**Reference:** design spec `docs/specs/2026-05-30-phase-3b-organize.md`; exemplar `docs/superpowers/plans/2026-05-30-phase-3a-filtering-navigation.md`; product spec `spec.md` (§5.6, §5.9, §6.13, §6.14).
 
 ---
 

@@ -13,7 +13,7 @@
 - `GSDStore` (GRDB, no SwiftUI): `AppDatabase` (`writer: any DatabaseWriter`; `Self.migrator.migrate(writer)` on init; `inMemory()` for tests, `live()` on-disk), `AppDatabase.migrator` (registers v1→v3, returns the `DatabaseMigrator`), the `TaskRecord`/`GSDJSON` mapper pattern (scalars direct, embedded collections as JSON strings via `GSDJSON`; `GSDJSON` is the **strict** ms-ISO-8601 codec), `TaskRepository`/`GRDBTaskRepository` (protocol `Sendable`, final class with `dbWriter: any DatabaseWriter` + injected `now`; `upsert`/`fetchAll`/`fetch(id:)`/`delete(id:)`/`replaceAll`/`observeAll`), `AppGroupDefaults` (`nonisolated(unsafe) static let shared: UserDefaults`, `Key` namespace, falls back to `.standard`), `StoreLocation.appGroupID = "group.dev.vinny.gsd"`.
 - Package: `GSDKit/Package.swift` (`swift-tools-version: 6.2`, products `GSDModel` + `GSDStore`, GRDB dependency, testTargets `GSDModelTests`/`GSDStoreTests`).
 
-**Reference:** design spec `docs/specs/2026-05-30-phase-5a-sync-foundation.md` (Groups A–C, A42–A48); product spec `2026-05-30-native-ios-app-design.md` §7 (Sync & Backend wire schema/mapper/LWW/queue/device-identity) + §8.4 (identity, resolved (c) email-keyed — a 5b concern); exemplars `docs/superpowers/plans/2026-05-30-phase-3a-…`, `…-3b-…`, `…-3c-…`, `…-4-notifications.md`.
+**Reference:** design spec `docs/specs/2026-05-30-phase-5a-sync-foundation.md` (Groups A–C, A42–A48); product spec `spec.md` §7 (Sync & Backend wire schema/mapper/LWW/queue/device-identity) + §8.4 (identity, resolved (c) email-keyed — a 5b concern); exemplars `docs/superpowers/plans/2026-05-30-phase-3a-…`, `…-3b-…`, `…-3c-…`, `…-4-notifications.md`.
 
 ---
 

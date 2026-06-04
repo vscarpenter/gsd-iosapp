@@ -48,10 +48,10 @@ public final class TaskStore {
     /// Fired after every observed task-set change (local + remote + background sync), with the
     /// new value already committed to `tasks`. Drives the widget snapshot (6a). Not observed.
     @ObservationIgnored public var onTasksChanged: (() -> Void)?
-    // nonisolated(unsafe) so deinit can cancel without a MainActor hop.
-    nonisolated(unsafe) private var observerTask: _Concurrency.Task<Void, Never>?
-    nonisolated(unsafe) private var smartViewObserverTask: _Concurrency.Task<Void, Never>?
-    nonisolated(unsafe) private var archiveObserverTask: _Concurrency.Task<Void, Never>?
+    // ObservationIgnored because lifecycle task handles are not UI state.
+    @ObservationIgnored private var observerTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var smartViewObserverTask: _Concurrency.Task<Void, Never>?
+    @ObservationIgnored private var archiveObserverTask: _Concurrency.Task<Void, Never>?
 
     public init(
         repository: any TaskRepository,

@@ -10,6 +10,7 @@ struct MatrixView: View {
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
+    @State private var actionFailure: TaskActionFailure?
 
     var body: some View {
         ZStack {
@@ -18,7 +19,11 @@ struct MatrixView: View {
                     ForEach(Quadrant.allCases, id: \.self) { q in
                         QuadrantSection(
                             quadrant: q, showCompleted: showCompleted,
-                            actions: TaskActions(store: store) { confettiTrigger += 1 },
+                            actions: TaskActions(
+                                store: store,
+                                onCompleted: { confettiTrigger += 1 },
+                                onError: { actionFailure = TaskActionFailure($0) }
+                            ),
                             onEdit: { editor = .edit($0) },
                             onAdd: { editor = .new(q, prefill: nil) }
                         )
@@ -44,10 +49,11 @@ struct MatrixView: View {
             ConfettiView(trigger: confettiTrigger)
         }
         .sheet(item: $editor) { TaskEditorView(request: $0) }
+        .taskActionFailureAlert($actionFailure)
     }
 }
 
-@ToolbarContentBuilder
+@MainActor @ToolbarContentBuilder
 func showCompletedToggle(_ binding: Binding<Bool>) -> some ToolbarContent {
     ToolbarItem(placement: .topBarTrailing) {
         Toggle(isOn: binding) { Label("Show Completed", systemImage: "checkmark.circle") }

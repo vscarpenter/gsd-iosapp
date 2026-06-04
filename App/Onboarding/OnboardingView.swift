@@ -24,7 +24,7 @@ struct OnboardingView: View {
               body: String(localized: "The dashboard shows streaks, trends, and where your time goes.")),
         .init(icon: "lock.shield",
               title: String(localized: "Private by default"),
-              body: String(localized: "No account required. Your data stays on your device; optional sync can come later.")),
+              body: String(localized: "No account required. Your data stays on your device unless you choose to sign in and sync.")),
     ]
 
     var body: some View {

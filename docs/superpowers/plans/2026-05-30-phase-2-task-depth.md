@@ -13,7 +13,7 @@
 - `GSDStore`: `AppDatabase.live()`/`.inMemory()`, `TaskRepository` protocol (`upsert`/`fetchAll`/`fetch`/`delete`/`observeAll`; `delete` already scrubs the id from other tasks' `dependencies`), `GRDBTaskRepository(_:now:)`, and `TaskStore` (`@MainActor @Observable`; `start()`, `tasks`, `add`/`save`/`toggleComplete`/`move`/`delete`, `tasks(in:showCompleted:)`, injected `clock`/`newID`).
 - App: `TaskEditorView(request:)` with `EditorRequest.{new,edit}`, `TaskCardView(task:)`, `QuadrantStyle.accent(_:)`/`.symbol(_:)`, `TaskActions`, `QuadrantSection`/`QuadrantCell`, `MatrixView`/`MatrixGridView`.
 
-**Reference:** increment spec `docs/specs/2026-05-30-phase-0-2-foundations-core-depth.md` (§2.1 scope, §5 contracts, §9 edge cases, §10 acceptance A9–A13, §11 test stubs); product spec `2026-05-30-native-ios-app-design.md` (§5.8 quadrants, §6.5 recurrence, §6.6 subtasks, §6.7 snooze, §6.8 dependencies/BFS, §6.9 time tracking, §6.10 due dates, Appendix A/B enums + limits).
+**Reference:** increment spec `docs/specs/2026-05-30-phase-0-2-foundations-core-depth.md` (§2.1 scope, §5 contracts, §9 edge cases, §10 acceptance A9–A13, §11 test stubs); product spec `spec.md` (§5.8 quadrants, §6.5 recurrence, §6.6 subtasks, §6.7 snooze, §6.8 dependencies/BFS, §6.9 time tracking, §6.10 due dates, Appendix A/B enums + limits).
 
 ---
 

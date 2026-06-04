@@ -1,6 +1,5 @@
 import Foundation
-
-enum AppGroup { static let id = "group.dev.vinny.gsd" }
+import GSDModel
 
 extension UserDefaults {
     /// Shared App-Group defaults; falls back to `.standard` if the group is

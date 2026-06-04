@@ -8,6 +8,7 @@ struct MatrixGridView: View {
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
+    @State private var actionFailure: TaskActionFailure?
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
@@ -23,7 +24,11 @@ struct MatrixGridView: View {
                             ForEach(Quadrant.allCases, id: \.self) { q in
                                 QuadrantCell(
                                     quadrant: q, showCompleted: showCompleted,
-                                    actions: TaskActions(store: store) { confettiTrigger += 1 },
+                                    actions: TaskActions(
+                                        store: store,
+                                        onCompleted: { confettiTrigger += 1 },
+                                        onError: { actionFailure = TaskActionFailure($0) }
+                                    ),
                                     onEdit: { editor = .edit($0) },
                                     onAdd: { editor = .new(q, prefill: nil) }
                                 )
@@ -38,5 +43,6 @@ struct MatrixGridView: View {
             ConfettiView(trigger: confettiTrigger)
         }
         .sheet(item: $editor) { TaskEditorView(request: $0) }
+        .taskActionFailureAlert($actionFailure)
     }
 }

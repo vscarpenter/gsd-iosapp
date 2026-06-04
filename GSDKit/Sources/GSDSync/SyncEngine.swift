@@ -271,8 +271,12 @@ public actor SyncEngine {
         guard let data = rawData.data(using: .utf8),
               let event = try? JSONDecoder().decode(RealtimeEvent.self, from: data),
               let record = event.record else { return }
-        if !record.owner.isEmpty, let token = try? await tokenProvider(),
-           let owner = JWT.userId(token), record.owner != owner { return }       // owner check
+        if !record.owner.isEmpty {
+            guard let token = try? await tokenProvider(),
+                  let owner = JWT.userId(token),
+                  record.owner == owner
+            else { return }       // fail closed when the event has an owner we cannot validate
+        }
         let pending = (try? await queue.all()) ?? []
         switch event.action {
         case .create, .update:

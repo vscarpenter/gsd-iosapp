@@ -113,7 +113,12 @@ final class SyncCoordinator {
             await refreshStatus()
             return false
         }
-        try? await store.eraseAllData()
+        do {
+            try await store.eraseAllData()
+        } catch {
+            await refreshStatus()
+            return false
+        }
         await refreshStatus()
         return true
     }
