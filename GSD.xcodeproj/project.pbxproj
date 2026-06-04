@@ -42,6 +42,7 @@
 		88A8C4B6149243B4E448B079 /* TaskListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721AA423A1BF176E1CB41486 /* TaskListRow.swift */; };
 		897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92D91657DBB6423E6BBE725 /* DataStorageView.swift */; };
 		8C598D4A09D89CC736EB8DD5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */; };
+		8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */; };
 		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
 		A6BD5A7B14A9BEC633DE1C66 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
@@ -117,6 +118,7 @@
 		45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDShareExtension.entitlements; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusEntry.swift; sourceTree = "<group>"; };
+		52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		53A151034146B4714F731EE2 /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantCell.swift; sourceTree = "<group>"; };
@@ -386,6 +388,7 @@
 		CAB18B8FF69C32795537F4B3 /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */,
 				94ED783FE5C2324C295B0273 /* RelativeDate.swift */,
 			);
 			path = Support;
@@ -625,6 +628,7 @@
 				897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */,
 				607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
+				8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */,
 				58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
 				CD46F261D6842C4865DDACB6 /* KeychainTokenStore.swift in Sources */,

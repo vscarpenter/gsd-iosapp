@@ -88,9 +88,12 @@ struct SmartViewEditorView: View {
                     TextField(String(localized: "Contains…"), text: $criteria.searchQuery)
                 }
                 if let saveError {
-                    Section { Text(saveError).font(.caption).foregroundStyle(.red) }
+                    Section { Text(saveError).font(.caption).foregroundStyle(Surface.alert) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Surface.paper)
+            .tint(Surface.tint)
             .navigationTitle(editingID == nil ? String(localized: "New Smart View") : String(localized: "Edit Smart View"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -111,9 +114,10 @@ struct SmartViewEditorView: View {
                 ForEach(iconChoices, id: \.self) { choice in
                     Button { icon = choice } label: {
                         Image(systemName: choice)
+                            .foregroundStyle(icon == choice ? Surface.tint : Surface.ink2)
                             .frame(width: 44, height: 44)
-                            .background(icon == choice ? Color.accentColor.opacity(0.2) : .clear,
-                                        in: RoundedRectangle(cornerRadius: 8))
+                            .background(icon == choice ? Surface.tint.opacity(0.16) : Color.clear,
+                                        in: RoundedRectangle(cornerRadius: Radius.tile, style: .continuous))
                     }
                     .accessibilityLabel(iconLabels[choice] ?? choice)
                     .accessibilityAddTraits(icon == choice ? .isSelected : [])
@@ -170,6 +174,7 @@ struct SmartViewEditorView: View {
             Toggle(String(localized: "Due this week"), isOn: $criteria.dueThisWeek)
             Toggle(String(localized: "No due date"), isOn: $criteria.noDueDate)
         }
+        .tint(Surface.success)
     }
 
     private var dueRangePickers: some View {
@@ -191,6 +196,7 @@ struct SmartViewEditorView: View {
         }
         .onChange(of: hasStart) { _, on in if !on { setRange(start: nil) } else { setRange(start: criteria.dueDateRange?.start ?? .now) } }
         .onChange(of: hasEnd) { _, on in if !on { setRange(end: nil) } else { setRange(end: criteria.dueDateRange?.end ?? .now) } }
+        .tint(Surface.success)
     }
 
     private var recurrenceChips: some View {
@@ -202,7 +208,7 @@ struct SmartViewEditorView: View {
                         .frame(minHeight: 44)
                         .contentShape(Rectangle())
                         .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(on ? Color.accentColor.opacity(0.2) : .clear,
+                        .background(on ? Surface.tint.opacity(0.16) : Color.clear,
                                     in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -213,6 +219,7 @@ struct SmartViewEditorView: View {
 
     private var readyToggle: some View {
         Toggle(String(localized: "Ready to work (no incomplete blockers)"), isOn: $criteria.readyToWork)
+            .tint(Surface.success)
     }
 
     // MARK: Helpers

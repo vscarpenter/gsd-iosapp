@@ -24,33 +24,42 @@ struct ArchiveListView: View {
     var body: some View {
         Group {
             if store.archivedTasks.isEmpty {
-                ContentUnavailableView(String(localized: "Archive is empty"),
-                                       systemImage: "archivebox",
-                                       description: Text(String(localized: "Completed tasks you archive will appear here.")))
+                EmptyStateView(icon: "archivebox",
+                               title: String(localized: "Nothing archived."),
+                               message: String(localized: "Completed tasks you archive will live here."))
+            } else if results.isEmpty {
+                EmptyStateView(icon: "magnifyingglass",
+                               title: String(localized: "No tasks match \"\(searchText)\""),
+                               message: String(localized: "Try a different word, tag, or quadrant."))
             } else {
                 List(selection: $selection) {
                     ForEach(results) { task in
                         TaskCardView(task: task, now: .now, blockedByCount: 0, blockingCount: 0)
-                            .opacity(0.6)
+                            .opacity(0.72)
                             .tag(task.id)
+                            .listRowBackground(Surface.surface)
+                            .listRowSeparatorTint(Surface.hairline)
                             .swipeActions(edge: .leading) {
                                 Button {
                                     runArchiveAction(String(localized: "Couldn’t restore that task")) {
                                         try await store.restore(task)
                                     }
                                 } label: { Label(String(localized: "Restore"), systemImage: "arrow.uturn.backward") }
-                                .tint(.blue)
+                                .tint(Surface.tint)
                             }
                             .swipeActions(edge: .trailing) {
                                 Button(role: .destructive) { pendingDelete = task } label: {
                                     Label(String(localized: "Delete"), systemImage: "trash")
                                 }
+                                .tint(Surface.alert)
                             }
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
             }
         }
+        .background(Surface.paper)
         .navigationTitle(String(localized: "Archive"))
         .searchable(text: $searchText, prompt: String(localized: "Search archive"))
         .toolbar {
@@ -75,7 +84,7 @@ struct ArchiveListView: View {
                     Spacer()
                     Text(String(localized: "\(selection.count) selected"))
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Surface.ink2)
                     Spacer()
                     Button(String(localized: "Delete"), role: .destructive) { showBulkDeleteConfirm = true }
                 }

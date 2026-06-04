@@ -2,7 +2,9 @@ import SwiftUI
 import GSDModel
 
 /// One task row. Hosts its own VoiceOver label; custom actions are attached
-/// by the enclosing section.
+/// by the enclosing section. Visual anatomy follows the editorial design
+/// language: a 3pt accent spine, SF headline title, footnote meta, and a
+/// 28pt completion disc that fills with the quadrant accent when done.
 struct TaskCardView: View {
     let task: Task
 
@@ -17,34 +19,25 @@ struct TaskCardView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
                 .fill(QuadrantStyle.accent(task.quadrant))
-                .frame(width: 4)
+                .frame(width: 3)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(task.title)
                     .font(.headline)
                     .strikethrough(task.completed)
-                    .foregroundStyle(task.completed ? .secondary : .primary)
+                    .foregroundStyle(task.completed ? Surface.ink3 : Surface.ink)
 
                 if !task.description.isEmpty {
                     Text(task.description)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(task.completed ? Surface.ink3 : descriptionColor)
                         .lineLimit(2)
                 }
 
-                if !task.tags.isEmpty {
-                    HStack(spacing: 6) {
-                        ForEach(task.tags, id: \.self) { tag in
-                            Text("#\(tag)")
-                                .font(.caption2)
-                                .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(QuadrantStyle.accent(task.quadrant).opacity(0.15), in: Capsule())
-                        }
-                    }
-                }
+                if !task.tags.isEmpty { tagRow }
 
                 // --- Phase 2 indicators ---
                 if hasMetadata { metadataRow }
@@ -53,17 +46,47 @@ struct TaskCardView: View {
 
             Spacer(minLength: 0)
 
-            Image(systemName: task.completed ? "checkmark.circle.fill" : "circle")
-                .imageScale(.large)
-                .foregroundStyle(task.completed ? QuadrantStyle.accent(task.quadrant) : .secondary)
-                .accessibilityHidden(true)
+            completionDisc
         }
-        .opacity(isBlocked && !task.completed ? 0.55 : 1)
+        .opacity(isBlocked && !task.completed ? 0.62 : 1)
         .padding(.vertical, 8)
         .frame(minHeight: 44)                 // ≥44pt hit target (§12.3)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    /// A captured link surfaces its URL as the description — render it quietly.
+    private var descriptionColor: Color {
+        let d = task.description
+        return (d.hasPrefix("http://") || d.hasPrefix("https://")) ? Surface.ink3 : Surface.ink2
+    }
+
+    private var completionDisc: some View {
+        ZStack {
+            if task.completed {
+                Circle().fill(QuadrantStyle.accent(task.quadrant))
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Surface.inkOnAccent)
+            } else {
+                Circle().stroke(Surface.hairlineStrong, lineWidth: 2)
+            }
+        }
+        .frame(width: 28, height: 28)
+        .accessibilityHidden(true)
+    }
+
+    private var tagRow: some View {
+        HStack(spacing: 6) {
+            ForEach(task.tags, id: \.self) { tag in
+                Text("#\(tag)")
+                    .font(.footnote)
+                    .foregroundStyle(QuadrantStyle.accent(task.quadrant))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(QuadrantStyle.wash(task.quadrant), in: Capsule())
+            }
+        }
     }
 
     private var hasMetadata: Bool {
@@ -78,26 +101,24 @@ struct TaskCardView: View {
         let runningStart = TimeTracking.runningEntry(task.timeEntries)?.startedAt
         HStack(spacing: 10) {
             if let dueDate = task.dueDate {
+                let state = RelativeDate.state(for: dueDate, reference: now)
                 Label(RelativeDate.dueString(for: dueDate, reference: now),
-                      systemImage: "calendar")
+                      systemImage: state == .overdue ? "exclamationmark.triangle" : "calendar")
                     .foregroundStyle(dueColor(for: dueDate))
+                    .fontWeight(state == .upcoming ? .regular : .semibold)
             }
             if task.recurrence != .none {
                 Image(systemName: "repeat").accessibilityLabel(String(localized: "Repeats"))
             }
             if blockedByCount > 0 {
-                Label("\(blockedByCount)", systemImage: "lock")
-                    .accessibilityLabel(String(localized: "Blocked by \(blockedByCount)"))
+                Label(String(localized: "Blocked by \(blockedByCount)"), systemImage: "lock")
             }
             if blockingCount > 0 {
                 Label("\(blockingCount)", systemImage: "arrow.right.circle")
                     .accessibilityLabel(String(localized: "Blocking \(blockingCount)"))
             }
             if let runningStart {
-                // Live elapsed since the running entry started.
-                let elapsedMinutes = Int(now.timeIntervalSince(runningStart) / 60.0)
-                Label(TimeTracking.format(minutes: elapsedMinutes), systemImage: "stopwatch")
-                    .foregroundStyle(.green)
+                runningTimer(since: runningStart)
             } else if let timeSpent = task.timeSpent, timeSpent > 0 {
                 Label(TimeTracking.format(minutes: timeSpent), systemImage: "clock")
             }
@@ -108,18 +129,44 @@ struct TaskCardView: View {
                       systemImage: "moon.zzz")
             }
         }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
+        .font(.footnote)
+        .foregroundStyle(Surface.ink3)
         .lineLimit(1)
+    }
+
+    /// Live elapsed since the running entry started: pulsing accent dot + tabular HH:MM:SS.
+    private func runningTimer(since start: Date) -> some View {
+        let elapsed = Int(now.timeIntervalSince(start))
+        return HStack(spacing: 6) {
+            PulsingDot(color: QuadrantStyle.accent(task.quadrant))
+            Text(Self.hms(elapsed)).monospacedDigit()
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundStyle(QuadrantStyle.accent(task.quadrant))
+        .accessibilityLabel(String(localized: "timer running \(TimeTracking.format(minutes: elapsed / 60))"))
+    }
+
+    static func hms(_ seconds: Int) -> String {
+        let s = max(0, seconds)
+        return String(format: "%02d:%02d:%02d", s / 3600, (s % 3600) / 60, s % 60)
     }
 
     @ViewBuilder private var subtaskProgress: some View {
         let done = task.subtasks.filter(\.completed).count
         let total = task.subtasks.count
-        VStack(alignment: .leading, spacing: 2) {
-            ProgressView(value: Double(done), total: Double(total))
-                .tint(QuadrantStyle.accent(task.quadrant))
-            Text("\(done)/\(total)").font(.caption2).foregroundStyle(.secondary)
+        let fraction = total > 0 ? Double(done) / Double(total) : 0
+        let complete = done == total
+        let fill = complete ? Surface.success : QuadrantStyle.accent(task.quadrant)
+        HStack(spacing: 9) {
+            Capsule().fill(Surface.sunken)
+                .frame(width: 84, height: 6)
+                .overlay(alignment: .leading) {
+                    Capsule().fill(fill).frame(width: 84 * fraction, height: 6)
+                }
+            Text("\(done)/\(total)")
+                .font(.footnote).monospacedDigit()
+                .fontWeight(complete ? .semibold : .regular)
+                .foregroundStyle(complete ? Surface.success : Surface.ink2)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "\(done) of \(total) subtasks done"))
@@ -127,9 +174,9 @@ struct TaskCardView: View {
 
     private func dueColor(for dueDate: Date) -> Color {
         switch RelativeDate.state(for: dueDate, reference: now) {
-        case .overdue:  return .red
-        case .today:    return .orange
-        case .upcoming: return .secondary
+        case .overdue:  return Surface.alert
+        case .today:    return QuadrantStyle.accent(.notUrgentImportant) // tide
+        case .upcoming: return Surface.ink3
         }
     }
 
@@ -154,5 +201,28 @@ struct TaskCardView: View {
             parts.append(String(localized: "snoozed \(RelativeDate.remainingString(until: snoozedUntil, reference: now))"))
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+/// A small accent dot that breathes. Its own identity keeps the repeating
+/// animation smooth even when the parent card re-renders each second for the
+/// live timer. Suppressed under Reduce Motion.
+private struct PulsingDot: View {
+    let color: Color
+    @State private var dim = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Circle()
+            .fill(color)
+            .frame(width: 7, height: 7)
+            .opacity(dim ? 0.35 : 1)
+            .onAppear {
+                guard !reduceMotion else { return }
+                withAnimation(.easeInOut(duration: 0.85).repeatForever(autoreverses: true)) {
+                    dim = true
+                }
+            }
+            .accessibilityHidden(true)
     }
 }

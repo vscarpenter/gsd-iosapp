@@ -17,6 +17,9 @@ struct GSDApp: App {
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
 
     init() {
+        // Editorial chrome: serif nav titles + ink (not system-blue) bars. Must run before
+        // any UINavigationBar/UITabBar is realized, so the App init is the right window.
+        AppAppearance.configure()
         // The local store is the app's source of truth; failure to open it is unrecoverable.
         let database = try! AppDatabase.live()
         // The live scheduler reads NotificationSettings straight from App-Group defaults
@@ -88,6 +91,7 @@ struct GSDApp: App {
                 .environment(session)
                 .environment(coordinator)
                 .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme ?? nil)
+                .tint(Surface.ink) // quiet graphite chrome; genuine actions opt into Surface.tint
                 .task {
                     store.start()
                     await shareInbox.drain { try await store.create($0) }
@@ -113,7 +117,13 @@ struct GSDApp: App {
                     get: { !hasOnboarded },
                     set: { presenting in if !presenting { hasOnboarded = true } }
                 )) {
-                    OnboardingView { hasOnboarded = true }
+                    OnboardingView(
+                        onFinish: { hasOnboarded = true },
+                        onSignIn: {
+                            hasOnboarded = true
+                            _Concurrency.Task { await session.signIn(provider: "google") }
+                        }
+                    )
                 }
         }
     }

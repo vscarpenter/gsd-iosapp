@@ -20,11 +20,13 @@ struct SyncHistoryView: View {
             }
             Section(String(localized: "Recent")) {
                 if entries.isEmpty {
-                    Text(String(localized: "No sync history yet.")).foregroundStyle(.secondary)
+                    Text(String(localized: "No sync history yet.")).foregroundStyle(Surface.ink2)
                 }
                 ForEach(entries) { entry in row(entry) }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background(Surface.paper)
         .navigationTitle(String(localized: "Sync History"))
         .task { await load() }
         .refreshable { await load() }
@@ -36,9 +38,9 @@ struct SyncHistoryView: View {
                 Image(systemName: icon(e.status)).foregroundStyle(color(e.status))
                 Text(title(e.status)).font(.subheadline.weight(.medium))
                 Spacer()
-                Text(date(e.timestamp)).font(.caption).foregroundStyle(.secondary)
+                Text(date(e.timestamp)).font(.caption).foregroundStyle(Surface.ink3)
             }
-            Text(detail(e)).font(.caption).foregroundStyle(.secondary)
+            Text(detail(e)).font(.caption).foregroundStyle(Surface.ink3)
         }
         .padding(.vertical, 2)
     }
@@ -63,10 +65,10 @@ struct SyncHistoryView: View {
     }
     private func color(_ s: SyncHistoryEntry.Status) -> Color {
         switch s {
-        case .success:  .green
-        case .conflict: .blue
-        case .partial:  .orange
-        case .error:    .red
+        case .success:  Surface.success
+        case .conflict: Surface.tint
+        case .partial:  QuadrantStyle.accent(.urgentNotImportant) // ochre
+        case .error:    Surface.alert
         }
     }
     private func title(_ s: SyncHistoryEntry.Status) -> String {

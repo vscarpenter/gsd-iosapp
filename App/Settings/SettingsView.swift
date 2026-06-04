@@ -35,6 +35,9 @@ struct SettingsView: View {
                 DataStorageView()          // Group D sections
                 aboutSection
             }
+            .scrollContentBackground(.hidden)
+            .background(Surface.paper)
+            .tint(Surface.tint)   // actions/links use the single calm tint, never system blue
             .navigationTitle(String(localized: "Settings"))
             .toolbar { paletteButton(palette) }
             .onAppear {
@@ -51,6 +54,7 @@ struct SettingsView: View {
                 ForEach(AppTheme.allCases) { theme in Text(theme.label).tag(theme.rawValue) }
             }
             Toggle(String(localized: "Show Completed Tasks"), isOn: $showCompleted)
+                .tint(Surface.success)
         }
     }
 
@@ -64,7 +68,7 @@ struct SettingsView: View {
                                    value: String(localized: "Synced · \(sync.pendingCount) pending"))
                 }
                 if let msg = sync.health.message {
-                    Text(msg).font(.footnote).foregroundStyle(.secondary)
+                    Text(msg).font(.footnote).foregroundStyle(Surface.ink3)
                 }
                 Button {
                     _Concurrency.Task { await session.syncNow() }
@@ -99,7 +103,7 @@ struct SettingsView: View {
                 .disabled(session.inProgress)
             }
             if let error = session.lastError {
-                Text(error).font(.footnote).foregroundStyle(.red)
+                Text(error).font(.footnote).foregroundStyle(Surface.alert)
             }
         }
     }
@@ -110,6 +114,7 @@ struct SettingsView: View {
                 get: { archiveSettings.autoEnabled },
                 set: { archiveSettings.autoEnabled = $0; store.archiveSettings = archiveSettings }
             ))
+            .tint(Surface.success)
             if archiveSettings.autoEnabled {
                 Picker(String(localized: "Archive after"), selection: Binding(
                     get: { archiveSettings.afterDays },
@@ -137,7 +142,7 @@ struct SettingsView: View {
             if let archiveStatus {
                 Text(archiveStatus)
                     .font(.footnote)
-                    .foregroundStyle(archiveStatusIsError ? .red : .secondary)
+                    .foregroundStyle(archiveStatusIsError ? Surface.alert : Surface.ink3)
             }
         }
     }
@@ -148,6 +153,7 @@ struct SettingsView: View {
                 get: { notificationSettings.enabled },
                 set: { notificationSettings.enabled = $0; flushNotificationSettings() }
             ))
+            .tint(Surface.success)
             if notificationSettings.enabled {
                 Picker(String(localized: "Default Reminder"), selection: Binding(
                     get: { notificationSettings.defaultReminder },
@@ -161,6 +167,7 @@ struct SettingsView: View {
                     get: { notificationSettings.soundEnabled },
                     set: { notificationSettings.soundEnabled = $0; flushNotificationSettings() }
                 ))
+                .tint(Surface.success)
                 quietHoursControls
                 authStatusRow
             }
@@ -182,6 +189,7 @@ struct SettingsView: View {
                 flushNotificationSettings()
             }
         ))
+        .tint(Surface.success)
         if notificationSettings.quietHoursStart != nil {
             DatePicker(String(localized: "From"), selection: quietBinding(\.quietHoursStart, default: "22:00"),
                        displayedComponents: .hourAndMinute)
@@ -271,7 +279,7 @@ struct SettingsView: View {
         Section(String(localized: "About")) {
             LabeledContent(String(localized: "Version"), value: appVersion)
             Text(String(localized: "GSD stores your data locally on your device. When you sign in, your tasks sync with your account; signed out, nothing leaves your device."))
-                .font(.footnote).foregroundStyle(.secondary)
+                .font(.footnote).foregroundStyle(Surface.ink3)
             Link(String(localized: "Privacy Policy"), destination: URL(string: "https://vinny.dev/gsd/privacy")!)
             Button {
                 hasOnboarded = false       // App root re-presents onboarding on the flag change

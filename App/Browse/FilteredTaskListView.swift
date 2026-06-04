@@ -23,6 +23,30 @@ struct FilteredTaskListView: View {
     }
     private var graph: DependencyGraph { DependencyGraph(tasks: store.tasks) }
 
+    /// View-aware empty state (design §10): a reassuring green check for an empty
+    /// Overdue view, a trophy for Wins, a search-miss message while searching, else
+    /// a generic prompt naming the view.
+    @ViewBuilder private var emptyState: some View {
+        let searching = !searchText.trimmingCharacters(in: .whitespaces).isEmpty
+        if searching {
+            EmptyStateView(icon: "magnifyingglass",
+                           title: String(localized: "No tasks match \"\(searchText)\""),
+                           message: String(localized: "Try a different word, tag, or quadrant."))
+        } else if view.id == "overdue" {
+            EmptyStateView(icon: "checkmark.circle", iconColor: Surface.success,
+                           title: String(localized: "Nothing overdue."),
+                           message: String(localized: "You're all caught up."))
+        } else if view.id == "weeks-wins" {
+            EmptyStateView(icon: "trophy",
+                           title: String(localized: "No wins logged yet."),
+                           message: String(localized: "Completed tasks from the last 7 days show here."))
+        } else {
+            EmptyStateView(icon: view.icon,
+                           title: String(localized: "Nothing here yet."),
+                           message: String(localized: "Tasks matching \"\(view.name)\" will appear here."))
+        }
+    }
+
     var body: some View {
         let rowActions = TaskActions(
             store: store,
@@ -32,9 +56,7 @@ struct FilteredTaskListView: View {
         ZStack {
             Group {
                 if tasks.isEmpty {
-                    ContentUnavailableView(String(localized: "No tasks match"),
-                                           systemImage: view.icon,
-                                           description: Text(String(localized: "Tasks matching \"\(view.name)\" will appear here.")))
+                    emptyState
                 } else {
                     List(selection: $selection) {
                         ForEach(tasks) { task in
@@ -46,11 +68,15 @@ struct FilteredTaskListView: View {
                                 onEdit: { editor = .edit($0) }
                             )
                             .tag(task.id)
+                            .listRowBackground(Surface.surface)
+                            .listRowSeparatorTint(Surface.hairline)
                         }
                     }
                     .listStyle(.insetGrouped)
+                    .scrollContentBackground(.hidden)
                 }
             }
+            .background(Surface.paper)
             ConfettiView(trigger: confettiTrigger)
         }
         .navigationTitle(view.name)

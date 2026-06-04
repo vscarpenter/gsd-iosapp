@@ -17,8 +17,13 @@ struct SmartViewListView: View {
             List {
                 Section {
                     NavigationLink(value: BrowseRoute.archive) {
-                        Label(String(localized: "Archive"), systemImage: "archivebox")
+                        Label {
+                            Text(String(localized: "Archive")).foregroundStyle(Surface.ink)
+                        } icon: {
+                            Image(systemName: "archivebox").foregroundStyle(Surface.ink2)
+                        }
                     }
+                    .listRowBackground(Surface.surface)
                 }
                 if !store.pinnedViews.isEmpty {
                     Section(String(localized: "Pinned")) {
@@ -36,6 +41,8 @@ struct SmartViewListView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Surface.paper)
             .navigationTitle(String(localized: "Browse"))
             .navigationDestination(for: BrowseRoute.self) { route in
                 switch route {
@@ -66,15 +73,16 @@ struct SmartViewListView: View {
 
     @ViewBuilder private func viewLink(_ view: SmartView) -> some View {
         NavigationLink(value: BrowseRoute.view(view.id)) { SmartViewRow(view: view) }
+            .listRowBackground(Surface.surface)
             .swipeActions(edge: .leading) {
                 if store.pinnedSmartViewIds.contains(view.id) {
                     Button { store.unpin(view.id) } label: {
                         Label(String(localized: "Unpin"), systemImage: "pin.slash")
-                    }.tint(.gray)
+                    }.tint(QuadrantStyle.accent(.notUrgentNotImportant)) // slate
                 } else {
                     Button { store.pin(view.id) } label: {
                         Label(String(localized: "Pin"), systemImage: "pin")
-                    }.tint(.orange)
+                    }.tint(Surface.tint)
                 }
             }
             .swipeActions(edge: .trailing) {
@@ -82,31 +90,45 @@ struct SmartViewListView: View {
                     Button(role: .destructive) {
                         _Concurrency.Task { try? await store.deleteView(id: view.id) }
                     } label: { Label(String(localized: "Delete"), systemImage: "trash") }
+                        .tint(Surface.alert)
                     Button { editorTarget = .edit(view) } label: {
                         Label(String(localized: "Edit"), systemImage: "pencil")
-                    }.tint(.blue)
+                    }.tint(Surface.tint)
                 }
             }
     }
 }
 
 /// A single smart-view row: icon + name + live result count. Reused by the iPad sidebar.
+/// Icons are graphite by default and tinted with an accent only for views that
+/// carry identity — the key "de-blue" of the Browse surface (design §4).
 struct SmartViewRow: View {
     @Environment(TaskStore.self) private var store
     let view: SmartView
     private var count: Int { store.tasks(matching: view.criteria).count }
 
     var body: some View {
-        Label {
-            HStack {
-                Text(view.name)
-                Spacer()
-                Text("\(count)").foregroundStyle(.secondary)
-            }
-        } icon: {
+        HStack(spacing: 14) {
             Image(systemName: view.icon)
+                .font(.body)
+                .foregroundStyle(Self.identityColor(for: view.id))
+                .frame(width: 28)
+            Text(view.name).foregroundStyle(Surface.ink)
+            Spacer()
+            Text("\(count)").font(.callout).monospacedDigit().foregroundStyle(Surface.ink3)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "\(view.name), \(count) tasks"))
+    }
+
+    /// Graphite by default; an accent only where the view has identity.
+    static func identityColor(for id: String) -> Color {
+        switch id {
+        case "today-focus":                 QuadrantStyle.accent(.urgentImportant)       // q1
+        case "this-week", "ready-to-work":  QuadrantStyle.accent(.notUrgentImportant)    // q2 tide
+        case "overdue":                     Surface.alert
+        case "weeks-wins":                  QuadrantStyle.accent(.urgentNotImportant)     // q3 ochre
+        default:                            Surface.ink2                                  // graphite
+        }
     }
 }

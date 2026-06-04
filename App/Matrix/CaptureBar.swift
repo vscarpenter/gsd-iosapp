@@ -19,33 +19,42 @@ struct CaptureBar: View {
 
     var body: some View {
         VStack(spacing: 8) {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 TextField(String(localized: "Capture a task…  (try !!  *  #tag)"), text: $draft)
                     .focused($focused)
                     .submitLabel(.done)
                     .onSubmit(submit)
                     .onChange(of: draft) { _, _ in captureError = nil }
+                    .foregroundStyle(Surface.ink)
                 Button(action: cycleOverride) {
                     Label(previewQuadrant.title, systemImage: QuadrantStyle.symbol(previewQuadrant))
-                        .font(.caption)
+                        .font(.footnote.weight(.semibold))
                         .labelStyle(.titleAndIcon)
                         .foregroundStyle(QuadrantStyle.accent(previewQuadrant))
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(QuadrantStyle.wash(previewQuadrant), in: Capsule())
                 }
-                .buttonStyle(.bordered)
+                .buttonStyle(.plain)
                 .accessibilityHint(String(localized: "Cycles the target quadrant"))
             }
+            .padding(.vertical, 12).padding(.leading, 18).padding(.trailing, 10)
+            .background(Surface.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(Surface.hairline, lineWidth: 1))
+            .shadow(color: Surface.shadow.opacity(0.10), radius: 10, x: 0, y: 4)
+
             if let captureError {
                 Text(captureError)
-                    .font(.caption)
-                    .foregroundStyle(.red)
+                    .font(.footnote)
+                    .foregroundStyle(Surface.alert)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             if !draft.isEmpty {
                 HStack(spacing: 6) {
                     ForEach(parsed.tags, id: \.self) { tag in
-                        Text("#\(tag)").font(.caption2)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(.quaternary, in: Capsule())
+                        Text("#\(tag)").font(.footnote)
+                            .foregroundStyle(Surface.ink2)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(Surface.sunken, in: Capsule())
                     }
                     Spacer()
                     Button(String(localized: "Details")) {
@@ -54,12 +63,14 @@ struct CaptureBar: View {
                         // lingers and a subsequent submit creates a duplicate (title-only) task.
                         draft = ""; override = nil; captureError = nil
                     }
-                        .font(.caption)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Surface.tint)
                 }
+                .padding(.horizontal, 4)
             }
         }
-        .padding(.horizontal).padding(.vertical, 8)
-        .background(.bar)
+        .padding(.horizontal).padding(.top, 8).padding(.bottom, 12)
+        .background(Surface.paper)
     }
 
     private func submit() {
