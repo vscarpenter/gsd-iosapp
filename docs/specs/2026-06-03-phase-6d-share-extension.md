@@ -1,6 +1,6 @@
 # Phase 6d — Share Extension
 
-**Status:** SPEC — awaiting user review (brainstorming gate)
+**Status:** SPEC — APPROVED by owner (2026-06-03); next step = writing-plans → execute → device live-gate → merge
 **Date:** 2026-06-03
 **Branch:** `phase-6d-share-extension`
 **Depends on:** Phases 0–5 + 6a (App Group, `GSDSnapshot` contract module, `TaskStore.onTasksChanged` widget hook)
