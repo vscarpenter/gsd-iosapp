@@ -48,7 +48,12 @@ struct ConfettiView: View {
                            y: origin.y * size.height + velocity.dy * t + 0.5 * gravity * t * t)
         }
         static func random() -> Particle {
-            let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .pink]
+            // On-brand celebration: the four quadrant pigments + success green, no generic rainbow.
+            let colors: [Color] = [
+                QuadrantStyle.accent(.urgentImportant), QuadrantStyle.accent(.notUrgentImportant),
+                QuadrantStyle.accent(.urgentNotImportant), QuadrantStyle.accent(.notUrgentNotImportant),
+                Surface.success,
+            ]
             let angle = Double.random(in: 0..<2 * .pi)
             let speed = Double.random(in: 150...460)
             return Particle(origin: CGPoint(x: Double.random(in: 0.3...0.7), y: 0.45),

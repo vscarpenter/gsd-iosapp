@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- Editorial app icon (dark): the dark-appearance quadrant pigments on dark paper,
+       white check on the Do-First (rust) tile. Opaque to match the light variant. -->
+  <defs>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="#17150F"/>
+  <g>
+    <rect x="116" y="116" width="376" height="376" rx="86" ry="86" fill="#E0705F"/>
+    <rect x="532" y="116" width="376" height="376" rx="86" ry="86" fill="#6FAACB"/>
+    <rect x="116" y="532" width="376" height="376" rx="86" ry="86" fill="#CFB266"/>
+    <rect x="532" y="532" width="376" height="376" rx="86" ry="86" fill="#A9A096"/>
+  </g>
+  <path d="M 222 310 L 278 368 L 392 236" fill="none" stroke="#FFFFFF" stroke-width="54"
+        stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)"/>
+</svg>

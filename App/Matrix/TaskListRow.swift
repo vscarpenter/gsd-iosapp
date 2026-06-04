@@ -23,13 +23,15 @@ struct TaskListRow: View {
                 Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"),
                       systemImage: task.completed ? "arrow.uturn.left" : "checkmark")
             }
-            .tint(QuadrantStyle.accent(task.quadrant))
+            .tint(Surface.success)
         }
         .swipeActions(edge: .trailing) {
-            Button(String(localized: "Snooze")) { actions.snooze(task, by: .oneHour) }.tint(.indigo)
+            Button(String(localized: "Snooze")) { actions.snooze(task, by: .oneHour) }
+                .tint(QuadrantStyle.accent(.notUrgentNotImportant)) // slate
             Button(role: .destructive) { actions.delete(task) } label: {
                 Label(String(localized: "Delete"), systemImage: "trash")
             }
+            .tint(Surface.alert) // rust
         }
         .contextMenu { rowMenu }
         .accessibilityActions {

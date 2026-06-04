@@ -36,7 +36,7 @@ struct BulkActionBar: View {
             Spacer()
             Text(String(localized: "\(count) selected"))
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Surface.ink2)
             Spacer()
             Button(role: .destructive) { showDeleteConfirm = true } label: {
                 Label(String(localized: "Delete"), systemImage: "trash")

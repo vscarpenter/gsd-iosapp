@@ -17,56 +17,69 @@ struct QuadrantCell: View {
     private var graph: DependencyGraph { DependencyGraph(tasks: store.tasks) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label(quadrant.title, systemImage: QuadrantStyle.symbol(quadrant))
-                    .font(.serif(.headline))
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: QuadrantStyle.symbol(quadrant))
+                    .font(.title3).foregroundStyle(QuadrantStyle.accent(quadrant))
+                Text(quadrant.title)
+                    .font(.serif(.title3).weight(.semibold))
                     .foregroundStyle(QuadrantStyle.accent(quadrant))
                 Spacer()
-                Text("\(activeCount)").font(.caption).foregroundStyle(.secondary)
+                Text("\(activeCount)").font(.callout).monospacedDigit()
+                    .foregroundStyle(Surface.ink3)
+                    .accessibilityLabel(String(localized: "\(activeCount) active"))
             }
             if items.isEmpty {
-                Button(action: onAdd) {
-                    Label(String(localized: "Add to \(quadrant.title)"), systemImage: "plus.circle")
-                }
-                .foregroundStyle(.secondary).padding(.vertical, 4)
+                QuadrantEmptyPrompt(quadrant: quadrant, action: onAdd)
             }
-            ForEach(items) { task in
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    TaskCardView(
-                        task: task,
-                        now: context.date,
-                        blockedByCount: graph.uncompletedBlockers(of: task.id).count,
-                        blockingCount: graph.blockedTasks(of: task.id).count
-                    )
-                }
-                .onTapGesture { onEdit(task) }
-                .draggable(task.id)
-                .contextMenu { cellMenu(task) }
-                .accessibilityActions {
-                    Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
-                    Button(String(localized: "Edit")) { onEdit(task) }
-                    Button(String(localized: "Delete")) { actions.delete(task) }
-                    Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
-                    if TimeTracking.runningEntry(task.timeEntries) == nil {
-                        Button(String(localized: "Start timer")) { actions.startTimer(task) }
-                    } else {
-                        Button(String(localized: "Stop timer")) { actions.stopTimer(task) }
-                    }
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
+                cardRow(task)
+                if index < items.count - 1 {
+                    Rectangle().fill(Surface.hairline).frame(height: 1)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
-        .background(QuadrantStyle.accent(quadrant).opacity(isTargeted ? 0.12 : 0.04),
-                    in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(QuadrantStyle.accent(quadrant).opacity(0.3)))
+        .background(isTargeted ? QuadrantStyle.wash(quadrant) : Surface.surface,
+                    in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                .strokeBorder(isTargeted ? QuadrantStyle.accent(quadrant) : Surface.hairline,
+                              lineWidth: isTargeted ? 2 : 1)
+        )
+        .shadow(color: Surface.shadow.opacity(0.10), radius: 10, x: 0, y: 4)
         .dropDestination(for: String.self) { ids, _ in
             guard let id = ids.first, let task = store.tasks.first(where: { $0.id == id }) else { return false }
             actions.move(task, to: quadrant)
             return true
         } isTargeted: { isTargeted = $0 }
+    }
+
+    private func cardRow(_ task: Task) -> some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            TaskCardView(
+                task: task,
+                now: context.date,
+                blockedByCount: graph.uncompletedBlockers(of: task.id).count,
+                blockingCount: graph.blockedTasks(of: task.id).count
+            )
+        }
+        .onTapGesture { onEdit(task) }
+        .draggable(task.id)
+        .contextMenu { cellMenu(task) }
+        .accessibilityActions {
+            Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
+            Button(String(localized: "Edit")) { onEdit(task) }
+            Button(String(localized: "Delete")) { actions.delete(task) }
+            Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
+            if TimeTracking.runningEntry(task.timeEntries) == nil {
+                Button(String(localized: "Start timer")) { actions.startTimer(task) }
+            } else {
+                Button(String(localized: "Stop timer")) { actions.stopTimer(task) }
+            }
+        }
     }
 
     @ViewBuilder private func cellMenu(_ task: Task) -> some View {

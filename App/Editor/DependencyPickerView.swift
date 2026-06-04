@@ -36,18 +36,21 @@ struct DependencyPickerView: View {
                     dismiss()
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(task.title)
+                        Text(task.title).foregroundStyle(Surface.ink)
                         if disabled {
                             Text(alreadyDep
                                  ? String(localized: "Already a dependency")
                                  : String(localized: "Would create a cycle"))
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Surface.ink3)
                         }
                     }
                 }
                 .disabled(disabled)
+                .listRowBackground(Surface.surface)
             }
+            .scrollContentBackground(.hidden)
+            .background(Surface.paper)
             .searchable(text: $query)
             .navigationTitle(String(localized: "Add Dependency"))
             .toolbar {

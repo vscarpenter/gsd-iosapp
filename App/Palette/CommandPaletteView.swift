@@ -81,8 +81,8 @@ struct CommandPaletteView: View {
                 if !taskResults.isEmpty {
                     Section(String(localized: "Tasks")) {
                         ForEach(taskResults) { task in
-                            Button { pick(.openTask(task)) } label: {
-                                Label(task.title, systemImage: "doc.text")
+                            paletteRow(task.title, icon: "doc.text", iconColor: Surface.ink2) {
+                                pick(.openTask(task))
                             }
                         }
                     }
@@ -90,8 +90,9 @@ struct CommandPaletteView: View {
                 if !viewResults.isEmpty {
                     Section(String(localized: "Smart Views")) {
                         ForEach(viewResults) { view in
-                            Button { pick(.openSmartView(view.id)) } label: {
-                                Label(view.name, systemImage: view.icon)
+                            paletteRow(view.name, icon: view.icon,
+                                       iconColor: SmartViewRow.identityColor(for: view.id)) {
+                                pick(.openSmartView(view.id))
                             }
                         }
                     }
@@ -99,18 +100,20 @@ struct CommandPaletteView: View {
                 if !actionResults.isEmpty {
                     Section(String(localized: "Actions")) {
                         ForEach(actionResults, id: \.0) { label, icon, result in
-                            Button { pick(result) } label: { Label(label, systemImage: icon) }
+                            paletteRow(label, icon: icon, iconColor: Surface.ink2) { pick(result) }
                         }
                     }
                 }
                 if !navResults.isEmpty {
                     Section(String(localized: "Navigation")) {
                         ForEach(navResults, id: \.0) { label, icon, result in
-                            Button { pick(result) } label: { Label(label, systemImage: icon) }
+                            paletteRow(label, icon: icon, iconColor: Surface.ink2) { pick(result) }
                         }
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Surface.paper)
             .navigationTitle(String(localized: "Commands"))
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
                         prompt: String(localized: "Search tasks, views, actions"))
@@ -120,6 +123,22 @@ struct CommandPaletteView: View {
                 }
             }
         }
+    }
+
+    /// A palette result row: ink text with a graphite (or identity-accent) icon —
+    /// the de-blue of the command list. `.plain` keeps the title ink, not tinted.
+    private func paletteRow(_ title: String, icon: String, iconColor: Color,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: icon).foregroundStyle(iconColor).frame(width: 26)
+                Text(title).foregroundStyle(Surface.ink)
+                Spacer(minLength: 0)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .listRowBackground(Surface.surface)
     }
 
     private func pick(_ result: PaletteResult) {

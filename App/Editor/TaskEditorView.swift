@@ -91,10 +91,13 @@ struct TaskEditorView: View {
                     dependenciesSection
                     reminderSection
                     if let saveError {
-                        Section { Text(saveError).font(.caption).foregroundStyle(.red) }
+                        Section { Text(saveError).font(.caption).foregroundStyle(Surface.alert) }
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Surface.paper)
+            .tint(Surface.tint)
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { EditButton() }
@@ -117,24 +120,34 @@ struct TaskEditorView: View {
         }
     }
 
+    /// 2×2 picker mirroring the matrix. Each cell shows its quadrant icon + name in
+    /// the quadrant accent; the selected cell fills with the quadrant wash + a full
+    /// accent border, unselected cells carry only a faint accent-tinted border (§3).
     private var quadrantPicker: some View {
-        LazyVGrid(columns: [GridItem(), GridItem()], spacing: 8) {
+        LazyVGrid(columns: [GridItem(), GridItem()], spacing: 10) {
             ForEach(Quadrant.allCases, id: \.self) { q in
+                let selected = quadrant == q
                 Button { quadrant = q } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: QuadrantStyle.symbol(q))
-                        Text(q.title).font(.caption)
+                    VStack(spacing: 8) {
+                        Image(systemName: QuadrantStyle.symbol(q)).font(.title3)
+                        Text(q.title).font(.subheadline.weight(.semibold))
                     }
-                    .frame(maxWidth: .infinity).padding(8)
-                    .background(quadrant == q ? QuadrantStyle.accent(q).opacity(0.2) : .clear,
-                                in: RoundedRectangle(cornerRadius: 8))
-                    .overlay(RoundedRectangle(cornerRadius: 8)
-                        .stroke(QuadrantStyle.accent(q), lineWidth: quadrant == q ? 2 : 0.5))
+                    .foregroundStyle(QuadrantStyle.accent(q))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16).padding(.horizontal, 10)
+                    .background(selected ? QuadrantStyle.wash(q) : Surface.surface,
+                                in: RoundedRectangle(cornerRadius: Radius.input, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Radius.input, style: .continuous)
+                            .strokeBorder(QuadrantStyle.accent(q).opacity(selected ? 1 : 0.35),
+                                          lineWidth: selected ? 2 : 1)
+                    )
                 }
-                .tint(QuadrantStyle.accent(q))
-                .accessibilityAddTraits(quadrant == q ? .isSelected : [])
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
+        .listRowBackground(Color.clear)
     }
 
     private var tagField: some View {
@@ -159,18 +172,25 @@ struct TaskEditorView: View {
                 get: { dueDate != nil },
                 set: { dueDate = $0 ? (dueDate ?? Calendar.current.startOfDay(for: .now)) : nil }
             ))
+            .tint(Surface.success)
             if dueDate != nil {
                 DatePicker(String(localized: "Due"),
                            selection: Binding(get: { dueDate ?? .now }, set: { dueDate = $0 }),
                            displayedComponents: .date)
             }
-            HStack {
+            HStack(spacing: 8) {
                 ForEach(DueDatePreset.allCases, id: \.self) { preset in
+                    let resolved = DueDatePresets.resolve(preset, today: .now, calendar: .current)
+                    let isSelected = sameDay(dueDate, resolved)
                     Button(preset.label) {
-                        dueDate = DueDatePresets.resolve(preset, today: .now, calendar: .current)
+                        dueDate = resolved
                     }
-                    .buttonStyle(.bordered)
-                    .font(.caption)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(isSelected ? QuadrantStyle.accent(.notUrgentImportant) : Surface.tint)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(isSelected ? QuadrantStyle.wash(.notUrgentImportant) : Surface.sunken,
+                                in: Capsule())
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -315,6 +335,15 @@ struct TaskEditorView: View {
         }
     }
 
+    /// Whether two optional dates fall on the same calendar day (nil ≍ nil = "None").
+    private func sameDay(_ a: Date?, _ b: Date?) -> Bool {
+        switch (a, b) {
+        case (nil, nil): return true
+        case let (x?, y?): return Calendar.current.isDate(x, inSameDayAs: y)
+        default: return false
+        }
+    }
+
     private func addSubtask() {
         let title = subtaskDraft.trimmingCharacters(in: .whitespaces)
         subtaskDraft = ""
@@ -334,8 +363,8 @@ struct TaskEditorView: View {
         return String(localized: "Tracked \(tracked) of \(TimeTracking.format(minutes: estimate))")
     }
     private var trackedColor: Color {
-        guard let estimate = Int(estimateText), estimate > 0 else { return .secondary }
-        return trackedMinutes > estimate ? .red : .secondary
+        guard let estimate = Int(estimateText), estimate > 0 else { return Surface.ink3 }
+        return trackedMinutes > estimate ? Surface.alert : Surface.ink3
     }
 
     /// The six §6.7 snooze presets, labels localized. (The matrix row in Group D

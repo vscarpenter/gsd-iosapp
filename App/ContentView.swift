@@ -131,29 +131,30 @@ private struct RegularRootView: View {
         @Bindable var palette = palette
         NavigationSplitView {
             List(selection: $palette.regularSelection) {
-                Label(String(localized: "Matrix"), systemImage: "square.grid.2x2").tag(RegularItem.matrix)
-                Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis").tag(RegularItem.dashboard)
-                Label(String(localized: "Archive"), systemImage: "archivebox").tag(RegularItem.archive)
-                Label(String(localized: "Settings"), systemImage: "gearshape").tag(RegularItem.settings)
-                if !store.pinnedViews.isEmpty {
-                    Section(String(localized: "Pinned")) {
-                        ForEach(store.pinnedViews) { view in sidebarRow(view) }
-                    }
-                }
-                Section(String(localized: "Built-in")) {
+                sidebarNavLabel(String(localized: "Matrix"), "square.grid.2x2").tag(RegularItem.matrix)
+                sidebarNavLabel(String(localized: "Dashboard"), "chart.bar.xaxis").tag(RegularItem.dashboard)
+
+                Section(String(localized: "Smart Views")) {
+                    ForEach(store.pinnedViews) { view in sidebarRow(view) }
                     ForEach(BuiltInSmartViews.all.filter { !store.pinnedSmartViewIds.contains($0.id) }) { view in
                         sidebarRow(view)
                     }
-                }
-                Section(String(localized: "Custom")) {
                     ForEach(store.customViews.filter { !store.pinnedSmartViewIds.contains($0.id) }) { view in
                         sidebarRow(view)
                     }
                     Button { editorTarget = .create } label: {
                         Label(String(localized: "New Smart View"), systemImage: "plus")
                     }
+                    .tint(Surface.tint)
+                }
+
+                Section(String(localized: "Library")) {
+                    sidebarNavLabel(String(localized: "Archive"), "archivebox").tag(RegularItem.archive)
+                    sidebarNavLabel(String(localized: "Settings"), "gearshape").tag(RegularItem.settings)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Surface.surface2)
             .navigationTitle("GSD")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -184,6 +185,15 @@ private struct RegularRootView: View {
             case .matrix, .none:
                 MatrixGridView()
             }
+        }
+    }
+
+    /// A top-level sidebar destination: graphite icon + ink label (de-blued chrome).
+    private func sidebarNavLabel(_ title: String, _ icon: String) -> some View {
+        Label {
+            Text(title).foregroundStyle(Surface.ink)
+        } icon: {
+            Image(systemName: icon).foregroundStyle(Surface.ink2)
         }
     }
 

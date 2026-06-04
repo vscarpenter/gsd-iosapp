@@ -1,9 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs><filter id="sh" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#000000" flood-opacity="0.30"/></filter></defs>
-    <rect x="0" y="0" width="512" height="512" fill="#FD4836"/>
-    <rect x="512" y="0" width="512" height="512" fill="#3699CB"/>
-    <rect x="0" y="512" width="512" height="512" fill="#C49823"/>
-    <rect x="512" y="512" width="512" height="512" fill="#A0A0A0"/>
-    <path d="M 322 540 L 455 675 L 715 360" fill="none" stroke="#FFFFFF" stroke-width="92"
-          stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)"/>
+  <!-- Editorial app icon (light): four refined quadrant pigments as rounded tiles on
+       warm paper, with a single white check on the Do-First (rust) tile. iOS masks
+       the outer corners on device; the paper is opaque (App Store requires no alpha). -->
+  <defs>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#3A211D" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+  <rect x="0" y="0" width="1024" height="1024" fill="#F4F1E9"/>
+  <g>
+    <rect x="116" y="116" width="376" height="376" rx="86" ry="86" fill="#B23A2E"/>
+    <rect x="532" y="116" width="376" height="376" rx="86" ry="86" fill="#2C6680"/>
+    <rect x="116" y="532" width="376" height="376" rx="86" ry="86" fill="#8A6A22"/>
+    <rect x="532" y="532" width="376" height="376" rx="86" ry="86" fill="#6F685F"/>
+  </g>
+  <path d="M 222 310 L 278 368 L 392 236" fill="none" stroke="#FFFFFF" stroke-width="54"
+        stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)"/>
 </svg>

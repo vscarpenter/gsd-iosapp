@@ -40,7 +40,7 @@ struct DataStorageView: View {
                     Label(String(localized: "Import Tasks…"), systemImage: "square.and.arrow.down")
                 }
                 if let statusMessage {
-                    Text(statusMessage).font(.footnote).foregroundStyle(.secondary)
+                    Text(statusMessage).font(.footnote).foregroundStyle(Surface.ink3)
                 }
             }
 

@@ -1,11 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs><clipPath id="rr"><rect x="0" y="0" width="1024" height="1024" rx="229" ry="229"/></clipPath><filter id="sh" x="-25%" y="-25%" width="150%" height="150%"><feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#000000" flood-opacity="0.30"/></filter></defs>
-  <g clip-path="url(#rr)">
-    <rect x="0" y="0" width="512" height="512" fill="#FD4836"/>
-    <rect x="512" y="0" width="512" height="512" fill="#3699CB"/>
-    <rect x="0" y="512" width="512" height="512" fill="#C49823"/>
-    <rect x="512" y="512" width="512" height="512" fill="#A0A0A0"/>
-    <path d="M 322 540 L 455 675 L 715 360" fill="none" stroke="#FFFFFF" stroke-width="92"
-          stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)"/>
+  <!-- Launch-screen mark: the icon art with a transparent background so it floats on
+       the paper LaunchBackground. Same refined pigments + white check on Do-First. -->
+  <defs>
+    <filter id="sh" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#3A211D" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <g>
+    <rect x="116" y="116" width="376" height="376" rx="86" ry="86" fill="#B23A2E"/>
+    <rect x="532" y="116" width="376" height="376" rx="86" ry="86" fill="#2C6680"/>
+    <rect x="116" y="532" width="376" height="376" rx="86" ry="86" fill="#8A6A22"/>
+    <rect x="532" y="532" width="376" height="376" rx="86" ry="86" fill="#6F685F"/>
   </g>
+  <path d="M 222 310 L 278 368 L 392 236" fill="none" stroke="#FFFFFF" stroke-width="54"
+        stroke-linecap="round" stroke-linejoin="round" filter="url(#sh)"/>
 </svg>

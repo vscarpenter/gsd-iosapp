@@ -37,6 +37,7 @@ struct MatrixGridView: View {
                         .padding(12)
                     }
                 }
+                .background(Surface.paper)
                 .navigationTitle("Matrix")
                 .toolbar { showCompletedToggle($showCompleted) }
             }

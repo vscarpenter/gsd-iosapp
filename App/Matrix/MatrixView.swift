@@ -15,22 +15,33 @@ struct MatrixView: View {
     var body: some View {
         ZStack {
             NavigationStack {
-                List {
-                    ForEach(Quadrant.allCases, id: \.self) { q in
-                        QuadrantSection(
-                            quadrant: q, showCompleted: showCompleted,
-                            actions: TaskActions(
-                                store: store,
-                                onCompleted: { confettiTrigger += 1 },
-                                onError: { actionFailure = TaskActionFailure($0) }
-                            ),
-                            onEdit: { editor = .edit($0) },
-                            onAdd: { editor = .new(q, prefill: nil) }
-                        )
+                Group {
+                    if store.tasks.isEmpty {
+                        EmptyStateView(icon: "square.grid.2x2",
+                                       title: String(localized: "Capture your first task"),
+                                       message: String(localized: "Type in the field above — try Email Tony !! #work."))
+                    } else {
+                        List {
+                            ForEach(Quadrant.allCases, id: \.self) { q in
+                                QuadrantSection(
+                                    quadrant: q, showCompleted: showCompleted,
+                                    actions: TaskActions(
+                                        store: store,
+                                        onCompleted: { confettiTrigger += 1 },
+                                        onError: { actionFailure = TaskActionFailure($0) }
+                                    ),
+                                    onEdit: { editor = .edit($0) },
+                                    onAdd: { editor = .new(q, prefill: nil) }
+                                )
+                            }
+                        }
+                        .listStyle(.insetGrouped)
+                        .listSectionSpacing(28)
+                        .scrollContentBackground(.hidden)
+                        .refreshable { await sync.syncNow() }
                     }
                 }
-                .listStyle(.insetGrouped)
-                .refreshable { await sync.syncNow() }
+                .background(Surface.paper)
                 .navigationTitle("Matrix")
                 .toolbar {
                     paletteButton(palette)
