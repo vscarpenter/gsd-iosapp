@@ -21,9 +21,19 @@ targets:
     info:
       path: App/Info.plist
       properties:
+        CFBundleDisplayName: GSD Task Manager
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         ITSAppUsesNonExemptEncryption: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
         UILaunchScreen:
           UIColorName: LaunchBackground
           UIImageName: LaunchMark
@@ -118,3 +128,15 @@ targets:
         product: GSDModel
       - package: GSDKit
         product: GSDSnapshot
+# A single shared scheme that builds/archives the GSD app (extensions ride along as
+# embedded dependencies). Without this, Xcode auto-creates one scheme per target and may
+# default to GSDShareExtension, mislabeling the archive — the bug this resolves.
+schemes:
+  GSD:
+    build:
+      targets:
+        GSD: all
+    run:
+      config: Debug
+    archive:
+      config: Release
