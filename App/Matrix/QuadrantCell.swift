@@ -11,6 +11,8 @@ struct QuadrantCell: View {
     var onAdd: () -> Void
 
     @State private var isTargeted = false
+    /// Which row is swiped open — shared with every row so opening one closes the others.
+    @State private var openTaskID: String?
     private var items: [Task] { store.tasks(in: quadrant, showCompleted: showCompleted) }
     private var activeCount: Int { store.tasks(in: quadrant, showCompleted: false).count }
     /// Computed once per render from the full task snapshot; dependencies cross quadrants.
@@ -58,17 +60,23 @@ struct QuadrantCell: View {
     }
 
     private func cardRow(_ task: Task) -> some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            TaskCardView(
-                task: task,
-                now: context.date,
-                blockedByCount: graph.uncompletedBlockers(of: task.id).count,
-                blockingCount: graph.blockedTasks(of: task.id).count
-            )
-        }
-        .onTapGesture { onEdit(task) }
-        .draggable(task.id)
-        .contextMenu { cellMenu(task) }
+        SwipeRevealRow(
+            task: task,
+            actions: actions,
+            onEdit: onEdit,
+            openTaskID: $openTaskID,
+            menu: { cellMenu(task) },
+            content: {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    TaskCardView(
+                        task: task,
+                        now: context.date,
+                        blockedByCount: graph.uncompletedBlockers(of: task.id).count,
+                        blockingCount: graph.blockedTasks(of: task.id).count
+                    )
+                }
+            }
+        )
         .accessibilityActions {
             Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
             Button(String(localized: "Edit")) { onEdit(task) }

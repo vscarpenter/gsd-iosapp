@@ -14,6 +14,13 @@ settings:
     # per release — never per-target (that's how the app/extension versions drifted apart).
     MARKETING_VERSION: "0.5"
     CURRENT_PROJECT_VERSION: "2"
+    # Xcode 26 "recommended settings" — declared here so they survive `xcodegen
+    # generate` (clicking "Perform Changes" in Xcode would edit the generated pbxproj
+    # and be wiped). These are already the SDK-default resolved values; made explicit
+    # so Xcode stops prompting. No run-script build phases exist for sandboxing to gate.
+    ENABLE_USER_SCRIPT_SANDBOXING: "YES"
+    STRING_CATALOG_GENERATE_SYMBOLS: "YES"
+    ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOL_FRAMEWORK_EXTENSIONS: "NO"
 packages:
   GSDKit:
     path: GSDKit
