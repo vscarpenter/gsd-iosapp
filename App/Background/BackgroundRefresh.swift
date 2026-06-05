@@ -9,9 +9,15 @@ enum BackgroundRefresh {
     static let taskIdentifier = "dev.vinny.gsd.refresh"
 
     /// Register the handler — call ONCE, early in app launch (before the scene appears).
+    ///
+    /// The launch handler MUST run on `.main`: it synchronously calls the `@MainActor` `handle`,
+    /// so the closure is main-actor-isolated and Swift 6 asserts the executor at call time. Passing
+    /// `using: nil` runs the handler on a background queue, tripping `dispatch_assert_queue(main)`
+    /// and crashing the moment the OS fires the task. `.main` keeps the non-Sendable `BGTask` on the
+    /// main actor throughout; `handle` does only trivial sync work and offloads the real work to a Task.
     @MainActor
     static func register(store: TaskStore) {
-        BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: nil) { task in
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: .main) { task in
             guard let refreshTask = task as? BGAppRefreshTask else { task.setTaskCompleted(success: false); return }
             handle(refreshTask, store: store)
         }
