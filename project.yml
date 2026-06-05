@@ -9,6 +9,11 @@ settings:
     SWIFT_VERSION: "6.0"
     CODE_SIGN_IDENTITY: "Apple Development"
     DEVELOPMENT_TEAM: "52HVJ3VDSM"   # owner's Apple Developer team — applies to all targets (incl. Phase 6 extensions)
+    # Version is project-wide: the app and ALL embedded extensions must share one
+    # CFBundleShortVersionString/CFBundleVersion (App Store rule). Bump these two lines
+    # per release — never per-target (that's how the app/extension versions drifted apart).
+    MARKETING_VERSION: "0.5"
+    CURRENT_PROJECT_VERSION: "2"
 packages:
   GSDKit:
     path: GSDKit
@@ -63,8 +68,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: App/GSD.entitlements
@@ -85,8 +88,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd.widgets
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: Widgets/GSDWidgets.entitlements
@@ -117,8 +118,6 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd.share
-        MARKETING_VERSION: "0.1.0"
-        CURRENT_PROJECT_VERSION: "1"
         SWIFT_VERSION: "6.0"
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: ShareExtension/GSDShareExtension.entitlements
