@@ -12,6 +12,9 @@ final class SessionStore {
     private(set) var email: String?
     private(set) var inProgress = false
     private(set) var lastError: String?
+    /// True when the last sign-in returned an Apple "Hide My Email" relay address — gates the
+    /// "separate account" hint (design §3). Reset on sign-out.
+    private(set) var usingRelayEmail = false
 
     private let auth: AuthService
     private let tokenStore: TokenStore
@@ -44,9 +47,29 @@ final class SessionStore {
         }
     }
 
+    /// Native Sign in with Apple — `SettingsView` passes the credential's authorization code (or `""`
+    /// if extraction failed, which surfaces the generic banner). Mirrors `signIn(provider:)`: silent on
+    /// cancel, generic banner otherwise. Sets `usingRelayEmail` for the §3 hint.
+    func signInWithApple(authorizationCode: String) async {
+        inProgress = true; lastError = nil
+        defer { inProgress = false }
+        do {
+            let result = try await auth.signInWithApple(authorizationCode: authorizationCode)
+            email = result.record.email
+            usingRelayEmail = AppleIdentity.isRelayEmail(result.record.email)
+            UserDefaults.standard.set(result.record.email, forKey: emailKey)
+            coordinator?.start(trigger: .signIn)   // first sign-in seeds + pulls the user's existing tasks
+        } catch AuthError.cancelled {
+            // user dismissed — silent, stay signed out, no banner
+        } catch {
+            lastError = String(localized: "Sign-in failed. Please try again.")
+        }
+    }
+
     func signOut() {
         auth.signOut()
         email = nil
+        usingRelayEmail = false
         UserDefaults.standard.removeObject(forKey: emailKey)
         coordinator?.signedOut()   // tear down + reset cursor; local tasks kept
     }
