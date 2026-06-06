@@ -1,4 +1,5 @@
 import SwiftUI
+import AuthenticationServices
 import UserNotifications
 import GSDModel
 import GSDStore
@@ -11,6 +12,7 @@ struct SettingsView: View {
     @Environment(SessionStore.self) private var session
     @Environment(SyncCoordinator.self) private var sync
     @Environment(PaletteController.self) private var palette
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -63,6 +65,11 @@ struct SettingsView: View {
             if session.isSignedIn {
                 LabeledContent(String(localized: "Signed in"),
                                value: session.email ?? String(localized: "Account"))
+                if session.usingRelayEmail {
+                    Text(String(localized: "Signed in with a private relay email — this is a separate account from your web tasks."))
+                        .font(.footnote)
+                        .foregroundStyle(Surface.ink3)
+                }
                 if let last = sync.lastSync, last.error == nil {
                     LabeledContent(String(localized: "Status"),
                                    value: String(localized: "Synced · \(sync.pendingCount) pending"))
@@ -101,6 +108,29 @@ struct SettingsView: View {
                     }
                 }
                 .disabled(session.inProgress)
+
+                SignInWithAppleButton(.signIn) { request in
+                    request.requestedScopes = [.email]
+                } onCompletion: { result in
+                    switch result {
+                    case .success(let auth):
+                        // Native flow returns the authorization code; "" routes to the generic banner.
+                        let code = (auth.credential as? ASAuthorizationAppleIDCredential)
+                            .flatMap(\.authorizationCode)
+                            .flatMap { String(data: $0, encoding: .utf8) } ?? ""
+                        _Concurrency.Task { await session.signInWithApple(authorizationCode: code) }
+                    case .failure(let error):
+                        if case ASAuthorizationError.canceled = error { return }   // user dismissed — silent
+                        _Concurrency.Task { await session.signInWithApple(authorizationCode: "") }
+                    }
+                }
+                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                .frame(height: 44)
+                .disabled(session.inProgress)
+
+                Text(String(localized: "To sync with the web app and your other devices, sign in with the same email you use there."))
+                    .font(.footnote)
+                    .foregroundStyle(Surface.ink3)
             }
             if let error = session.lastError {
                 Text(error).font(.footnote).foregroundStyle(Surface.alert)
