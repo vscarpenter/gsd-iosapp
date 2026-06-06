@@ -118,10 +118,10 @@ struct SettingsView: View {
                         let code = (auth.credential as? ASAuthorizationAppleIDCredential)
                             .flatMap(\.authorizationCode)
                             .flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                        _Concurrency.Task { await session.signInWithApple(authorizationCode: code) }
+                        _Concurrency.Task { @MainActor in await session.signInWithApple(authorizationCode: code) }
                     case .failure(let error):
                         if case ASAuthorizationError.canceled = error { return }   // user dismissed — silent
-                        _Concurrency.Task { await session.signInWithApple(authorizationCode: "") }
+                        _Concurrency.Task { @MainActor in await session.signInWithApple(authorizationCode: "") }
                     }
                 }
                 .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
