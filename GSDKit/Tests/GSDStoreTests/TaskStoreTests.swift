@@ -69,6 +69,24 @@ struct TaskStoreTests {
         #expect(stored?.updatedAt == Date(timeIntervalSince1970: 1000))
     }
 
+    @Test func saveCanonicalizesTagsToLowercaseDeduped() async throws {
+        let (store, repo) = try makeStoreAndRepo()
+        let now = Date(timeIntervalSince1970: 1000)
+        let t = Task(id: "mixed", title: "X", urgent: true, important: false,
+                     createdAt: now, updatedAt: now, tags: ["Work", "work", "URGENT"])
+        try await store.save(t)
+        #expect(try await repo.fetch(id: "mixed")?.tags == ["work", "urgent"])
+    }
+
+    @Test func createCanonicalizesTagsToLowercaseDeduped() async throws {
+        let (store, repo) = try makeStoreAndRepo()
+        let now = Date(timeIntervalSince1970: 1000)
+        let t = Task(id: "made2", title: "X", urgent: true, important: false,
+                     createdAt: now, updatedAt: now, tags: ["Home", "HOME"])
+        try await store.create(t)
+        #expect(try await repo.fetch(id: "made2")?.tags == ["home"])
+    }
+
     @Test func tasksInQuadrantSortsIncompleteFirst() async throws {
         let (store, repo) = try makeStoreAndRepo()
         let now = Date(timeIntervalSince1970: 1000)

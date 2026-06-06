@@ -164,8 +164,21 @@ public final class TaskStore {
         try await upsertEnqueued(task, op: .create)   // capture-bar quick-add is a creation path → must enqueue (else reconcile deletes it)
     }
 
+    /// Tags are canonically lowercase and deduped (matching `CaptureParser` and the web app).
+    /// Enforced here on the single mutation path so editor edits of legacy/mixed-case tags and
+    /// bulk adds all converge. Sync-pulled rows go through `repository.upsert` directly and are
+    /// intentionally left as the remote sent them, to avoid last-write-wins churn.
+    static func canonicalTags(_ tags: [String]) -> [String] {
+        var seen = Set<String>()
+        return tags.compactMap { tag in
+            let lower = tag.lowercased()
+            return seen.insert(lower).inserted ? lower : nil
+        }
+    }
+
     public func create(_ task: Task) async throws {
         var t = task
+        t.tags = Self.canonicalTags(task.tags)
         let now = clock()
         t.createdAt = now
         t.updatedAt = now
@@ -175,7 +188,9 @@ public final class TaskStore {
     }
 
     public func save(_ task: Task) async throws {
-        var t = task; t.updatedAt = clock()
+        var t = task
+        t.tags = Self.canonicalTags(task.tags)
+        t.updatedAt = clock()
         try TaskValidator.validate(t)
         try await upsertEnqueued(t, op: .update)
         await reminders.schedule(t)
