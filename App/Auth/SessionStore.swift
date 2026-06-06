@@ -26,7 +26,9 @@ final class SessionStore {
         self.tokenStore = tokenStore
         self.coordinator = coordinator
         if tokenStore.load() != nil {
-            email = UserDefaults.standard.string(forKey: emailKey)
+            let cached = UserDefaults.standard.string(forKey: emailKey)
+            email = cached
+            usingRelayEmail = cached.map(AppleIdentity.isRelayEmail) ?? false
         }
     }
 
