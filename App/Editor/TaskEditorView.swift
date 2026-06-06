@@ -160,9 +160,14 @@ struct TaskEditorView: View {
                     }
                 }
             }
-            TextField(String(localized: "Add tag"), text: $tagDraft)
-                .onSubmit(addTag)
-                .onChange(of: tagDraft) { _, new in if new.hasSuffix(",") { addTag() } }
+            HStack {
+                TextField(String(localized: "Add tag"), text: $tagDraft)
+                    .onSubmit(addTag)
+                    .onChange(of: tagDraft) { _, new in if new.hasSuffix(",") { addTag() } }
+                Button(String(localized: "Add"), action: addTag)
+                    .disabled(tagDraft.trimmingCharacters(in: CharacterSet(charactersIn: " ,#")).isEmpty
+                              || tags.count >= FieldLimits.maxTags)
+            }
         }
     }
 
@@ -395,6 +400,11 @@ struct TaskEditorView: View {
     }
 
     private func save() {
+        // Flush typed-but-unsubmitted draft entries: the tag/subtask fields only commit
+        // on return (or a trailing comma, for tags), so tapping Save with a pending draft
+        // would otherwise silently drop it. Both adders no-op when their draft is empty.
+        addTag()
+        addSubtask()
         var task: Task
         if let original {
             task = original
