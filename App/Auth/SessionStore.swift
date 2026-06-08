@@ -60,29 +60,15 @@ final class SessionStore {
     /// showing a signed-in account whose syncs silently no-op.
     var isSignedIn: Bool { tokenStore.load() != nil }
 
+    /// Web-redirect OAuth for every provider (`"google"`, `"apple"`, `"github"`). Apple rides the same
+    /// path as the rest — its native sheet was retired (Option A: one PocketBase provider, a Services-ID
+    /// `client_id`). Silent on cancel, generic banner otherwise. Sets `usingRelayEmail` so an Apple
+    /// "Hide My Email" sign-in surfaces the §3 "separate account" hint regardless of provider.
     func signIn(provider: String) async {
         inProgress = true; lastError = nil
         defer { inProgress = false }
         do {
             let result = try await auth.signIn(provider: provider)
-            email = result.record.email
-            UserDefaults.standard.set(result.record.email, forKey: emailKey)
-            routeAfterSignIn(result)   // same/first account → seed+pull; different → dialog (Fix C)
-        } catch AuthError.cancelled {
-            // user dismissed — silent, stay signed out, no banner
-        } catch {
-            lastError = String(localized: "Sign-in failed. Please try again.")
-        }
-    }
-
-    /// Native Sign in with Apple — `SettingsView` passes the credential's authorization code (or `""`
-    /// if extraction failed, which surfaces the generic banner). Mirrors `signIn(provider:)`: silent on
-    /// cancel, generic banner otherwise. Sets `usingRelayEmail` for the §3 hint.
-    func signInWithApple(authorizationCode: String) async {
-        inProgress = true; lastError = nil
-        defer { inProgress = false }
-        do {
-            let result = try await auth.signInWithApple(authorizationCode: authorizationCode)
             email = result.record.email
             usingRelayEmail = AppleIdentity.isRelayEmail(result.record.email)
             UserDefaults.standard.set(result.record.email, forKey: emailKey)
