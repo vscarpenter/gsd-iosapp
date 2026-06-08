@@ -74,42 +74,6 @@ struct AuthServiceTests {
         await #expect(throws: AuthError.providerNotFound("apple")) { _ = try await service.signIn(provider: "apple") }
     }
 
-    private func appleService(store: TokenStore, exec: FakeExecutor) -> AuthService {
-        AuthService(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
-                    presenter: FakePresenter(.failure(AuthError.cancelled)),   // never used by the Apple path
-                    tokenStore: store, config: .live)
-    }
-
-    @Test func appleSignInStoresTokenAndSendsAppleProvider() async throws {
-        let store = InMemoryTokenStore(); let exec = FakeExecutor()
-        exec.routes["auth-with-oauth2"] = (try fixture("auth_with_oauth2"), 200)
-        let result = try await appleService(store: store, exec: exec).signInWithApple(authorizationCode: "APPLE_CODE")
-        #expect(result.record.email == "v@example.com")
-        #expect(store.token == "header.payload.signature")
-        let sent = try JSONDecoder().decode([String: String].self, from: #require(exec.lastBody))
-        #expect(sent["provider"] == "apple")
-        #expect(sent["code"] == "APPLE_CODE")
-        #expect(sent["codeVerifier"] == "")
-        #expect(sent["redirectURL"] == "")
-    }
-
-    @Test func appleSignInEmptyCodeThrowsAndStoresNothing() async throws {
-        let store = InMemoryTokenStore(); let exec = FakeExecutor()
-        await #expect(throws: AuthError.missingCode) {
-            _ = try await appleService(store: store, exec: exec).signInWithApple(authorizationCode: "")
-        }
-        #expect(store.token == nil)
-    }
-
-    @Test func appleSignInBackendErrorSurfacesAndStoresNothing() async throws {
-        let store = InMemoryTokenStore(); let exec = FakeExecutor()
-        exec.routes["auth-with-oauth2"] = (try fixture("pb_error"), 400)
-        await #expect(throws: PocketBaseError.self) {
-            _ = try await appleService(store: store, exec: exec).signInWithApple(authorizationCode: "APPLE_CODE")
-        }
-        #expect(store.token == nil)
-    }
-
     private func makeJWT(exp: Int) -> String {
         func b64url(_ d: Data) -> String {
             d.base64EncodedString().replacingOccurrences(of: "+", with: "-")

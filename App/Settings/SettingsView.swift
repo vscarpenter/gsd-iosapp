@@ -1,5 +1,4 @@
 import SwiftUI
-import AuthenticationServices
 import UserNotifications
 import GSDModel
 import GSDStore
@@ -109,23 +108,29 @@ struct SettingsView: View {
                 }
                 .disabled(session.inProgress)
 
-                SignInWithAppleButton(.signIn) { request in
-                    request.requestedScopes = [.email]
-                } onCompletion: { result in
-                    switch result {
-                    case .success(let auth):
-                        // Native flow returns the authorization code; "" routes to the generic banner.
-                        let code = (auth.credential as? ASAuthorizationAppleIDCredential)
-                            .flatMap(\.authorizationCode)
-                            .flatMap { String(data: $0, encoding: .utf8) } ?? ""
-                        _Concurrency.Task { @MainActor in await session.signInWithApple(authorizationCode: code) }
-                    case .failure(let error):
-                        if case ASAuthorizationError.canceled = error { return }   // user dismissed — silent
-                        _Concurrency.Task { @MainActor in await session.signInWithApple(authorizationCode: "") }
-                    }
+                // Apple HIG-styled button driving the same web-redirect flow as Google (Option A).
+                // `SignInWithAppleButton` can't be reused — it always triggers the retired native sheet —
+                // so the appearance rules (black-on-light / white-on-dark, Apple glyph, wording, corner
+                // radius) are hand-rendered to satisfy App Review Guideline 4.8.
+                Button {
+                    _Concurrency.Task { await session.signIn(provider: "apple") }
+                } label: {
+                    Label(String(localized: "Sign in with Apple"), systemImage: "applelogo")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .foregroundStyle(colorScheme == .dark ? .black : .white)
+                        .background(colorScheme == .dark ? Color.white : Color.black)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
-                .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-                .frame(height: 44)
+                .buttonStyle(.plain)
+                .disabled(session.inProgress)
+
+                Button {
+                    _Concurrency.Task { await session.signIn(provider: "github") }
+                } label: {
+                    Label(String(localized: "Sign in with GitHub"),
+                          systemImage: "chevron.left.forwardslash.chevron.right")
+                }
                 .disabled(session.inProgress)
 
                 Text(String(localized: "To sync with the web app and your other devices, sign in with the same email you use there."))

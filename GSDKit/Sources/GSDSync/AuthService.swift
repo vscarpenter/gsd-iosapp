@@ -34,21 +34,6 @@ public struct AuthService: Sendable {
         return result
     }
 
-    /// Native Sign in with Apple (design §2). The system sheet already performed the OAuth interaction;
-    /// we only exchange the returned `authorizationCode` at PocketBase's `auth-with-oauth2`. No
-    /// `auth-methods` fetch, no `state`, no web presenter. `codeVerifier`/`redirectURL` default empty —
-    /// the native handshake has no PKCE verifier and no web redirect (distinct from the web flow's
-    /// `AuthConfig.redirectURI`); confirm exact values at the live gate (§8).
-    public func signInWithApple(authorizationCode: String,
-                                codeVerifier: String = "",
-                                redirectURL: String = "") async throws -> AuthResult {
-        guard !authorizationCode.isEmpty else { throw AuthError.missingCode }
-        let result = try await client.authWithOAuth2(
-            provider: "apple", code: authorizationCode, codeVerifier: codeVerifier, redirectURL: redirectURL)
-        tokenStore.save(result.token)
-        return result
-    }
-
     public func signOut() { tokenStore.clear() }
 
     /// A usable token, refreshing proactively near expiry; nil if signed out. Throws if refresh fails
