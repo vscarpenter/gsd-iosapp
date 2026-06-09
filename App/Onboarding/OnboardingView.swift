@@ -1,16 +1,19 @@
+import AuthenticationServices
 import SwiftUI
 import GSDModel
 
 /// First-run onboarding (design §9): four skippable, paged screens in the editorial
 /// language — paper background, New York titles, an ink-filled primary pill, and the
-/// single tint reserved for the optional "Sign in to sync". `hasOnboarded` is owned by
-/// the presenter; this view calls `onFinish` (done/skipped) or `onSignIn` (last screen).
+/// single tint reserved for optional sync sign-in. `hasOnboarded` is owned by
+/// the presenter; this view calls `onFinish` (done/skipped) or a provider sign-in.
 struct OnboardingView: View {
     var onFinish: () -> Void
-    var onSignIn: (() -> Void)? = nil
+    var onGoogleSignIn: (() -> Void)? = nil
+    var onAppleSignIn: ((String) -> Void)? = nil
 
     @State private var page = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
 
     private let pageCount = 4
 
@@ -57,15 +60,49 @@ struct OnboardingView: View {
                 withAnimation(reduceMotion ? nil : .easeInOut) { page += 1 }
             }
         } else {
-            VStack(spacing: 4) {
+            VStack(spacing: 8) {
                 primaryButton(String(localized: "Start using GSD"), action: onFinish)
-                if let onSignIn {
-                    Button(String(localized: "Sign in to sync"), action: onSignIn)
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(Surface.tint)
-                        .padding(.vertical, 11)
+                if onAppleSignIn != nil || onGoogleSignIn != nil {
+                    syncSignInButtons
+                    Text(String(localized: "To sync with the web app and your other devices, use the same email you use there."))
+                        .font(.caption)
+                        .foregroundStyle(Surface.ink3)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
+        }
+    }
+
+    @ViewBuilder private var syncSignInButtons: some View {
+        if let onAppleSignIn {
+            SignInWithAppleButton(.signIn) { request in
+                request.requestedScopes = [.email]
+            } onCompletion: { result in
+                switch result {
+                case .success(let auth):
+                    guard let code = (auth.credential as? ASAuthorizationAppleIDCredential)
+                        .flatMap(\.authorizationCode)
+                        .flatMap({ String(data: $0, encoding: .utf8) }),
+                          !code.isEmpty else { return }
+                    onAppleSignIn(code)
+                case .failure:
+                    return
+                }
+            }
+            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+            .frame(height: 44)
+        }
+
+        if let onGoogleSignIn {
+            Button(action: onGoogleSignIn) {
+                Text(String(localized: "Sign in with Google"))
+                    .font(.callout.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+                    .foregroundStyle(Surface.tint)
+            }
+            .buttonStyle(.plain)
         }
     }
 

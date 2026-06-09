@@ -310,7 +310,8 @@ struct SettingsView: View {
             LabeledContent(String(localized: "Version"), value: appVersion)
             Text(String(localized: "GSD stores your data locally on your device. When you sign in, your tasks sync with your account; signed out, nothing leaves your device."))
                 .font(.footnote).foregroundStyle(Surface.ink3)
-            Link(String(localized: "Privacy Policy"), destination: URL(string: "https://vinny.dev/gsd/privacy")!)
+            Link(String(localized: "Privacy Policy"), destination: URL(string: "https://gsd.vinny.dev/privacy")!)
+            Link(String(localized: "Contact Support"), destination: URL(string: "mailto:vscarpenter@gmail.com?subject=GSD%20Task%20Manager%20Support")!)
             Button {
                 hasOnboarded = false       // App root re-presents onboarding on the flag change
             } label: {

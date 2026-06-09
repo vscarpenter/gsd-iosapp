@@ -119,9 +119,13 @@ struct GSDApp: App {
                 )) {
                     OnboardingView(
                         onFinish: { hasOnboarded = true },
-                        onSignIn: {
+                        onGoogleSignIn: {
                             hasOnboarded = true
                             _Concurrency.Task { await session.signIn(provider: "google") }
+                        },
+                        onAppleSignIn: { code in
+                            hasOnboarded = true
+                            _Concurrency.Task { @MainActor in await session.signInWithApple(authorizationCode: code) }
                         }
                     )
                 }
