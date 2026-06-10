@@ -57,4 +57,12 @@ struct PocketBaseTaskRecordTests {
         #expect(records.count == 2)                  // the middle (no task_id) is skipped, not fatal
         #expect(records.map(\.taskId) == ["task-ok-1", "task-ok-2"])
     }
+
+    @Test func decodesServerUpdatedButNeverEncodesIt() throws {
+        let json = #"{"task_id":"a","updated":"2026-06-10 12:00:00.123Z"}"#
+        let rec = try JSONDecoder().decode(PocketBaseTaskRecord.self, from: Data(json.utf8))
+        #expect(rec.updated == "2026-06-10 12:00:00.123Z")
+        let encoded = String(decoding: try JSONEncoder().encode(rec), as: UTF8.self)
+        #expect(!encoded.contains("\"updated\""))   // PB owns system fields; never send one
+    }
 }

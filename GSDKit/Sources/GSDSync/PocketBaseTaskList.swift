@@ -10,17 +10,19 @@ struct ListPage<T: Decodable>: Decodable {
 }
 
 extension PocketBaseClient {
-    /// Pull `tasks` records with `client_updated_at >= since` (ISO), paging through ALL pages
-    /// (data-completeness — never drop page 2+). Malformed individual records are skipped (§7.4) via
-    /// `Failable`. The `owner` API rule auto-scopes to the authed user. (Confirm the filter syntax at
-    /// the live gate.)
+    /// Pull `tasks` records with server-stamped `updated >= since` (PB space-form date), paging
+    /// through ALL pages (data-completeness — never drop page 2+). `updated` is the PULL CURSOR
+    /// only (§7.1 cursor exception, design 2026-06-10 Fix B) — LWW still resolves on
+    /// `client_updated_at`. Malformed individual records are skipped (§7.4) via `Failable`.
+    /// The `owner` API rule auto-scopes to the authed user. (Live gate: confirm the collection
+    /// has the autodate `updated` field — owner confirmed 2026-06-10.)
     func listTasks(updatedSince since: String, token: String, perPage: Int = 200) async throws -> [PocketBaseTaskRecord] {
         var all: [PocketBaseTaskRecord] = []
         var page = 1
         while true {
-            let filter = "client_updated_at >= \"\(since)\""
+            let filter = "updated >= \"\(since)\""
             let encoded = filter.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? filter
-            let path = "/api/collections/tasks/records?page=\(page)&perPage=\(perPage)&sort=client_updated_at&filter=\(encoded)"
+            let path = "/api/collections/tasks/records?page=\(page)&perPage=\(perPage)&sort=updated&filter=\(encoded)"
             let req = authedRequest(path: path, method: "GET", token: token)
             let pg = try await send(req, as: ListPage<Failable<PocketBaseTaskRecord>>.self)
             all.append(contentsOf: pg.items.compactMap(\.value))

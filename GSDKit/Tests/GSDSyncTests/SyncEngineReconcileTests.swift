@@ -114,7 +114,7 @@ struct SyncEngineReconcileTests {
     @Test func resetCursorClearsPersistedCursor() async throws {
         let defaults = UserDefaults(suiteName: "t.\(UUID().uuidString)")!
         let cursor = SyncCursor(defaults: defaults)
-        cursor.advance(maxApplied: Date(timeIntervalSince1970: 1000), now: Date(timeIntervalSince1970: 1_000_000))
+        cursor.advance(maxApplied: Date(timeIntervalSince1970: 1000))
         #expect(cursor.load() != nil)
         let db = try AppDatabase.inMemory()
         let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: IndexExecutor()),

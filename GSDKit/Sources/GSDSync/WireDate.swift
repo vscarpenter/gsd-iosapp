@@ -18,15 +18,23 @@ enum WireDate {
     }
 
     /// Empty → nil; fractional-seconds → Date; whole-second → Date; otherwise nil.
+    /// PocketBase SYSTEM dates (`updated`/`created`) use a space separator
+    /// ("2026-06-10 12:00:00.123Z") — normalized to 'T' before the lenient parse.
     static func parse(_ string: String) -> Date? {
         if string.isEmpty { return nil }
-        if let date = fractional().date(from: string) { return date }
-        return wholeSecond().date(from: string)
+        let normalized = string.replacingOccurrences(of: " ", with: "T")
+        if let date = fractional().date(from: normalized) { return date }
+        return wholeSecond().date(from: normalized)
     }
 
     /// nil → "" (the §7.1 absent-date form); otherwise canonical fractional-seconds.
     static func format(_ date: Date?) -> String {
         guard let date else { return "" }
         return fractional().string(from: date)
+    }
+
+    /// PocketBase-native system-date form (space separator) — the `updated` cursor/filter format.
+    static func formatPocketBase(_ date: Date) -> String {
+        fractional().string(from: date).replacingOccurrences(of: "T", with: " ")
     }
 }

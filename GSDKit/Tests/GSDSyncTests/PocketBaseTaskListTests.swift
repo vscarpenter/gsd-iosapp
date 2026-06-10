@@ -31,6 +31,16 @@ struct PocketBaseTaskListTests {
         #expect(exec.requestedPaths.allSatisfy { $0.contains("/api/collections/tasks/records") })
     }
 
+    @Test func filtersAndSortsOnServerUpdated() async throws {
+        let exec = PagingExecutor()
+        let client = PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec)
+        _ = try await client.listTasks(updatedSince: "2026-06-10 12:00:00.000Z", token: "TOK")
+        let url = try #require(exec.requestedPaths.first)
+        #expect(url.contains("sort=updated"))
+        let decoded = url.removingPercentEncoding ?? url
+        #expect(decoded.contains(#"filter=updated >= "2026-06-10 12:00:00.000Z""#))
+    }
+
     @Test func singlePageStopsAfterOne() async throws {
         let exec = PagingExecutor()
         exec.pages[1] = #"{"page":1,"perPage":200,"totalItems":1,"totalPages":1,"items":[\#(rec("a"))]}"#

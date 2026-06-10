@@ -22,7 +22,7 @@ struct SyncEnginePullTests {
             now: { Date(timeIntervalSince1970: 2_000_000_000) })
     }
     private func wire(_ id: String, title: String, updated: String) -> String {
-        #"{"task_id":"\#(id)","title":"\#(title)","urgent":true,"important":false,"client_updated_at":"\#(updated)","client_created_at":"\#(updated)"}"#
+        #"{"task_id":"\#(id)","title":"\#(title)","urgent":true,"important":false,"client_updated_at":"\#(updated)","client_created_at":"\#(updated)","updated":"\#(updated)"}"#
     }
 
     @Test func pullUpsertsNewRemoteTask() async throws {

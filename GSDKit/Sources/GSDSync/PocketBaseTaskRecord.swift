@@ -10,8 +10,9 @@ struct WireTimeEntry: Codable, Equatable {
 }
 
 /// Faithful §7.1 PocketBase `tasks` record (snake_case wire model). Date fields are raw `String`s —
-/// leniency lives in `WireDate`, not here. System `created`/`updated` are omitted (§7.1 forbids
-/// using them for sort/filter). Decoding is DEFENSIVE: only `task_id` (the join key) is required;
+/// leniency lives in `WireDate`, not here. System `created` is omitted; `updated` is DECODE-ONLY —
+/// it is the pull cursor (§7.1 cursor exception, design 2026-06-10 Fix B), never a conflict input
+/// and never encoded. Decoding is DEFENSIVE: only `task_id` (the join key) is required;
 /// every other field defaults so empty-string, JSON-null, and key-absent all decode without
 /// throwing (mirrors the `Task.init(from:)` lenient-decode precedent). `Subtask` is reused from
 /// `GSDModel` because it already matches the §7.1 `{id,title,completed}` shape.
@@ -42,6 +43,9 @@ struct PocketBaseTaskRecord: Codable, Equatable {
     var clientUpdatedAt: String
     var clientCreatedAt: String
     var deviceId: String
+    /// PocketBase's server-stamped `updated` autodate (raw wire string). Deliberately absent
+    /// from `CodingKeys`, so the synthesized encoder never sends it — PB owns its system fields.
+    var updated: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -63,6 +67,8 @@ struct PocketBaseTaskRecord: Codable, Equatable {
         case clientCreatedAt = "client_created_at"
         case deviceId = "device_id"
     }
+
+    private enum SystemKeys: String, CodingKey { case updated }
 
     /// Defensive decode (§7.1): `task_id` required; everything else defaults. `encode(to:)` stays
     /// synthesized (uses the snake_case `CodingKeys`; nil optionals are omitted via `encodeIfPresent`).
@@ -94,6 +100,8 @@ struct PocketBaseTaskRecord: Codable, Equatable {
         clientUpdatedAt = try c.decodeIfPresent(String.self, forKey: .clientUpdatedAt) ?? ""
         clientCreatedAt = try c.decodeIfPresent(String.self, forKey: .clientCreatedAt) ?? ""
         deviceId = try c.decodeIfPresent(String.self, forKey: .deviceId) ?? ""
+        let system = try decoder.container(keyedBy: SystemKeys.self)
+        updated = try system.decodeIfPresent(String.self, forKey: .updated) ?? ""
     }
 
     /// Memberwise init (the synthesized one is suppressed by the custom `init(from:)`); used by
@@ -104,7 +112,7 @@ struct PocketBaseTaskRecord: Codable, Equatable {
          dependencies: [String], notificationEnabled: Bool, notificationSent: Bool,
          notifyBefore: Int?, lastNotificationAt: String, estimatedMinutes: Int?, timeSpent: Int,
          timeEntries: [WireTimeEntry], snoozedUntil: String, clientUpdatedAt: String,
-         clientCreatedAt: String, deviceId: String) {
+         clientCreatedAt: String, deviceId: String, updated: String = "") {
         self.id = id; self.taskId = taskId; self.owner = owner; self.title = title
         self.description = description; self.urgent = urgent; self.important = important
         self.quadrant = quadrant; self.dueDate = dueDate; self.completed = completed
@@ -115,7 +123,7 @@ struct PocketBaseTaskRecord: Codable, Equatable {
         self.estimatedMinutes = estimatedMinutes; self.timeSpent = timeSpent
         self.timeEntries = timeEntries; self.snoozedUntil = snoozedUntil
         self.clientUpdatedAt = clientUpdatedAt; self.clientCreatedAt = clientCreatedAt
-        self.deviceId = deviceId
+        self.deviceId = deviceId; self.updated = updated
     }
 }
 

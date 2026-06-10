@@ -57,7 +57,11 @@ public actor SyncEngine {
         var maxApplied: Date?
         for record in records {
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { continue }
-            maxApplied = max(maxApplied ?? .distantPast, remoteUpdated)
+            // Cursor advances on SERVER stamps (Fix B); LWW below stays on client stamps.
+            // Records with an unparseable `updated` apply but don't advance the cursor.
+            if let serverUpdated = WireDate.parse(record.updated) {
+                maxApplied = max(maxApplied ?? .distantPast, serverUpdated)
+            }
             let local = try await tasks.fetch(id: record.taskId)
             // Upsert when there's no local copy, or the remote is strictly newer (LWW).
             let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
@@ -189,13 +193,13 @@ public actor SyncEngine {
             // §7.7 promises "tap Sync Now to retry" — an explicit user retry (or the network
             // coming back) revives `.failed` items so the push loop drains them again.
             if trigger == .manual || trigger == .networkRegained { try await requeueFailed() }
-            let since = cursor.load() ?? "1970-01-01T00:00:00.000Z"
+            let since = cursor.load() ?? "1970-01-01 00:00:00.000Z"
             let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since)
             result.pulled = pulled
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
             result.deleted = try await reconcileDeletions(token: token)    // destructive — last
-            cursor.advance(maxApplied: maxApplied, now: now())
+            cursor.advance(maxApplied: maxApplied)
             await record(trigger: trigger, result: result, conflicts: conflicts, start: start)
         } catch {
             result.error = String("\(error)".prefix(200))
