@@ -1,4 +1,3 @@
-import AuthenticationServices
 import SwiftUI
 import GSDModel
 
@@ -9,7 +8,7 @@ import GSDModel
 struct OnboardingView: View {
     var onFinish: () -> Void
     var onGoogleSignIn: (() -> Void)? = nil
-    var onAppleSignIn: ((String) -> Void)? = nil
+    var onAppleSignIn: (() -> Void)? = nil
 
     @State private var page = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -76,22 +75,19 @@ struct OnboardingView: View {
 
     @ViewBuilder private var syncSignInButtons: some View {
         if let onAppleSignIn {
-            SignInWithAppleButton(.signIn) { request in
-                request.requestedScopes = [.email]
-            } onCompletion: { result in
-                switch result {
-                case .success(let auth):
-                    guard let code = (auth.credential as? ASAuthorizationAppleIDCredential)
-                        .flatMap(\.authorizationCode)
-                        .flatMap({ String(data: $0, encoding: .utf8) }),
-                          !code.isEmpty else { return }
-                    onAppleSignIn(code)
-                case .failure:
-                    return
-                }
+            // Apple HIG-styled button driving the same web-redirect flow as Google (Option A).
+            // `SignInWithAppleButton` can't be reused — it always triggers the retired native sheet —
+            // so the appearance rules (black-on-light / white-on-dark, Apple glyph, wording, corner
+            // radius) are hand-rendered to satisfy App Review Guideline 4.8 (same as SettingsView).
+            Button(action: onAppleSignIn) {
+                Label(String(localized: "Sign in with Apple"), systemImage: "applelogo")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .foregroundStyle(colorScheme == .dark ? .black : .white)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
-            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-            .frame(height: 44)
+            .buttonStyle(.plain)
         }
 
         if let onGoogleSignIn {
