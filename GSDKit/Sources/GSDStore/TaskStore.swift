@@ -83,25 +83,63 @@ public final class TaskStore {
         startArchiveObserver()
     }
 
+    /// Observation streams retry on error (bounded): a transient I/O failure must not freeze
+    /// the UI for the session (design 2026-06-10 Fix D). The failure counter resets on any
+    /// successful emission; on final give-up the last good snapshot stays visible. Each
+    /// repository is captured strongly (an immutable seam); `self` stays weak so
+    /// deinit-cancellation still works.
+    private static let observerMaxConsecutiveFailures = 5
+
     private func startTaskObserver() {
         guard observerTask == nil else { return }
-        let stream = repository.observeAll()
+        let repository = self.repository
         observerTask = _Concurrency.Task { [weak self] in
-            do { for try await snapshot in stream { self?.tasks = snapshot; self?.onTasksChanged?() } } catch {}
+            var failures = 0
+            while !_Concurrency.Task.isCancelled && failures < Self.observerMaxConsecutiveFailures {
+                do {
+                    for try await snapshot in repository.observeAll() {
+                        failures = 0
+                        self?.tasks = snapshot
+                        self?.onTasksChanged?()
+                    }
+                    return   // stream ended cleanly (cancellation/termination) — stop
+                } catch {
+                    failures += 1
+                    try? await _Concurrency.Task.sleep(for: .seconds(1))
+                }
+            }
         }
     }
     private func startSmartViewObserver() {
         guard smartViewObserverTask == nil else { return }
-        let stream = smartViewRepository.observeAll()
+        let repository = self.smartViewRepository
         smartViewObserverTask = _Concurrency.Task { [weak self] in
-            do { for try await snapshot in stream { self?.customViews = snapshot } } catch {}
+            var failures = 0
+            while !_Concurrency.Task.isCancelled && failures < Self.observerMaxConsecutiveFailures {
+                do {
+                    for try await snapshot in repository.observeAll() { failures = 0; self?.customViews = snapshot }
+                    return
+                } catch {
+                    failures += 1
+                    try? await _Concurrency.Task.sleep(for: .seconds(1))
+                }
+            }
         }
     }
     private func startArchiveObserver() {
         guard archiveObserverTask == nil else { return }
-        let stream = archiveRepository.observeAll()
+        let repository = self.archiveRepository
         archiveObserverTask = _Concurrency.Task { [weak self] in
-            do { for try await snapshot in stream { self?.archivedTasks = snapshot } } catch {}
+            var failures = 0
+            while !_Concurrency.Task.isCancelled && failures < Self.observerMaxConsecutiveFailures {
+                do {
+                    for try await snapshot in repository.observeAll() { failures = 0; self?.archivedTasks = snapshot }
+                    return
+                } catch {
+                    failures += 1
+                    try? await _Concurrency.Task.sleep(for: .seconds(1))
+                }
+            }
         }
     }
 
