@@ -123,8 +123,7 @@ public final class TaskStore {
             createdAt: now, updatedAt: now, tags: parsed.tags
         )
         try TaskValidator.validate(task)
-        try await repository.upsert(task)
-        await enqueue(task.id, .create, payload: task)   // capture-bar quick-add is a creation path → must enqueue (else reconcile deletes it)
+        try await upsertEnqueued(task, op: .create)   // capture-bar quick-add is a creation path → must enqueue (else reconcile deletes it)
     }
 
     public func create(_ task: Task) async throws {
@@ -133,16 +132,14 @@ public final class TaskStore {
         t.createdAt = now
         t.updatedAt = now
         try TaskValidator.validate(t)
-        try await repository.upsert(t)
-        await enqueue(t.id, .create, payload: t)
+        try await upsertEnqueued(t, op: .create)
         await reminders.schedule(t)
     }
 
     public func save(_ task: Task) async throws {
         var t = task; t.updatedAt = clock()
         try TaskValidator.validate(t)
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
         await reminders.schedule(t)
     }
 
@@ -159,8 +156,7 @@ public final class TaskStore {
         t.completed = willComplete
         t.completedAt = willComplete ? now : nil
         t.updatedAt = now
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
 
         if willComplete { await reminders.cancel(taskID: t.id) }
         else { await reminders.schedule(t) }
@@ -169,8 +165,7 @@ public final class TaskStore {
         guard willComplete,
               let next = RecurrenceEngine.spawnNext(from: t, now: now, newID: newID(), calendar: calendar)
         else { return }
-        try await repository.upsert(next)
-        await enqueue(next.id, .create, payload: next)   // spawned recurrence instance is a NEW local task
+        try await upsertEnqueued(next, op: .create)   // spawned recurrence instance is a NEW local task
         await reminders.schedule(next)
     }
 
@@ -178,13 +173,17 @@ public final class TaskStore {
         var t = task
         t.urgent = quadrant.isUrgent; t.important = quadrant.isImportant
         t.updatedAt = clock()
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
     }
 
     public func delete(_ task: Task) async throws {
-        try await repository.delete(id: task.id)
-        await enqueue(task.id, .delete, payload: nil)
+        let queueItemId = await enqueue(task.id, .delete, payload: nil)
+        do {
+            try await repository.delete(id: task.id)
+        } catch {
+            if let queueItemId { try? await syncQueue.remove(id: queueItemId) }
+            throw error
+        }
         await reminders.cancel(taskID: task.id)
     }
 
@@ -195,8 +194,7 @@ public final class TaskStore {
         let interval = min(preset.interval, FieldLimits.maxSnoozeInterval)
         t.snoozedUntil = now.addingTimeInterval(interval)
         t.updatedAt = now
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
         await reminders.schedule(t)   // live impl schedules at snoozedUntil
     }
 
@@ -207,8 +205,7 @@ public final class TaskStore {
         t.timeEntries = try TimeTracking.start(t.timeEntries, now: now,
                                                newID: newID(size: IDGenerator.Size.timeEntry))
         t.updatedAt = now
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
     }
 
     /// Stop the running entry and recalculate `timeSpent` (product spec §6.9).
@@ -218,8 +215,7 @@ public final class TaskStore {
         t.timeEntries = try TimeTracking.stop(t.timeEntries, now: now, notes: notes)
         t.timeSpent = TimeTracking.timeSpentMinutes(t.timeEntries)
         t.updatedAt = now
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
     }
 
     private func newID(size: Int) -> String {
@@ -289,19 +285,35 @@ public final class TaskStore {
     private func persist(_ task: Task) async throws {
         var t = task
         t.updatedAt = clock()
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
     }
 
     /// Enqueue a sync op for a local mutation (§7.5). `.delete` carries no payload. Best-effort —
-    /// a queue failure must not fail the user's mutation (the next sync's seed/reconcile self-heals).
-    private func enqueue(_ taskId: String, _ op: SyncQueueItem.Operation, payload: Task?) async {
+    /// a queue failure must not fail the user's mutation (the next sync's seed/reconcile
+    /// self-heals). Returns the queue-item id so a failed companion write can remove the orphan.
+    @discardableResult
+    private func enqueue(_ taskId: String, _ op: SyncQueueItem.Operation, payload: Task?) async -> String? {
         let item = SyncQueueItem(id: IDGenerator.generate(size: IDGenerator.Size.task),
                                  taskId: taskId, operation: op,
                                  timestamp: Int(clock().timeIntervalSince1970 * 1000),
                                  payload: op == .delete ? nil : payload)
-        try? await syncQueue.enqueue(item)
+        do { try await syncQueue.enqueue(item) } catch { return nil }
         onMutation?()
+        return item.id
+    }
+
+    /// Race-proof write (design 2026-06-10 Fix E): persist the queue item BEFORE the task row.
+    /// Both serialize through the same GRDB writer, so any task visible to a reconcile
+    /// `fetchAll` already has queue protection. If the upsert then fails, the orphaned item is
+    /// removed — an unpersisted task must not push a ghost create.
+    private func upsertEnqueued(_ task: Task, op: SyncQueueItem.Operation) async throws {
+        let queueItemId = await enqueue(task.id, op, payload: task)
+        do {
+            try await repository.upsert(task)
+        } catch {
+            if let queueItemId { try? await syncQueue.remove(id: queueItemId) }
+            throw error
+        }
     }
 
     // MARK: Reads
@@ -404,8 +416,7 @@ public final class TaskStore {
         var t = task
         t.updatedAt = clock()
         try await archiveRepository.restore(id: task.id)
-        try await repository.upsert(t)
-        await enqueue(t.id, .update, payload: t)
+        try await upsertEnqueued(t, op: .update)
     }
 
     public func deletePermanently(_ task: Task) async throws {
@@ -557,19 +568,28 @@ public final class TaskStore {
             let stamped = result.tasks.map { task -> Task in
                 var t = task; t.updatedAt = now; return t
             }
-            try await repository.replaceAll(stamped)
-            for t in stamped { await enqueue(t.id, .update, payload: t) }
+            var enqueued: [String] = []
+            for t in stamped {
+                if let id = await enqueue(t.id, .update, payload: t) { enqueued.append(id) }
+            }
             // §3.4: cleared-but-not-imported tasks must be deleted remotely too (the App drains via
             // SyncCoordinator.flushAfterReplace under the pull-suppression gate).
-            for removed in existingIDs.subtracting(importedIDs) { await enqueue(removed, .delete, payload: nil) }
+            for removed in existingIDs.subtracting(importedIDs) {
+                if let id = await enqueue(removed, .delete, payload: nil) { enqueued.append(id) }
+            }
+            do {
+                try await repository.replaceAll(stamped)
+            } catch {
+                for id in enqueued { try? await syncQueue.remove(id: id) }
+                throw error
+            }
             return result
         case .merge:
             let existing = Set(try await repository.fetchAll().map(\.id))
             let result = try TaskImporter.merge(from: data, existingIDs: existing, newID: { self.newID() })
             for task in result.tasks {
                 var t = task; t.updatedAt = clock()
-                try await repository.upsert(t)
-                await enqueue(t.id, .update, payload: t)
+                try await upsertEnqueued(t, op: .update)
             }
             return result
         }
