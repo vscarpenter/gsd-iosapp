@@ -60,6 +60,22 @@ struct SyncEngineEraseTests {
         #expect(try await queue.pending().isEmpty)        // signed out → no deletes enqueued
     }
 
+    @Test func eraseAllRemoteTokenFailureIsAnErrorNotSignedOut() async throws {
+        // A session EXISTS but can't be validated (expired + refresh unavailable). Reporting
+        // notSignedIn here would let the caller wipe local while every task survives remotely.
+        let db = try AppDatabase.inMemory()
+        let eng = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: DeleteExecutor()),
+                             tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
+                             cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
+                             deviceId: "dev-A",
+                             tokenProvider: { throw PocketBaseError.network("offline during refresh") },
+                             now: { Date(timeIntervalSince1970: 2_000_000_000) }, throttleMs: 0,
+                             history: GRDBSyncHistoryRepository(db))
+        let result = await eng.eraseAllRemote()
+        #expect(!result.notSignedIn)
+        #expect(result.error != nil)
+    }
+
     @Test func flushDeletesDrainsPendingDeletes() async throws {
         let db = try AppDatabase.inMemory(); let exec = DeleteExecutor()
         let (eng, _, queue) = make(db, exec)

@@ -76,6 +76,44 @@ struct SyncEnginePushTests {
         #expect(try await queue.pending().isEmpty)
     }
 
+    // `sync()` derives `owner` from the JWT (unlike `push(token:owner:)`), so these need a real one.
+    private static let jwt = "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InUxIiwiZXhwIjo5OTk5OTk5OTk5fQ.x"
+    private func makeSyncEngine(tasks: GRDBTaskRepository, queue: GRDBSyncQueueRepository,
+                                exec: RequestExecuting) -> SyncEngine {
+        SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
+                   tasks: tasks, queue: queue,
+                   cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
+                   deviceId: "dev-A", tokenProvider: { Self.jwt },
+                   now: { Date(timeIntervalSince1970: 2_000_000_000) }, throttleMs: 0)
+    }
+
+    @Test func manualSyncRevivesFailedItems() async throws {   // §7.7: "tap Sync Now to retry" must be true
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let t = Task(id: "a", title: "x", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
+                                              retryCount: 5, payload: t, status: .failed,
+                                              lastAttemptAt: 1, failedAt: 1))
+        let engine = makeSyncEngine(tasks: tasks, queue: queue, exec: CRUDExecutor())   // remote healthy again
+        let result = await engine.sync(trigger: .manual)
+        #expect(result.pushed == 1)                  // revived + drained
+        #expect(try await queue.all().isEmpty)
+    }
+
+    @Test func periodicSyncLeavesFailedItemsTerminal() async throws {   // only an explicit retry revives
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let t = Task(id: "a", title: "x", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
+                                              retryCount: 5, payload: t, status: .failed,
+                                              lastAttemptAt: 1, failedAt: 1))
+        let engine = makeSyncEngine(tasks: tasks, queue: queue, exec: CRUDExecutor())
+        let result = await engine.sync(trigger: .periodic)
+        #expect(result.pushed == 0)
+        let all = try await queue.all()
+        #expect(all.count == 1 && all[0].status == .failed)
+    }
+
     @Test func pushFailureBumpsRetryCountAndKeepsPending() async throws {
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         let exec = CRUDExecutor(); exec.writeStatus = 500   // server error

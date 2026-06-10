@@ -32,7 +32,10 @@ final class SessionStore {
         }
     }
 
-    var isSignedIn: Bool { email != nil || tokenStore.load() != nil }
+    /// Token-presence is the truth, not the cached email: when the server rejects the session
+    /// (401 → Keychain cleared mid-session), Settings must offer sign-in again instead of
+    /// showing a signed-in account whose syncs silently no-op.
+    var isSignedIn: Bool { tokenStore.load() != nil }
 
     func signIn(provider: String) async {
         inProgress = true; lastError = nil

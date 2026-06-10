@@ -147,13 +147,51 @@ struct AuthServiceTests {
         #expect(token == nil)
     }
 
-    @Test func refreshFailureClearsTokenAndThrows() async throws {
+    @Test func refreshAuthRejectionClearsTokenAndThrows() async throws {
         let now = Date(timeIntervalSince1970: 1_000_000_000)
         let store = InMemoryTokenStore(makeJWT(exp: 1_000_000_030)); let exec = FakeExecutor()
         exec.routes["auth-refresh"] = (try fixture("pb_error"), 401)
         let service = refreshService(store: store, exec: exec, now: now)
         await #expect(throws: PocketBaseError.self) { _ = try await service.refresh() }
         #expect(store.token == nil)
+    }
+
+    @Test func refreshTransientFailureKeepsToken() async throws {   // offline ≠ signed out
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let current = makeJWT(exp: 1_000_000_030)
+        let store = InMemoryTokenStore(current); let exec = FakeExecutor()
+        exec.routes["auth-refresh"] = (try fixture("pb_error"), 500)
+        let service = refreshService(store: store, exec: exec, now: now)
+        await #expect(throws: PocketBaseError.self) { _ = try await service.refresh() }
+        #expect(store.token == current)
+    }
+
+    @Test func validTokenRefreshesDaysBeforeExpiry() async throws {   // PB tokens live ~14d; the skew must be days
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let store = InMemoryTokenStore(makeJWT(exp: 1_000_000_000 + 3 * 86_400)); let exec = FakeExecutor()
+        exec.routes["auth-refresh"] = (try fixture("auth_with_oauth2"), 200)
+        let token = try await refreshService(store: store, exec: exec, now: now).validToken()
+        #expect(token == "header.payload.signature")
+        #expect(store.token == "header.payload.signature")
+    }
+
+    @Test func validTokenFallsBackToStillValidTokenOnTransientRefreshFailure() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let current = makeJWT(exp: 1_000_000_030)                      // near expiry, still valid
+        let store = InMemoryTokenStore(current); let exec = FakeExecutor()
+        exec.routes["auth-refresh"] = (try fixture("pb_error"), 500)   // hiccup, not a rejection
+        let token = try await refreshService(store: store, exec: exec, now: now).validToken()
+        #expect(token == current)          // sync proceeds on the old token
+        #expect(store.token == current)    // and the user is NOT signed out
+    }
+
+    @Test func validTokenThrowsForExpiredTokenWhenRefreshUnavailable() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let store = InMemoryTokenStore(makeJWT(exp: 999_999_990)); let exec = FakeExecutor()
+        exec.routes["auth-refresh"] = (try fixture("pb_error"), 500)
+        let service = refreshService(store: store, exec: exec, now: now)
+        await #expect(throws: PocketBaseError.self) { _ = try await service.validToken() }
+        #expect(store.token != nil)        // kept so health can report "session expired — sign in again"
     }
 
     @Test func signOutClearsToken() {

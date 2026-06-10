@@ -10,8 +10,11 @@ public struct AuthService: Sendable {
     private let refreshSkew: TimeInterval
     private let now: @Sendable () -> Date
 
+    /// `refreshSkew` defaults to 7 days: PocketBase auth tokens live ~14 days, so any sync in the
+    /// back half of the lifetime extends the session. (A seconds-scale skew means an active user's
+    /// token silently expires — refresh would only fire if a sync landed inside that tiny window.)
     public init(client: PocketBaseClient, presenter: WebAuthPresenting, tokenStore: TokenStore,
-                config: AuthConfig, refreshSkew: TimeInterval = 60,
+                config: AuthConfig, refreshSkew: TimeInterval = 7 * 24 * 60 * 60,
                 now: @escaping @Sendable () -> Date = { Date() }) {
         self.client = client; self.presenter = presenter; self.tokenStore = tokenStore
         self.config = config; self.refreshSkew = refreshSkew; self.now = now
@@ -51,15 +54,23 @@ public struct AuthService: Sendable {
 
     public func signOut() { tokenStore.clear() }
 
-    /// A usable token, refreshing proactively near expiry; nil if signed out. Throws if refresh fails
-    /// (caller prompts re-auth).
+    /// A usable token, refreshing proactively near expiry; nil if signed out. A transient refresh
+    /// failure (offline, 5xx) falls back to the stored token while it still has life left — the
+    /// next sync retries the refresh. Throws only when no usable token remains (caller prompts re-auth).
     public func validToken() async throws -> String? {
         guard let token = tokenStore.load() else { return nil }
         guard JWT.expiresWithin(refreshSkew, of: token, now: now()) else { return token }
-        return try await refresh().token
+        do {
+            return try await refresh().token
+        } catch {
+            if tokenStore.load() != nil, !JWT.expiresWithin(0, of: token, now: now()) { return token }
+            throw error
+        }
     }
 
-    /// Extend a still-valid JWT (no refresh-token). On failure, clear + signal re-auth.
+    /// Extend a still-valid JWT (no refresh-token). The Keychain is cleared ONLY when the server
+    /// rejects the token itself (401/403) — a transient network/server failure must not sign the
+    /// user out (offline-first: airplane mode during a refresh is routine, not a session loss).
     @discardableResult
     public func refresh() async throws -> AuthResult {
         guard let token = tokenStore.load() else { throw AuthError.notSignedIn }
@@ -68,8 +79,17 @@ public struct AuthService: Sendable {
             tokenStore.save(result.token)
             return result
         } catch {
-            tokenStore.clear()
+            if Self.isAuthRejection(error) { tokenStore.clear() }
             throw error
+        }
+    }
+
+    private static func isAuthRejection(_ error: Error) -> Bool {
+        switch error {
+        case PocketBaseError.http(let status, _), PocketBaseError.pocketBase(let status, _):
+            status == 401 || status == 403
+        default:
+            false
         }
     }
 

@@ -392,6 +392,7 @@ public final class TaskStore {
     /// syncs). Note `restore` DOES enqueue (it re-activates the task — see below).
     public func archive(_ task: Task) async throws {
         try await archiveRepository.archive(task)
+        await reminders.cancel(taskID: task.id)   // an archived task must not fire a reminder
     }
 
     /// Restore an archived task to active, stamping `updatedAt` so it sorts fresh.
@@ -575,8 +576,11 @@ public final class TaskStore {
     }
 
     /// Erase all app data EXCEPT the theme (design-spec §3 reset scope call): clears tasks,
-    /// archived tasks, custom smart views, pinning, and archive settings. `appTheme` +
-    /// `hasOnboarded` live in the App layer's `@AppStorage` and are intentionally untouched.
+    /// archived tasks, custom smart views, pinning, archive settings — and the sync queue +
+    /// scheduled reminders. The queue clear matters even signed-out: stale queued mutations
+    /// would otherwise re-create every "erased" task on the server at the next sign-in.
+    /// `appTheme` + `hasOnboarded` live in the App layer's `@AppStorage` and are intentionally
+    /// untouched.
     public func eraseAllData() async throws {
         try await repository.replaceAll([])
         for archived in try await archiveRepository.fetchAll() {
@@ -585,6 +589,11 @@ public final class TaskStore {
         for view in try await smartViewRepository.fetchAll() {
             try await smartViewRepository.delete(id: view.id)
         }
+        for item in try await syncQueue.all() {
+            try await syncQueue.remove(id: item.id)
+        }
+        await reminders.cancelAll()
+        await reminders.setBadge(0)
         pinnedIDs = []
         defaults.removeObject(forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
         defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAutoEnabled)

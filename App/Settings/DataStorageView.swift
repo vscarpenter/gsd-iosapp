@@ -55,6 +55,8 @@ struct DataStorageView: View {
                 Text(String(localized: "Erasing removes all tasks, archived items, and custom views. Your appearance settings are kept. Export first if you want a backup."))
             }
         }
+        .onAppear { cleanupExportFile() }      // clear any stale export from a previous session
+        .onDisappear { cleanupExportFile() }   // don't leave a plaintext task dump in tmp/
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.json]) { result in
             handleImportPick(result)
         }
@@ -72,7 +74,7 @@ struct DataStorageView: View {
                 _Concurrency.Task {
                     let ok = await sync.eraseEverywhere(store: store)
                     statusMessage = ok ? String(localized: "All data erased.")
-                                       : String(localized: "Couldn't erase right now — a sync was in progress. Please try again.")
+                                       : String(localized: "Couldn't erase right now — check your connection and try again. Nothing was removed from this device.")
                 }
             }
             .disabled(resetConfirmText != "RESET")
@@ -83,7 +85,9 @@ struct DataStorageView: View {
     }
 
     /// Write the export JSON to a temp `.json` file so `ShareLink(item: URL)` (URL is
-    /// `Transferable`, FileDocument is not) can share it with a real filename.
+    /// `Transferable`, FileDocument is not) can share it with a real filename. The file is a
+    /// full plaintext dump of the user's tasks, so it gets `.completeFileProtection` and is
+    /// deleted when the view goes away (`cleanupExportFile`) — never left in tmp/ indefinitely.
     private func makeExportURL() -> URL? {
         let data: Data
         do {
@@ -92,14 +96,23 @@ struct DataStorageView: View {
             statusMessage = String(localized: "Couldn’t prepare the export file: \(error.localizedDescription)")
             return nil
         }
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("GSD-Tasks.json")
+        let url = exportFileURL
         do {
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
             return url
         } catch {
             statusMessage = String(localized: "Couldn’t prepare the export file.")
             return nil
         }
+    }
+
+    private var exportFileURL: URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("GSD-Tasks.json")
+    }
+
+    private func cleanupExportFile() {
+        exportURL = nil
+        try? FileManager.default.removeItem(at: exportFileURL)
     }
 
     private func handleImportPick(_ result: Result<URL, Error>) {

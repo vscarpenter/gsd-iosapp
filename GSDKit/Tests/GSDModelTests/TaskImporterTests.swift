@@ -47,6 +47,15 @@ struct TaskImporterTests {
         #expect(result.tasks[0].parentTaskId == "z")
     }
 
+    // MARK: validation (imported files are untrusted)
+    @Test func parseSkipsTasksThatFailFieldLimitValidation() throws {
+        var oversized = task("big")
+        oversized.title = String(repeating: "x", count: 200)   // breaks the 80-char title limit
+        let result = try TaskImporter.replace(from: try data([task("ok"), oversized]))
+        #expect(result.tasks.map(\.id) == ["ok"])
+        #expect(result.skipped == 1)
+    }
+
     // MARK: lenient decode
     @Test func lenientDecodeIgnoresUnknownKeysAndFillsMissing() throws {
         // A hand-rolled envelope: one task with ONLY the 6 required keys (every defaulted

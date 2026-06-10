@@ -79,4 +79,22 @@ struct TaskStoreDataTests {
         #expect(store.tasks.isEmpty)
         #expect(store.pinnedSmartViewIds.isEmpty)
     }
+
+    @Test func eraseAllDataClearsTheSyncQueue() async throws {
+        // A signed-out user's mutations all enqueue; an erase that leaves them queued would
+        // re-create every "erased" task on the server (and then locally) at the next sign-in.
+        let db = try AppDatabase.inMemory()
+        let queue = GRDBSyncQueueRepository(db)
+        let store = TaskStore(repository: GRDBTaskRepository(db),
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db),
+                              defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
+                              clock: { Date(timeIntervalSince1970: 1000) },
+                              syncQueue: queue)
+        try await store.create(task("a"))
+        try await store.create(task("b"))
+        #expect(try await queue.all().count == 2)
+        try await store.eraseAllData()
+        #expect(try await queue.all().isEmpty)
+    }
 }

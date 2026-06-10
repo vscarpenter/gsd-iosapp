@@ -79,7 +79,14 @@ public enum TaskImporter {
         var tasks: [Task] = []
         var skipped = 0
         for raw in envelope.tasks {
-            if let task = raw.decoded { tasks.append(task) } else { skipped += 1 }
+            // Imported files are untrusted: a task must satisfy the same `TaskValidator`
+            // invariants every other write path enforces (else import becomes a back door
+            // for unbounded fields that then sync ecosystem-wide). Invalid → skip + count.
+            if let task = raw.decoded, (try? TaskValidator.validate(task)) != nil {
+                tasks.append(task)
+            } else {
+                skipped += 1
+            }
         }
         return ImportResult(tasks: tasks, skipped: skipped)
     }

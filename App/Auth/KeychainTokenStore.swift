@@ -31,7 +31,9 @@ struct KeychainTokenStore: TokenStore {
         SecItemDelete(base as CFDictionary)
         var add = base
         add[kSecValueData as String] = Data(token.utf8)
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        // ThisDeviceOnly: the session token must not migrate via encrypted backups or
+        // device-to-device restore — a restored device should re-authenticate.
+        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         SecItemAdd(add as CFDictionary, nil)
     }
 

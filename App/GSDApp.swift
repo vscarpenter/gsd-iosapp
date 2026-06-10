@@ -20,8 +20,10 @@ struct GSDApp: App {
         // Editorial chrome: serif nav titles + ink (not system-blue) bars. Must run before
         // any UINavigationBar/UITabBar is realized, so the App init is the right window.
         AppAppearance.configure()
-        // The local store is the app's source of truth; failure to open it is unrecoverable.
-        let database = try! AppDatabase.live()
+        // The local store is the app's source of truth. An unopenable store (corruption,
+        // failed migration) is moved aside — preserved as .corrupt — and recreated, instead
+        // of crash-looping at launch. Only a second consecutive failure is unrecoverable.
+        let database = try! AppDatabase.liveWithRecovery()
         // The live scheduler reads NotificationSettings straight from App-Group defaults
         // (the same suite the store persists to) — avoids a store-construction cycle.
         let scheduler = LiveReminderScheduler(settingsProvider: {
@@ -56,6 +58,7 @@ struct GSDApp: App {
             cursor: SyncCursor(),
             deviceId: DeviceIdentity.current(nameProvider: { deviceName }).deviceId,
             tokenProvider: { try await authService.validToken() },
+            rawToken: { tokenStore.load() },   // health-only: lets an expired session say so
             history: historyRepo)
         _syncEngine = State(initialValue: syncEngine)
         // SyncCoordinator (Phase 5d) owns when sync fires (cadence/foreground/network/debounced push/SSE)

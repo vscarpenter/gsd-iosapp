@@ -25,21 +25,26 @@ public actor SyncEngine {
     private let cursor: SyncCursor
     private let deviceId: String
     private let tokenProvider: @Sendable () async throws -> String?
+    private let rawToken: @Sendable () -> String?
     private let now: @Sendable () -> Date
     private let throttleMs: Int
     private let history: any SyncHistoryRepository
     private var isSyncing = false
     private var isErasing = false      // §3.4: suppresses pull during a destructive erase/replace drain (Group D)
 
+    /// `rawToken` reads the STORED token without validation/refresh — only `health()` uses it, so
+    /// an expired-but-present session can still be reported as "session expired" (the validating
+    /// `tokenProvider` throws in that state and carries no expiry).
     public init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
                 cursor: SyncCursor, deviceId: String,
                 tokenProvider: @escaping @Sendable () async throws -> String?,
+                rawToken: @escaping @Sendable () -> String? = { nil },
                 now: @escaping @Sendable () -> Date = { Date() },
                 throttleMs: Int = 100,
                 history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
         self.client = client; self.tasks = tasks; self.queue = queue; self.cursor = cursor
-        self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.now = now
-        self.throttleMs = throttleMs; self.history = history
+        self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.rawToken = rawToken
+        self.now = now; self.throttleMs = throttleMs; self.history = history
     }
 
     /// Pull remote → local (upsert-only; no deletes). LWW vs local; device-local preserved via the
@@ -137,6 +142,17 @@ public actor SyncEngine {
         return deleted
     }
 
+    /// Reset every `.failed` queue item to `.pending` (fresh retry budget) so the next push drains
+    /// it. Without this, `.failed` is a terminal state and the affected edits never leave the device.
+    func requeueFailed() async throws {
+        for item in try await queue.all() where item.status == .failed {
+            var revived = item
+            revived.status = .pending; revived.retryCount = 0
+            revived.lastAttemptAt = nil; revived.failedAt = nil
+            try await queue.update(revived)
+        }
+    }
+
     /// Clear the pull cursor (sign-out) so the next sign-in re-seeds + full-pulls. Local tasks are
     /// NOT wiped (offline-first).
     public func resetCursor() { cursor.clear() }
@@ -153,7 +169,12 @@ public actor SyncEngine {
         do {
             guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
             token = t
-        } catch { result.notSignedIn = true; return result }
+        } catch {
+            // A throwing provider is NOT "signed out" — a session exists but couldn't be validated
+            // (expired + refresh unavailable). Surface it; a silent no-op hides a dead session.
+            result.error = String("\(error)".prefix(200))
+            return result
+        }
 
         guard let owner = JWT.userId(token) else {
             result.error = "Could not derive owner from auth token"   // malformed token → fail fast (don't push owner:"")
@@ -162,6 +183,9 @@ public actor SyncEngine {
         let start = now()
         do {
             if cursor.load() == nil { try await seedExistingTasks() }      // first-sync seed BEFORE pull/reconcile
+            // §7.7 promises "tap Sync Now to retry" — an explicit user retry (or the network
+            // coming back) revives `.failed` items so the push loop drains them again.
+            if trigger == .manual || trigger == .networkRegained { try await requeueFailed() }
             let since = cursor.load() ?? "1970-01-01T00:00:00.000Z"
             let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since)
             result.pulled = pulled
@@ -195,7 +219,10 @@ public actor SyncEngine {
         do {
             guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
             token = t
-        } catch { result.notSignedIn = true; return result }
+        } catch {
+            result.error = String("\(error)".prefix(200))   // dead session ≠ signed out (see sync())
+            return result
+        }
         guard let owner = JWT.userId(token) else {
             result.error = "Could not derive owner from auth token"; return result
         }
@@ -226,7 +253,14 @@ public actor SyncEngine {
         do {
             guard let t = try await tokenProvider() else { result.notSignedIn = true; return result }
             token = t
-        } catch { result.notSignedIn = true; return result }
+        } catch {
+            // CRITICAL distinction: nil = genuinely signed out (caller may erase local-only);
+            // a throw = a session EXISTS but can't be validated — report an error so the caller
+            // refuses the local wipe (otherwise "erase everywhere" would wipe local, report
+            // success, and leave every task alive on the server).
+            result.error = String("\(error)".prefix(200))
+            return result
+        }
         guard JWT.userId(token) != nil else {
             result.error = "Could not derive owner from auth token"; return result
         }
@@ -335,12 +369,14 @@ public actor SyncEngine {
     public func pendingCount() async -> Int { (try? await queue.pending().count) ?? 0 }
 
     /// Compute current health (§7.7) from the queue + token + reachability (the App supplies `online`).
+    /// Falls back to `rawToken` when validation throws — an expired-but-present session must still
+    /// surface its expiry (that's exactly the state "session expired — sign in again" describes).
     public func health(online: Bool) async -> SyncHealth {
         let items = (try? await queue.all()) ?? []
         let oldestPendingMs = items.filter { $0.status == .pending }.map(\.timestamp).min()
         let failedCount = items.filter { $0.status == .failed }.count
-        let token = try? await tokenProvider()
-        let expiry = token.flatMap { $0 }.flatMap { JWT.expiry($0) }
+        let token = ((try? await tokenProvider()).flatMap { $0 }) ?? rawToken()
+        let expiry = token.flatMap { JWT.expiry($0) }
         return SyncHealth.evaluate(oldestPendingMs: oldestPendingMs, failedCount: failedCount,
                                    tokenExpiry: expiry, online: online, now: now())
     }

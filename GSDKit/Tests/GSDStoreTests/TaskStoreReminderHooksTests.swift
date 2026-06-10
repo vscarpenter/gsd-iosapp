@@ -97,6 +97,21 @@ struct TaskStoreReminderHooksTests {
         }
         #expect(spawnSchedules.count == 1)   // exactly one schedule for the spawned instance
     }
+    @Test func archiveCancelsReminder() async throws {
+        let rec = RecordingReminderScheduler()
+        let store = try makeStore(rec)
+        try await store.create(task("a", due: now.addingTimeInterval(3600)))   // schedule
+        try await store.archive(task("a", due: now.addingTimeInterval(3600)))
+        #expect(rec.scheduleCancelCalls == [.schedule("a"), .cancel("a")])     // no ghost reminder
+    }
+    @Test func eraseAllDataCancelsEveryReminderAndZeroesBadge() async throws {
+        let rec = RecordingReminderScheduler()
+        let store = try makeStore(rec)
+        try await store.create(task("a", due: now.addingTimeInterval(3600)))
+        try await store.eraseAllData()
+        #expect(rec.calls.contains(.cancelAll))
+        #expect(rec.calls.contains(.badge(0)))
+    }
     @Test func refreshBadgeForwardsComputedCount() async throws {
         let rec = RecordingReminderScheduler()
         let store = try makeStore(rec)

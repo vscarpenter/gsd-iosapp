@@ -33,7 +33,9 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: GSD Task Manager
+        # Home-screen label — anything longer than ~12 chars truncates under the icon.
+        # The full "GSD Task Manager" name belongs in App Store Connect, not here.
+        CFBundleDisplayName: GSD
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         ITSAppUsesNonExemptEncryption: false
@@ -50,9 +52,10 @@ targets:
           UIColorName: LaunchBackground
           UIImageName: LaunchMark
           UIImageRespectsSafeAreaInsets: true
+        # `fetch` only: the sole background task is a BGAppRefreshTask (dev.vinny.gsd.refresh).
+        # Declaring `processing` with no BGProcessingTask is an App Review question-magnet.
         UIBackgroundModes:
           - fetch
-          - processing
         BGTaskSchedulerPermittedIdentifiers:
           - dev.vinny.gsd.refresh
         CFBundleURLTypes:

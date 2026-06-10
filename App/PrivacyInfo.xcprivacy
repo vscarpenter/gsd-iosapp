@@ -52,7 +52,10 @@
             <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
             <key>NSPrivacyAccessedAPITypeReasons</key>
             <array>
+                <!-- 1C8F.1 covers the App-Group suite; CA92.1 covers UserDefaults.standard
+                     (SessionStore's email cache + non-group fallbacks). -->
                 <string>1C8F.1</string>
+                <string>CA92.1</string>
             </array>
         </dict>
         <dict>
