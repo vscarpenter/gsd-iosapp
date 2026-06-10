@@ -13,6 +13,7 @@ import GSDSnapshot
 /// surfaces own (tab/sidebar selection, the Browse push path).
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(SessionStore.self) private var session
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
 
@@ -38,6 +39,31 @@ struct ContentView: View {
             }
             .sheet(item: $paletteEditor) { TaskEditorView(request: $0) }
             .onOpenURL { handleDeepLink($0) }
+            // Cross-account guard (design 2026-06-10 Fix C): a DIFFERENT account signed in
+            // while this device holds tasks from the previous one — sync is parked until the
+            // user chooses. Hosted here so sign-ins from Settings AND Onboarding both surface it.
+            .confirmationDialog(
+                String(localized: "Different account"),
+                isPresented: Binding(
+                    get: { session.pendingAccountSwitch != nil },
+                    set: { presented in
+                        if !presented {
+                            // Defer one turn: a button action claims synchronously first, so
+                            // this only cancels a no-choice (outside-tap) dismissal.
+                            _Concurrency.Task { @MainActor in session.cancelAccountSwitchIfUnresolved() }
+                        }
+                    }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button(String(localized: "Keep my tasks")) { session.resolveAccountSwitch(.merge) }
+                Button(String(localized: "Start fresh (erase tasks on this device)"), role: .destructive) {
+                    session.resolveAccountSwitch(.fresh)
+                }
+                Button(String(localized: "Cancel"), role: .cancel) { session.resolveAccountSwitch(.cancel) }
+            } message: {
+                Text(String(localized: "You signed in as \(session.pendingAccountSwitch?.newEmail ?? String(localized: "a different account")), but this device has tasks from a previous account. Keep them and sync them to this account, or start fresh?"))
+            }
     }
 
     private func handleDeepLink(_ url: URL) {

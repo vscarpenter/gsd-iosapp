@@ -87,7 +87,10 @@ struct GSDApp: App {
         // create() path on launch + foreground. Trivial glue; the logic is the tested ShareInbox.
         let shareInbox = ShareInbox(store: ShareOutboxStore())
         _shareInbox = State(initialValue: shareInbox)
-        _session = State(initialValue: SessionStore(auth: authService, tokenStore: tokenStore, coordinator: coordinator))
+        _session = State(initialValue: SessionStore(
+            auth: authService, tokenStore: tokenStore, coordinator: coordinator,
+            hasLocalActiveTasks: { !store.tasks.isEmpty },
+            eraseLocal: { try await store.eraseAllData() }))
         // BGTaskScheduler handlers MUST be registered before the app finishes launching —
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
         // and would trip "all launch handlers must be registered before application finishes

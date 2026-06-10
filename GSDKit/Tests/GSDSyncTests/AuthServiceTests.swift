@@ -199,4 +199,16 @@ struct AuthServiceTests {
         refreshService(store: store, exec: FakeExecutor(), now: Date(timeIntervalSince1970: 0)).signOut()
         #expect(store.token == nil)
     }
+
+    @Test func currentUserIdReadsTheStoredTokenWithoutValidation() {
+        let jwt = "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InUxIiwiZXhwIjo5OTk5OTk5OTk5fQ.x"   // id u1
+        let service = refreshService(store: InMemoryTokenStore(jwt), exec: FakeExecutor(),
+                                     now: Date(timeIntervalSince1970: 0))
+        #expect(service.currentUserId() == "u1")
+    }
+    @Test func currentUserIdNilWhenSignedOut() {
+        let service = refreshService(store: InMemoryTokenStore(), exec: FakeExecutor(),
+                                     now: Date(timeIntervalSince1970: 0))
+        #expect(service.currentUserId() == nil)
+    }
 }

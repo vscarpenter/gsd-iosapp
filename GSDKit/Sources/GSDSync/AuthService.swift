@@ -54,6 +54,13 @@ public struct AuthService: Sendable {
 
     public func signOut() { tokenStore.clear() }
 
+    /// The signed-in PocketBase user id from the STORED token (no validation, no refresh) —
+    /// the App's account-switch guard records this as the last-known owner. nil when signed
+    /// out or the token is unparseable.
+    public func currentUserId() -> String? {
+        tokenStore.load().flatMap { JWT.userId($0) }
+    }
+
     /// A usable token, refreshing proactively near expiry; nil if signed out. A transient refresh
     /// failure (offline, 5xx) falls back to the stored token while it still has life left — the
     /// next sync retries the refresh. Throws only when no usable token remains (caller prompts re-auth).
