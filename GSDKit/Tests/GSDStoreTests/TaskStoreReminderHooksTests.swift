@@ -97,6 +97,27 @@ struct TaskStoreReminderHooksTests {
         }
         #expect(spawnSchedules.count == 1)   // exactly one schedule for the spawned instance
     }
+    @Test func resyncRemindersRebuildsOnlyEligibleTasks() async throws {
+        let rec = RecordingReminderScheduler()
+        let store = try makeStore(rec)
+        store.start()
+        try await store.create(task("due", due: now.addingTimeInterval(3600)))
+        try await store.create(task("noDue"))
+        try await store.create(task("done", due: now.addingTimeInterval(3600), completed: true))
+        var muted = task("muted", due: now.addingTimeInterval(3600))
+        muted.notificationEnabled = false
+        try await store.create(muted)
+        var waited = 0
+        while store.tasks.count != 4 && waited < 200 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        rec.calls = []
+        await store.resyncReminders()
+        #expect(rec.calls.first == .cancelAll)                       // wipe first…
+        #expect(rec.scheduleCancelCalls == [.cancelAll, .schedule("due")])  // …then only the eligible task
+        #expect(rec.calls.contains { if case .badge = $0 { true } else { false } })  // badge refreshed
+    }
+
     @Test func archiveCancelsReminder() async throws {
         let rec = RecordingReminderScheduler()
         let store = try makeStore(rec)

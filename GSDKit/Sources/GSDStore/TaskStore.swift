@@ -528,6 +528,21 @@ public final class TaskStore {
         await reminders.setBadge(count)
     }
 
+    /// Rebuild reminder + badge state from the live snapshot (design 2026-06-10 Fix A).
+    /// Repository-direct writes — sync pull, SSE, deletion-reconcile — never pass through the
+    /// §9.1 mutation hooks, so remote changes leave reminders stale on this device. The App
+    /// calls this (debounced) whenever the task set changes. Idempotent: `schedule()` uses the
+    /// stable `task-<id>` identifier, so re-scheduling replaces rather than duplicates. The
+    /// eligibility pre-filter bounds notification-center IPC to reminder-bearing tasks;
+    /// `schedule()` keeps final say (quiet hours, past-due → cancel).
+    public func resyncReminders() async {
+        await reminders.cancelAll()
+        for task in tasks where !task.completed && task.dueDate != nil && task.notificationEnabled {
+            await reminders.schedule(task)
+        }
+        await refreshBadge()
+    }
+
     /// Request OS notification authorization (contextual — product spec §9.2) and stamp
     /// `permissionAsked`. Routes through the injected scheduler so `GSDStore` stays free of
     /// `UserNotifications`. Returns whether reminders are authorized after the request. The

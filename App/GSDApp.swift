@@ -11,6 +11,7 @@ struct GSDApp: App {
     @State private var syncEngine: SyncEngine
     @State private var coordinator: SyncCoordinator
     @State private var widgetRefresher: WidgetSnapshotRefresher
+    @State private var reminderResyncer: ReminderResyncer
     @State private var shareInbox: ShareInbox
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
@@ -74,7 +75,14 @@ struct GSDApp: App {
         // widget timelines whenever the task set changes (local edits, remote sync, background).
         let widgetRefresher = WidgetSnapshotRefresher(store: store)
         _widgetRefresher = State(initialValue: widgetRefresher)
-        store.onTasksChanged = { widgetRefresher.schedule() }
+        // Reminder resync (Fix A): remote writes (pull/SSE/reconcile) bypass the §9.1 mutation
+        // hooks; this rebuilds reminders+badge from the snapshot on every observed change.
+        let reminderResyncer = ReminderResyncer(store: store)
+        _reminderResyncer = State(initialValue: reminderResyncer)
+        store.onTasksChanged = {
+            widgetRefresher.schedule()
+            reminderResyncer.schedule()
+        }
         // Share Extension inbox (Phase 6d): drains the App-Group outbox through the SAME
         // create() path on launch + foreground. Trivial glue; the logic is the tested ShareInbox.
         let shareInbox = ShareInbox(store: ShareOutboxStore())
