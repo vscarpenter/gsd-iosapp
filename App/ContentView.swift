@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreSpotlight
 import GSDModel
 import GSDStore
 import GSDSnapshot
@@ -13,6 +14,7 @@ import GSDSnapshot
 /// surfaces own (tab/sidebar selection, the Browse push path).
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(TaskStore.self) private var store
     @Environment(SessionStore.self) private var session
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
@@ -28,17 +30,22 @@ struct ContentView: View {
             .environment(palette)
             // Hidden ⌘K trigger — a zero-size button carrying the keyboard shortcut so the
             // hardware ⌘K opens the palette anywhere in the app.
-            .background {
-                Button("", action: { palette.showPalette = true })
-                    .keyboardShortcut("k", modifiers: .command)
-                    .opacity(0)
-                    .accessibilityHidden(true)
-            }
+            .background { keyboardShortcuts }
             .sheet(isPresented: $palette.showPalette, onDismiss: presentPendingEditor) {
                 CommandPaletteView(onSelect: handle)
             }
             .sheet(item: $paletteEditor) { TaskEditorView(request: $0) }
             .onOpenURL { handleDeepLink($0) }
+            .onContinueUserActivity(CSSearchableItemActionType, perform: handleSpotlightActivity)
+            .onReceive(NotificationCenter.default.publisher(for: .gsdOpenDeepLink)) { notification in
+                guard let url = notification.object as? URL else { return }
+                handleDeepLink(url)
+            }
+            .task {
+                if let url = DeepLinkHandoff.consumePendingURL() {
+                    handleDeepLink(url)
+                }
+            }
             // Cross-account guard (design 2026-06-10 Fix C): a DIFFERENT account signed in
             // while this device holds tasks from the previous one — sync is parked until the
             // user chooses. Hosted here so sign-ins from Settings AND Onboarding both surface it.
@@ -66,11 +73,56 @@ struct ContentView: View {
             }
     }
 
+    @ViewBuilder private var keyboardShortcuts: some View {
+        Group {
+            Button("", action: { palette.showPalette = true })
+                .keyboardShortcut("k", modifiers: .command)
+            Button("", action: { palette.showPalette = true })
+                .keyboardShortcut("f", modifiers: .command)
+            Button("", action: { paletteEditor = .new(.urgentImportant, prefill: nil) })
+                .keyboardShortcut("n", modifiers: .command)
+            Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.urgentImportant).url) })
+                .keyboardShortcut("1", modifiers: .command)
+            Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.notUrgentImportant).url) })
+                .keyboardShortcut("2", modifiers: .command)
+            Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.urgentNotImportant).url) })
+                .keyboardShortcut("3", modifiers: .command)
+            Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.notUrgentNotImportant).url) })
+                .keyboardShortcut("4", modifiers: .command)
+        }
+        .opacity(0)
+        .accessibilityHidden(true)
+    }
+
     private func handleDeepLink(_ url: URL) {
         guard let route = DeepLinkParser.route(from: url) else { return }  // ignores gsd://oauth-callback
         switch route {
-        case .focus: navigate(to: .matrix)   // the Matrix's Q1 quadrant IS today's focus
+        case .focus:
+            navigate(to: .matrix)   // the Matrix's Q1 quadrant IS today's focus
+        case .capture:
+            paletteEditor = .new(.urgentImportant, prefill: nil)
+        case .quadrant:
+            navigate(to: .matrix)
+        case .task(let id):
+            if let task = store.tasks.first(where: { $0.id == id }) {
+                paletteEditor = .edit(task)
+            } else {
+                navigate(to: .matrix)
+            }
+        case .smartView(let id):
+            openSmartView(id)
+        case .dashboard:
+            navigate(to: .dashboard)
+        case .settings:
+            navigate(to: .settings)
+        case .archive:
+            navigate(to: .archive)
         }
+    }
+
+    private func handleSpotlightActivity(_ activity: NSUserActivity) {
+        guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String else { return }
+        handleDeepLink(DeepLinkRoute.task(id).url)
     }
 
     @ViewBuilder private var rootContent: some View {
@@ -152,6 +204,7 @@ private struct RegularRootView: View {
     @Environment(PaletteController.self) private var palette
     @Environment(SyncCoordinator.self) private var sync
     @State private var editorTarget: SmartViewEditorTarget?
+    @State private var actionFailure: TaskActionFailure?
 
     var body: some View {
         @Bindable var palette = palette
@@ -194,6 +247,7 @@ private struct RegularRootView: View {
                 }
             }
             .sheet(item: $editorTarget) { SmartViewEditorView(target: $0) }
+            .taskActionFailureAlert($actionFailure)
         } detail: {
             switch palette.regularSelection {
             case .smartView(let id):
@@ -239,11 +293,21 @@ private struct RegularRootView: View {
                         Label(String(localized: "Edit"), systemImage: "pencil")
                     }
                     Button(role: .destructive) {
-                        _Concurrency.Task { try? await store.deleteView(id: view.id) }
+                        deleteSmartView(view)
                     } label: {
                         Label(String(localized: "Delete"), systemImage: "trash")
                     }
                 }
             }
+    }
+
+    private func deleteSmartView(_ view: SmartView) {
+        _Concurrency.Task { @MainActor in
+            do {
+                try await store.deleteView(id: view.id)
+            } catch {
+                actionFailure = TaskActionFailure(String(localized: "Couldn’t delete “\(view.name)”: \(error.localizedDescription)"))
+            }
+        }
     }
 }

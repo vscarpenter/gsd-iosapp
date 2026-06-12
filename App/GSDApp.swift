@@ -6,12 +6,14 @@ import GSDSnapshot
 
 @main
 struct GSDApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var store: TaskStore
     @State private var session: SessionStore
     @State private var syncEngine: SyncEngine
     @State private var coordinator: SyncCoordinator
     @State private var widgetRefresher: WidgetSnapshotRefresher
     @State private var reminderResyncer: ReminderResyncer
+    @State private var spotlightIndexer: SpotlightIndexer
     @State private var shareInbox: ShareInbox
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
@@ -79,9 +81,12 @@ struct GSDApp: App {
         // hooks; this rebuilds reminders+badge from the snapshot on every observed change.
         let reminderResyncer = ReminderResyncer(store: store)
         _reminderResyncer = State(initialValue: reminderResyncer)
+        let spotlightIndexer = SpotlightIndexer()
+        _spotlightIndexer = State(initialValue: spotlightIndexer)
         store.onTasksChanged = {
             widgetRefresher.schedule()
             reminderResyncer.schedule()
+            spotlightIndexer.schedule(tasks: store.tasks)
         }
         // Share Extension inbox (Phase 6d): drains the App-Group outbox through the SAME
         // create() path on launch + foreground. Trivial glue; the logic is the tested ShareInbox.

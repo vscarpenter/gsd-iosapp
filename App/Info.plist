@@ -37,6 +37,29 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAdd</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Capture in GSD</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>New Task</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>dev.vinny.gsd.new-task</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeFavorite</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Open priority tasks</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Today's Focus</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>dev.vinny.gsd.today-focus</string>
+		</dict>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

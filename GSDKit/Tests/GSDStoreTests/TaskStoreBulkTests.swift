@@ -75,10 +75,25 @@ struct TaskStoreBulkTests {
         let store = try makeStore()
         let full = task("full", tags: (0..<FieldLimits.maxTags).map { "t\($0)" })
         try await seed(store, [full, task("ok")])
-        try await store.bulkAddTags(ids: ["full", "ok"], tags: ["new"])
+        let result = try await store.bulkAddTags(ids: ["full", "ok"], tags: ["new"])
         var w = 0
         while !(store.tasks.first { $0.id == "ok" }?.tags.contains("new") ?? false) && w < 100 { try await _Concurrency.Task.sleep(for: .milliseconds(10)); w += 1 }
         #expect(store.tasks.first { $0.id == "ok" }?.tags.contains("new") == true)
         #expect(store.tasks.first { $0.id == "full" }?.tags.count == FieldLimits.maxTags)  // unchanged
+        #expect(result.completedIDs == ["ok"])
+        #expect(result.failedIDs == ["full"])
+    }
+
+    @Test func duplicateCreatesActiveCopy() async throws {
+        let store = try makeStore()
+        try await seed(store, [task("original", tags: ["focus"])])
+        let original = try #require(store.tasks.first { $0.id == "original" })
+        let copy = try await store.duplicate(original)
+        var w = 0
+        while store.tasks.count != 2 && w < 100 { try await _Concurrency.Task.sleep(for: .milliseconds(10)); w += 1 }
+        #expect(copy.id != original.id)
+        #expect(copy.title == "Copy of original")
+        #expect(copy.completed == false)
+        #expect(store.tasks.contains { $0.id == copy.id })
     }
 }

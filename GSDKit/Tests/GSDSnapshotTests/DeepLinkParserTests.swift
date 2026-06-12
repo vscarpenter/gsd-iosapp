@@ -22,5 +22,12 @@ struct DeepLinkParserTests {
 
     @Test func routeURLRoundTrips() {
         #expect(DeepLinkParser.route(from: DeepLinkRoute.focus.url) == .focus)
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.capture.url) == .capture)
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.quadrant(.notUrgentImportant).url) == .quadrant(.notUrgentImportant))
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.task("task 1").url) == .task("task 1"))
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.smartView("today-focus").url) == .smartView("today-focus"))
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.dashboard.url) == .dashboard)
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.settings.url) == .settings)
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.archive.url) == .archive)
     }
 }

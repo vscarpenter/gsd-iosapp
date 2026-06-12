@@ -11,6 +11,8 @@ struct MatrixView: View {
     @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
     @State private var actionFailure: TaskActionFailure?
+    @State private var selection = Set<String>()
+    @Environment(\.editMode) private var editMode
 
     var body: some View {
         ZStack {
@@ -21,7 +23,7 @@ struct MatrixView: View {
                                        title: String(localized: "Capture your first task"),
                                        message: String(localized: "Type in the field above — try Call my wife !! #family."))
                     } else {
-                        List {
+                        List(selection: $selection) {
                             ForEach(Quadrant.allCases, id: \.self) { q in
                                 QuadrantSection(
                                     quadrant: q, showCompleted: showCompleted,
@@ -46,6 +48,7 @@ struct MatrixView: View {
                 .toolbar {
                     paletteButton(palette)
                     showCompletedToggle($showCompleted)
+                    ToolbarItem(placement: .topBarTrailing) { EditButton() }
                     ToolbarItem(placement: .topBarTrailing) {
                         SyncStatusChip(phase: sync.phase, pendingCount: sync.pendingCount,
                                        health: sync.health) { palette.compactTab = 3 }
@@ -56,11 +59,20 @@ struct MatrixView: View {
                         editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
                     }
                 }
+                .safeAreaInset(edge: .bottom) {
+                    if !selection.isEmpty {
+                        BulkActionBar(selection: $selection)
+                            .background(.bar)
+                    }
+                }
             }
             ConfettiView(trigger: confettiTrigger)
         }
         .sheet(item: $editor) { TaskEditorView(request: $0) }
         .taskActionFailureAlert($actionFailure)
+        .onChange(of: editMode?.wrappedValue) { _, mode in
+            if mode?.isEditing == false { selection.removeAll() }
+        }
     }
 }
 

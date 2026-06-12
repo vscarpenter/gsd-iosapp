@@ -8,6 +8,7 @@ struct SmartViewListView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
     @State private var editorTarget: SmartViewEditorTarget?
+    @State private var actionFailure: TaskActionFailure?
 
     var body: some View {
         @Bindable var palette = palette
@@ -63,6 +64,7 @@ struct SmartViewListView: View {
                 }
             }
             .sheet(item: $editorTarget) { SmartViewEditorView(target: $0) }
+            .taskActionFailureAlert($actionFailure)
         }
     }
 
@@ -88,7 +90,7 @@ struct SmartViewListView: View {
             .swipeActions(edge: .trailing) {
                 if !view.isBuiltIn {
                     Button(role: .destructive) {
-                        _Concurrency.Task { try? await store.deleteView(id: view.id) }
+                        deleteSmartView(view)
                     } label: { Label(String(localized: "Delete"), systemImage: "trash") }
                         .tint(Surface.alert)
                     Button { editorTarget = .edit(view) } label: {
@@ -96,6 +98,16 @@ struct SmartViewListView: View {
                     }.tint(Surface.tint)
                 }
             }
+    }
+
+    private func deleteSmartView(_ view: SmartView) {
+        _Concurrency.Task { @MainActor in
+            do {
+                try await store.deleteView(id: view.id)
+            } catch {
+                actionFailure = TaskActionFailure(String(localized: "Couldn’t delete “\(view.name)”: \(error.localizedDescription)"))
+            }
+        }
     }
 }
 

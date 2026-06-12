@@ -9,8 +9,11 @@ struct MatrixGridView: View {
     @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
     @State private var actionFailure: TaskActionFailure?
+    @State private var selection = Set<String>()
+    @Environment(\.editMode) private var editMode
 
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    private var isSelecting: Bool { editMode?.wrappedValue.isEditing == true }
 
     var body: some View {
         ZStack {
@@ -29,6 +32,8 @@ struct MatrixGridView: View {
                                         onCompleted: { confettiTrigger += 1 },
                                         onError: { actionFailure = TaskActionFailure($0) }
                                     ),
+                                    selection: $selection,
+                                    isSelecting: isSelecting,
                                     onEdit: { editor = .edit($0) },
                                     onAdd: { editor = .new(q, prefill: nil) }
                                 )
@@ -39,11 +44,23 @@ struct MatrixGridView: View {
                 }
                 .background(Surface.paper)
                 .navigationTitle("Matrix")
-                .toolbar { showCompletedToggle($showCompleted) }
+                .toolbar {
+                    showCompletedToggle($showCompleted)
+                    ToolbarItem(placement: .topBarTrailing) { EditButton() }
+                }
+                .safeAreaInset(edge: .bottom) {
+                    if !selection.isEmpty {
+                        BulkActionBar(selection: $selection)
+                            .background(.bar)
+                    }
+                }
             }
             ConfettiView(trigger: confettiTrigger)
         }
         .sheet(item: $editor) { TaskEditorView(request: $0) }
         .taskActionFailureAlert($actionFailure)
+        .onChange(of: editMode?.wrappedValue) { _, mode in
+            if mode?.isEditing == false { selection.removeAll() }
+        }
     }
 }

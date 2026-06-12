@@ -7,6 +7,8 @@ struct QuadrantCell: View {
     let quadrant: Quadrant
     let showCompleted: Bool
     let actions: TaskActions
+    @Binding var selection: Set<String>
+    let isSelecting: Bool
     var onEdit: (Task) -> Void
     var onAdd: () -> Void
 
@@ -59,7 +61,35 @@ struct QuadrantCell: View {
         } isTargeted: { isTargeted = $0 }
     }
 
-    private func cardRow(_ task: Task) -> some View {
+    @ViewBuilder private func cardRow(_ task: Task) -> some View {
+        if isSelecting {
+            Button {
+                toggleSelection(task.id)
+            } label: {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: selection.contains(task.id) ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(selection.contains(task.id) ? Surface.tint : Surface.ink3)
+                        .frame(width: 28)
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        TaskCardView(
+                            task: task,
+                            now: context.date,
+                            blockedByCount: graph.uncompletedBlockers(of: task.id).count,
+                            blockingCount: graph.blockedTasks(of: task.id).count
+                        )
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityAddTraits(selection.contains(task.id) ? .isSelected : [])
+        } else {
+            swipeRow(task)
+        }
+    }
+
+    private func swipeRow(_ task: Task) -> some View {
         SwipeRevealRow(
             task: task,
             actions: actions,
@@ -80,6 +110,7 @@ struct QuadrantCell: View {
         .accessibilityActions {
             Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
             Button(String(localized: "Edit")) { onEdit(task) }
+            Button(String(localized: "Duplicate")) { actions.duplicate(task) }
             Button(String(localized: "Delete")) { actions.delete(task) }
             Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
             if TimeTracking.runningEntry(task.timeEntries) == nil {
@@ -92,6 +123,12 @@ struct QuadrantCell: View {
 
     @ViewBuilder private func cellMenu(_ task: Task) -> some View {
         Button { onEdit(task) } label: { Label(String(localized: "Edit"), systemImage: "pencil") }
+        Button { actions.duplicate(task) } label: {
+            Label(String(localized: "Duplicate"), systemImage: "plus.square.on.square")
+        }
+        ShareLink(item: task.shareText) {
+            Label(String(localized: "Share"), systemImage: "square.and.arrow.up")
+        }
         Button { actions.toggle(task) } label: {
             Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"), systemImage: "checkmark")
         }
@@ -117,5 +154,10 @@ struct QuadrantCell: View {
          (String(localized: "3 hours"), .threeHours),
          (String(localized: "Tomorrow"), .tomorrow),
          (String(localized: "Next week"), .nextWeek)]
+    }
+
+    private func toggleSelection(_ id: String) {
+        if selection.contains(id) { selection.remove(id) }
+        else { selection.insert(id) }
     }
 }

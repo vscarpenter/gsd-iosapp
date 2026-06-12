@@ -29,23 +29,23 @@ struct ShareComposeView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Task") {
-                    TextField("Title", text: $title, axis: .vertical)
+                Section(String(localized: "Task")) {
+                    TextField(String(localized: "Title"), text: $title, axis: .vertical)
                 }
-                Section("Quadrant") {
-                    Picker("Quadrant", selection: $quadrant) {
+                Section(String(localized: "Quadrant")) {
+                    Picker(String(localized: "Quadrant"), selection: $quadrant) {
                         ForEach(Quadrant.allCases, id: \.self) { q in
                             Text(q.title).tag(q)
                         }
                     }
                 }
-                Section("Tags") {
-                    TextField("comma, separated, tags", text: $tagsText)
+                Section(String(localized: "Tags")) {
+                    TextField(String(localized: "comma, separated, tags"), text: $tagsText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                 }
                 if !urls.isEmpty {
-                    Section("Link") {
+                    Section(String(localized: "Link")) {
                         ForEach(urls, id: \.self) { url in
                             Text(url).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
                         }
@@ -55,14 +55,14 @@ struct ShareComposeView: View {
                     Section { Text(errorMessage).foregroundStyle(.red) }
                 }
             }
-            .navigationTitle("Add to GSD")
+            .navigationTitle(String(localized: "Add to GSD"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel", action: onCancel)
+                    Button(String(localized: "Cancel"), action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add", action: add)
+                    Button(String(localized: "Add"), action: add)
                 }
             }
         }

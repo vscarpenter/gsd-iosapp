@@ -32,6 +32,7 @@ struct QuadrantSection: View {
                         actions: actions,
                         onEdit: onEdit
                     )
+                    .tag(task.id)
                     .listRowBackground(Surface.surface)
                     .listRowSeparatorTint(Surface.hairline)
                 }

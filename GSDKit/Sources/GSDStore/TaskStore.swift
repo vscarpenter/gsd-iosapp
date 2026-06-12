@@ -21,6 +21,31 @@ public enum SnoozePreset: Equatable, Sendable {
     }
 }
 
+public struct BulkActionFailure: Equatable, Sendable {
+    public let taskID: String
+    public let message: String
+
+    public init(taskID: String, message: String) {
+        self.taskID = taskID
+        self.message = message
+    }
+}
+
+public struct BulkActionResult: Equatable, Sendable {
+    /// IDs the caller can remove from selection: mutated, already in the requested state,
+    /// or no longer present in the active snapshot.
+    public let completedIDs: Set<String>
+    public let failures: [BulkActionFailure]
+
+    public init(completedIDs: Set<String>, failures: [BulkActionFailure]) {
+        self.completedIDs = completedIDs
+        self.failures = failures
+    }
+
+    public var failedIDs: Set<String> { Set(failures.map(\.taskID)) }
+    public var hasFailures: Bool { !failures.isEmpty }
+}
+
 /// The single mutation path and observable task snapshot for the UI. Bridges
 /// `TaskRepository.observeAll()` into `tasks`, and stamps `updatedAt` (via an
 /// injected clock) on every PRIMARY mutation — satisfying the §3.3 invariant at
@@ -185,6 +210,26 @@ public final class TaskStore {
         try TaskValidator.validate(t)
         try await upsertEnqueued(t, op: .create)
         await reminders.schedule(t)
+    }
+
+    public func duplicate(_ task: Task) async throws -> Task {
+        let now = clock()
+        var copy = task
+        copy.id = newID()
+        copy.title = String(localized: "Copy of \(task.title)")
+        copy.completed = false
+        copy.completedAt = nil
+        copy.createdAt = now
+        copy.updatedAt = now
+        copy.notificationSent = false
+        copy.lastNotificationAt = nil
+        copy.timeSpent = nil
+        copy.timeEntries = []
+        copy.subtasks = task.subtasks.map {
+            Subtask(id: newID(size: IDGenerator.Size.task), title: $0.title, completed: $0.completed)
+        }
+        try await create(copy)
+        return copy
     }
 
     public func save(_ task: Task) async throws {
@@ -578,36 +623,69 @@ public final class TaskStore {
         tasks.filter { ids.contains($0.id) }
     }
 
-    public func bulkComplete(ids: Set<String>) async throws {
-        for task in selectedTasks(ids) where !task.completed {
-            try? await toggleComplete(task)   // stamps completedAt/updatedAt + spawns recurrence
+    @discardableResult
+    public func bulkComplete(ids: Set<String>) async throws -> BulkActionResult {
+        await bulkApply(ids: ids) { task in
+            if !task.completed {
+                try await toggleComplete(task)   // stamps completedAt/updatedAt + spawns recurrence
+            }
         }
     }
-    public func bulkMove(ids: Set<String>, to quadrant: Quadrant) async throws {
-        for task in selectedTasks(ids) { try? await move(task, to: quadrant) }
+    @discardableResult
+    public func bulkMove(ids: Set<String>, to quadrant: Quadrant) async throws -> BulkActionResult {
+        await bulkApply(ids: ids) { task in try await move(task, to: quadrant) }
     }
-    public func bulkAddTags(ids: Set<String>, tags newTags: [String]) async throws {
-        for var task in selectedTasks(ids) {
-            let merged = task.tags + newTags.filter { !task.tags.contains($0) }
-            task.tags = merged
-            try? await save(task)             // save validates (tag count/length) + stamps updatedAt
+    @discardableResult
+    public func bulkAddTags(ids: Set<String>, tags newTags: [String]) async throws -> BulkActionResult {
+        await bulkApply(ids: ids) { task in
+            var t = task
+            let canonicalNewTags = Self.canonicalTags(newTags)
+            let merged = t.tags + canonicalNewTags.filter { !t.tags.contains($0) }
+            t.tags = merged
+            try await save(t)             // save validates (tag count/length) + stamps updatedAt
         }
     }
-    public func bulkRemoveTags(ids: Set<String>, tags removeTags: [String]) async throws {
-        let toRemove = Set(removeTags)
-        for var task in selectedTasks(ids) {
-            task.tags.removeAll { toRemove.contains($0) }
-            try? await save(task)
+    @discardableResult
+    public func bulkRemoveTags(ids: Set<String>, tags removeTags: [String]) async throws -> BulkActionResult {
+        let toRemove = Set(Self.canonicalTags(removeTags))
+        return await bulkApply(ids: ids) { task in
+            var t = task
+            t.tags.removeAll { toRemove.contains($0) }
+            try await save(t)
         }
     }
-    public func bulkSetDue(ids: Set<String>, to dueDate: Date?) async throws {
-        for var task in selectedTasks(ids) {
-            task.dueDate = dueDate
-            try? await save(task)
+    @discardableResult
+    public func bulkSetDue(ids: Set<String>, to dueDate: Date?) async throws -> BulkActionResult {
+        await bulkApply(ids: ids) { task in
+            var t = task
+            t.dueDate = dueDate
+            try await save(t)
         }
     }
-    public func bulkDelete(ids: Set<String>) async throws {
-        for task in selectedTasks(ids) { try? await delete(task) }
+    @discardableResult
+    public func bulkDelete(ids: Set<String>) async throws -> BulkActionResult {
+        await bulkApply(ids: ids) { task in try await delete(task) }
+    }
+
+    private func bulkApply(
+        ids: Set<String>,
+        operation: (Task) async throws -> Void
+    ) async -> BulkActionResult {
+        let selected = selectedTasks(ids)
+        let selectedIDs = Set(selected.map(\.id))
+        var completedIDs = ids.subtracting(selectedIDs)
+        var failures: [BulkActionFailure] = []
+
+        for task in selected {
+            do {
+                try await operation(task)
+                completedIDs.insert(task.id)
+            } catch {
+                failures.append(BulkActionFailure(taskID: task.id, message: error.localizedDescription))
+            }
+        }
+
+        return BulkActionResult(completedIDs: completedIDs, failures: failures)
     }
 
     // MARK: Data (export / import / reset)

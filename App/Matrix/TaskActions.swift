@@ -41,6 +41,12 @@ struct TaskActions {
         }
     }
 
+    func duplicate(_ t: Task) {
+        run(String(localized: "Couldn’t duplicate that task")) {
+            _ = try await store.duplicate(t)
+        }
+    }
+
     func snooze(_ t: Task, by preset: SnoozePreset) {
         run(String(localized: "Couldn’t snooze that task")) {
             try await store.snooze(t, by: preset)

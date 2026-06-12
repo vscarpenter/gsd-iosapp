@@ -9,8 +9,8 @@ struct TodaysFocusWidget: Widget {
             TodaysFocusView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("Today's Focus")
-        .description("Your urgent and important tasks.")
+        .configurationDisplayName(String(localized: "Today's Focus"))
+        .description(String(localized: "Your urgent and important tasks."))
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

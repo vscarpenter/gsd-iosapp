@@ -4,7 +4,7 @@ import GSDStore
 
 /// Bottom action bar shown while multi-selecting active tasks. Six ops; Delete confirms.
 /// Move/tags/due open lightweight prompts. Each op calls the store's bulk method then
-/// clears the selection. Hosted via `.safeAreaInset` (not a toolbar item) so its
+/// clears only the IDs the store reports as resolved. Hosted via `.safeAreaInset` (not a toolbar item) so its
 /// `.confirmationDialog`/`.alert`/`.sheet` modifiers stay in the main view hierarchy and
 /// actually present.
 struct BulkActionBar: View {
@@ -102,15 +102,30 @@ struct BulkActionBar: View {
             $0.trimmingCharacters(in: CharacterSet(charactersIn: " #")).lowercased()
         }.filter { !$0.isEmpty }
     }
-    private func run(_ op: @escaping (Set<String>) async throws -> Void) {
+    private func run(_ op: @escaping (Set<String>) async throws -> BulkActionResult) {
         let ids = selection
         _Concurrency.Task { @MainActor in
             do {
-                try await op(ids)
-                selection.subtract(ids)
+                let result = try await op(ids)
+                selection.subtract(result.completedIDs)
+                if result.hasFailures {
+                    actionFailure = TaskActionFailure(partialFailureMessage(result: result, total: ids.count))
+                }
             } catch {
                 actionFailure = TaskActionFailure(String(localized: "Couldn’t update selected tasks: \(error.localizedDescription)"))
             }
         }
+    }
+
+    private func partialFailureMessage(result: BulkActionResult, total: Int) -> String {
+        let failed = result.failures.count
+        let completed = max(0, total - failed)
+        guard let first = result.failures.first else {
+            return String(localized: "Updated \(completed) selected tasks.")
+        }
+        if failed == 1 {
+            return String(localized: "Updated \(completed) selected tasks. 1 task was skipped: \(first.message)")
+        }
+        return String(localized: "Updated \(completed) selected tasks. \(failed) tasks were skipped. First error: \(first.message)")
     }
 }
