@@ -234,11 +234,11 @@ private struct CaptureLegend: View {
     var body: some View {
         VStack(spacing: 18) {
             HStack(spacing: 0) {
-                Text("Email Tony ").foregroundStyle(Surface.ink)
+                Text("Call my wife ").foregroundStyle(Surface.ink)
                 Text("!!").font(.system(.body, design: .monospaced).weight(.semibold))
                     .foregroundStyle(QuadrantStyle.accent(.urgentImportant))
                 Text("  ").foregroundStyle(Surface.ink)
-                Text("#work").font(.system(.footnote, design: .monospaced).weight(.semibold))
+                Text("#family").font(.system(.footnote, design: .monospaced).weight(.semibold))
                     .foregroundStyle(QuadrantStyle.accent(.urgentImportant))
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(QuadrantStyle.wash(.urgentImportant), in: Capsule())

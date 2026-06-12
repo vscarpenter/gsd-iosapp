@@ -13,7 +13,7 @@ settings:
     # CFBundleShortVersionString/CFBundleVersion (App Store rule). Bump these two lines
     # per release — never per-target (that's how the app/extension versions drifted apart).
     MARKETING_VERSION: "1.1"
-    CURRENT_PROJECT_VERSION: "6"
+    CURRENT_PROJECT_VERSION: "8"
     # Xcode 26 "recommended settings" — declared here so they survive `xcodegen
     # generate` (clicking "Perform Changes" in Xcode would edit the generated pbxproj
     # and be wiped). These are already the SDK-default resolved values; made explicit
@@ -137,6 +137,22 @@ targets:
         product: GSDModel
       - package: GSDKit
         product: GSDSnapshot
+  # App Store screenshot runner (not a correctness test target — the app's logic gate
+  # remains `swift test` + a clean build). Drives the live app through its main screens
+  # and writes full-res PNGs; see ScreenshotTests/ScreenshotTests.swift for the env vars.
+  GSDScreenshotTests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - ScreenshotTests
+    dependencies:
+      - target: GSD
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd.screenshot-tests
+        SWIFT_VERSION: "6.0"
+        TEST_TARGET_NAME: GSD
+        GENERATE_INFOPLIST_FILE: "YES"
 # A single shared scheme that builds/archives the GSD app (extensions ride along as
 # embedded dependencies). Without this, Xcode auto-creates one scheme per target and may
 # default to GSDShareExtension, mislabeling the archive — the bug this resolves.
@@ -149,3 +165,12 @@ schemes:
       config: Debug
     archive:
       config: Release
+  # Separate scheme so screenshot runs never touch the main GSD scheme/archive flow.
+  GSDScreenshots:
+    build:
+      targets:
+        GSDScreenshotTests: all
+    test:
+      config: Debug
+      targets:
+        - GSDScreenshotTests

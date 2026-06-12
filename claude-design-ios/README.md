@@ -156,7 +156,7 @@ Anatomy: a **3 px accent spine** (quadrant color) inset at left; **title** SF he
 Centered, paper background, page dots, a `Skip` top-right on every screen.
 1. **Welcome** — the 2×2 app-mark hero, New York "Get the right things done.", a one-line lead, primary `Get started` (ink-filled pill), `Skip`.
 2. **The Matrix** — a 2×2 axes diagram (pigment-wash tiles labeled Do First/Schedule/Delegate/Eliminate with `More urgent →` / `More important →` axes), title "Four quadrants, one decision.", `Next`.
-3. **Capture shorthand** — a sample capture field (`Email Tony !! #work`) + a legend mapping `!!` `!` `*` `#tag`, `Next`.
+3. **Capture shorthand** — a sample capture field (`Call my wife !! #family`) + a legend mapping `!!` `!` `*` `#tag`, `Next`.
 4. **Privacy & sync** — a lock mark, "Yours, and only yours.", the on-device/optional-sync copy; primary `Start using GSD`, quiet **secondary** `Sign in to sync` in `tint` (never the default).
 - Re-showable from Settings → About → *Show Onboarding Again*. Reduce Motion → cross-fade, no animated illustration.
 
@@ -164,7 +164,7 @@ Centered, paper background, page dots, a `Skip` top-right on every screen.
 - **Anatomy:** centered — one quiet SF Symbol (`ink-3` on a `sunken` 60-pt tile; tinted only to reassure, e.g. green check for "nothing overdue"), a New York title3 headline, one `ink-2` sentence, and **at most one** action (in `tint`).
 - **In-context empties** (a quadrant inside a non-empty matrix) use a **dashed prompt row** (`1px dashed hairline-strong`, radius 22, a circled `+`, copy like "No fires right now. **Add to Do First**") — not a full-screen takeover.
 - **Per-surface copy** (exact strings):
-  - Empty matrix (brand new): **"Capture your first task"** / "Type in the field above — try `Email Tony !! #work`."
+  - Empty matrix (brand new): **"Capture your first task"** / "Type in the field above — try `Call my wife !! #family`."
   - Do First: **"No fires right now."** / Add to Do First
   - Schedule: **"Nothing scheduled yet."** / Add to Schedule
   - Delegate: **"Nothing to hand off."** / Add to Delegate

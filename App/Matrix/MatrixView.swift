@@ -19,7 +19,7 @@ struct MatrixView: View {
                     if store.tasks.isEmpty {
                         EmptyStateView(icon: "square.grid.2x2",
                                        title: String(localized: "Capture your first task"),
-                                       message: String(localized: "Type in the field above — try Email Tony !! #work."))
+                                       message: String(localized: "Type in the field above — try Call my wife !! #family."))
                     } else {
                         List {
                             ForEach(Quadrant.allCases, id: \.self) { q in

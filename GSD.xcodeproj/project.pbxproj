@@ -55,6 +55,7 @@
 		B6AF4EA8BD5D386DBF3D1310 /* TodaysFocusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FECB334B943916706D8E944 /* TodaysFocusWidget.swift */; };
 		BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 834FF1E8BA076E31BA383962 /* GSDApp.swift */; };
 		C54C617DEC7531732CFC2822 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */; };
+		C8EFB5F817DADDA1C48B0356 /* ScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87C46CC1405702B23330578 /* ScreenshotTests.swift */; };
 		CD46F261D6842C4865DDACB6 /* KeychainTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */; };
 		D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD99A69FF72AB17AB5968 /* DashboardView.swift */; };
 		D1A08D8A25028DD6A0CF3B82 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 98C26FEAF665B149C1D46E83 /* GSDSnapshot */; };
@@ -71,6 +72,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		3539ACF5B1670282BE6A9FBF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0765B2E5667333C3066967A2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C9092E2A5E48E2CA69F326A5;
+			remoteInfo = GSD;
+		};
 		9F2BB16D90F4AFDB23B6F144 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0765B2E5667333C3066967A2 /* Project object */;
@@ -136,6 +144,7 @@
 		761CD99A69FF72AB17AB5968 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		7955446497B26D20179DFD36 /* WidgetSnapshotRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotRefresher.swift; sourceTree = "<group>"; };
 		834FF1E8BA076E31BA383962 /* GSDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDApp.swift; sourceTree = "<group>"; };
+		84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GSDScreenshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8908894C46A7A691FFED08F0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		8A2616E2AED32805AED8C11B /* GSDWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDWidgets.entitlements; sourceTree = "<group>"; };
 		8FECB334B943916706D8E944 /* TodaysFocusWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusWidget.swift; sourceTree = "<group>"; };
@@ -159,6 +168,7 @@
 		DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
 		E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncHistoryView.swift; sourceTree = "<group>"; };
 		E77900FA416C5BD27D556B5F /* GSDWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E87C46CC1405702B23330578 /* ScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTests.swift; sourceTree = "<group>"; };
 		EA24761F3BB6078DC0F318A8 /* TodaysFocusProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusProvider.swift; sourceTree = "<group>"; };
 		EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
 		F13D65075CBAAF0DA403E950 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -348,6 +358,7 @@
 			isa = PBXGroup;
 			children = (
 				5786EAF6D1A1869947855193 /* GSD.app */,
+				84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */,
 				085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */,
 				E77900FA416C5BD27D556B5F /* GSDWidgets.appex */,
 			);
@@ -375,6 +386,7 @@
 			children = (
 				0408C7043A3AAB9AC827D964 /* App */,
 				D515A28E5AA76CE02716A6EF /* Packages */,
+				D91E23D34EABC2DCA97A941B /* ScreenshotTests */,
 				7A441FD94D17954A83BEB281 /* ShareExtension */,
 				1EB3D99838DFC3431761508F /* Widgets */,
 				A8F4EE28B10703F63C52EDE9 /* Products */,
@@ -404,6 +416,14 @@
 				0408B7C2649856ADA33B1BF0 /* GSDKit */,
 			);
 			name = Packages;
+			sourceTree = "<group>";
+		};
+		D91E23D34EABC2DCA97A941B /* ScreenshotTests */ = {
+			isa = PBXGroup;
+			children = (
+				E87C46CC1405702B23330578 /* ScreenshotTests.swift */,
+			);
+			path = ScreenshotTests;
 			sourceTree = "<group>";
 		};
 		E3E7A9EE8C0A43B83CCADEC0 /* Settings */ = {
@@ -474,6 +494,24 @@
 			productReference = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		514075EFE8DBD13643C750B5 /* GSDScreenshotTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 13196E8866F24C5D04C343A1 /* Build configuration list for PBXNativeTarget "GSDScreenshotTests" */;
+			buildPhases = (
+				F84BCBEC325D643938BD8486 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F4F60C2B58C5ED34B0CD1F0A /* PBXTargetDependency */,
+			);
+			name = GSDScreenshotTests;
+			packageProductDependencies = (
+			);
+			productName = GSDScreenshotTests;
+			productReference = 84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		C9092E2A5E48E2CA69F326A5 /* GSD */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5212041C283BCD7F5730074B /* Build configuration list for PBXNativeTarget "GSD" */;
@@ -534,6 +572,10 @@
 						DevelopmentTeam = 52HVJ3VDSM;
 						ProvisioningStyle = Automatic;
 					};
+					514075EFE8DBD13643C750B5 = {
+						DevelopmentTeam = 52HVJ3VDSM;
+						TestTargetID = C9092E2A5E48E2CA69F326A5;
+					};
 					C9092E2A5E48E2CA69F326A5 = {
 						DevelopmentTeam = 52HVJ3VDSM;
 						ProvisioningStyle = Automatic;
@@ -562,6 +604,7 @@
 			projectRoot = "";
 			targets = (
 				C9092E2A5E48E2CA69F326A5 /* GSD */,
+				514075EFE8DBD13643C750B5 /* GSDScreenshotTests */,
 				3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */,
 				FB5769502DA33695CDF99A6E /* GSDWidgets */,
 			);
@@ -665,6 +708,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		F84BCBEC325D643938BD8486 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C8EFB5F817DADDA1C48B0356 /* ScreenshotTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -678,9 +729,32 @@
 			target = FB5769502DA33695CDF99A6E /* GSDWidgets */;
 			targetProxy = 9F2BB16D90F4AFDB23B6F144 /* PBXContainerItemProxy */;
 		};
+		F4F60C2B58C5ED34B0CD1F0A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C9092E2A5E48E2CA69F326A5 /* GSD */;
+			targetProxy = 3539ACF5B1670282BE6A9FBF /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		33BA65B9DD49615C9ABC1DCA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.vinny.gsd.screenshot-tests";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = GSD;
+			};
+			name = Debug;
+		};
 		37460A3C4558B370E2B339AD /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -757,7 +831,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 52HVJ3VDSM;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -860,6 +934,24 @@
 			};
 			name = Debug;
 		};
+		EA50656F6A20E80E24B5E5CE /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.vinny.gsd.screenshot-tests";
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = GSD;
+			};
+			name = Release;
+		};
 		F970A69120215AD673742366 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -896,7 +988,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 8;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 52HVJ3VDSM;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -933,6 +1025,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		13196E8866F24C5D04C343A1 /* Build configuration list for PBXNativeTarget "GSDScreenshotTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				33BA65B9DD49615C9ABC1DCA /* Debug */,
+				EA50656F6A20E80E24B5E5CE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		2920322B215695EF6FC9F93B /* Build configuration list for PBXProject "GSD" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
