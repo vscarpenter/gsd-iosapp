@@ -17,6 +17,7 @@
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
 		2DAC8455D9EDB41A5278D652 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 6A3C3A671584405B65D83D55 /* GSDModel */; };
+		32AC8D69042D0AA6FEA03C34 /* PreviewChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 664E6FF5137DE167118E123D /* PreviewChoreography.swift */; };
 		330EE4300870006150028E1E /* SwipeRevealRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAAD187765FA87D80F92EA6D /* SwipeRevealRow.swift */; };
 		34A8E574358FAB0570162302 /* LiveReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */; };
 		359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */; };
@@ -135,6 +136,7 @@
 		58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantCell.swift; sourceTree = "<group>"; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartViewEditorView.swift; sourceTree = "<group>"; };
+		664E6FF5137DE167118E123D /* PreviewChoreography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewChoreography.swift; sourceTree = "<group>"; };
 		6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantSection.swift; sourceTree = "<group>"; };
 		6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		6CB854FC328F174E62348856 /* TodaysFocusView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusView.swift; sourceTree = "<group>"; };
@@ -421,6 +423,7 @@
 		D91E23D34EABC2DCA97A941B /* ScreenshotTests */ = {
 			isa = PBXGroup;
 			children = (
+				664E6FF5137DE167118E123D /* PreviewChoreography.swift */,
 				E87C46CC1405702B23330578 /* ScreenshotTests.swift */,
 			);
 			path = ScreenshotTests;
@@ -712,6 +715,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				32AC8D69042D0AA6FEA03C34 /* PreviewChoreography.swift in Sources */,
 				C8EFB5F817DADDA1C48B0356 /* ScreenshotTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
