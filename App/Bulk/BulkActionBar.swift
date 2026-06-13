@@ -120,12 +120,14 @@ struct BulkActionBar: View {
     private func partialFailureMessage(result: BulkActionResult, total: Int) -> String {
         let failed = result.failures.count
         let completed = max(0, total - failed)
-        guard let first = result.failures.first else {
-            return String(localized: "Updated \(completed) selected tasks.")
-        }
+        // completed == 1 is the most common partial-failure shape — don't show "1 tasks".
+        let updated = completed == 1
+            ? String(localized: "Updated 1 selected task.")
+            : String(localized: "Updated \(completed) selected tasks.")
+        guard let first = result.failures.first else { return updated }
         if failed == 1 {
-            return String(localized: "Updated \(completed) selected tasks. 1 task was skipped: \(first.message)")
+            return updated + " " + String(localized: "1 task was skipped: \(first.message)")
         }
-        return String(localized: "Updated \(completed) selected tasks. \(failed) tasks were skipped. First error: \(first.message)")
+        return updated + " " + String(localized: "\(failed) tasks were skipped. First error: \(first.message)")
     }
 }

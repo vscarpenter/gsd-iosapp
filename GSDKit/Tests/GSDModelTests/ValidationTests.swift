@@ -26,6 +26,13 @@ struct ValidationTests {
         try TaskValidator.validate(makeTask(title: "Buy milk"))
     }
 
+    @Test func localizedDescriptionIsTheHumanReadableMessage() {
+        // Callers that only have `any Error` (e.g. bulk-action failure collection) must
+        // surface the same copy as callers that catch ValidationError directly.
+        let error: any Error = ValidationError.titleLength
+        #expect(error.localizedDescription == ValidationError.titleLength.message)
+    }
+
     // MARK: - Description
 
     @Test func rejectsDescriptionOver600Chars() {

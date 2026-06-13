@@ -53,6 +53,7 @@ struct QuadrantSection: View {
             }
             .textCase(nil) // keep the serif title cased, not the default uppercased label
             .padding(.bottom, 2)
+            .id(quadrant)   // ScrollViewReader anchor for ⌘1–⌘4 quadrant focus
         }
     }
 }

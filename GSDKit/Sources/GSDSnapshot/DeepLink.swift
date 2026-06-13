@@ -21,9 +21,9 @@ public enum DeepLinkRoute: Equatable, Sendable {
         case .quadrant(let quadrant):
             URL(string: "gsd://quadrant/\(quadrant.rawValue)")!
         case .task(let id):
-            URL(string: "gsd://task/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)")!
+            URL(string: "gsd://task/\(encodePathSegment(id))")!
         case .smartView(let id):
-            URL(string: "gsd://smart-view/\(id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id)")!
+            URL(string: "gsd://smart-view/\(encodePathSegment(id))")!
         case .dashboard:
             URL(string: "gsd://dashboard")!
         case .settings:
@@ -67,6 +67,16 @@ public enum DeepLinkParser {
     }
 
     private static func firstPathComponent(_ url: URL) -> String? {
-        url.pathComponents.dropFirst().first?.removingPercentEncoding
+        // `pathComponents` already percent-decodes — decoding again would corrupt IDs
+        // containing literal '%' sequences (the encode side performs exactly one encode).
+        url.pathComponents.dropFirst().first
     }
 }
+
+/// Percent-encodes an ID so it survives as a SINGLE path segment: unlike `.urlPathAllowed`,
+/// '/' is escaped (it would otherwise split the ID into multiple components).
+private func encodePathSegment(_ id: String) -> String {
+    id.addingPercentEncoding(withAllowedCharacters: pathSegmentAllowed) ?? id
+}
+
+private let pathSegmentAllowed = CharacterSet.urlPathAllowed.subtracting(CharacterSet(charactersIn: "/"))

@@ -49,6 +49,23 @@ struct TaskStoreTests {
         #expect(try await repo.fetch(id: "fixed-id")?.completedAt == nil)
     }
 
+    @Test func fetchTaskReadsThePersistedRowWithoutObservation() async throws {
+        // Deep-link routing on a cold launch needs a direct read: the observation
+        // snapshot (`tasks`) is still empty when the first URL arrives.
+        let (store, _) = try makeStoreAndRepo()
+        try await store.add(ParsedCapture(title: "X", urgent: false, important: false, tags: [], descriptionAdditions: []))
+        #expect(try await store.fetchTask(id: "fixed-id")?.title == "X")
+        #expect(try await store.fetchTask(id: "missing") == nil)
+    }
+
+    @Test func fetchAllTasksReadsPersistedRowsWithoutObservation() async throws {
+        // Entity queries from background-launched intents run before any observation starts.
+        let (store, _) = try makeStoreAndRepo()
+        try await store.add(ParsedCapture(title: "X", urgent: false, important: false, tags: [], descriptionAdditions: []))
+        #expect(try await store.fetchAllTasks().map(\.title) == ["X"])
+        #expect(store.tasks.isEmpty)   // the observation snapshot is untouched
+    }
+
     @Test func observationPropagatesToTasks() async throws {
         let (store, _) = try makeStoreAndRepo()
         store.start()

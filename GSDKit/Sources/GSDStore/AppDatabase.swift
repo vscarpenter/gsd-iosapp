@@ -27,6 +27,10 @@ public final class AppDatabase: Sendable {
     static func openWithRecovery(at url: URL, fileManager: FileManager = .default) throws -> AppDatabase {
         do {
             return try AppDatabase(try DatabaseQueue(path: url.path))
+        } catch let error as DatabaseError where error.resultCode == .SQLITE_BUSY || error.resultCode == .SQLITE_LOCKED {
+            // Contention from another live connection on the same file — the store is
+            // HEALTHY; moving it aside here would wipe the user's data. Let the caller fail.
+            throw error
         } catch {
             // Move the main file + SQLite sidecars aside (a fresh DB must not inherit a stale WAL).
             for suffix in ["", "-wal", "-shm"] {

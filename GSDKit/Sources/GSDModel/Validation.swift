@@ -36,6 +36,12 @@ public enum ValidationError: Error, Equatable {
     case tooManyTimeEntries
 }
 
+extension ValidationError: LocalizedError {
+    /// Surfaces `message` through `localizedDescription`, so call sites that only hold
+    /// `any Error` (bulk-action failure collection) show the same copy as direct catches.
+    public var errorDescription: String? { message }
+}
+
 extension ValidationError {
     /// Human-readable, localized reason for surfacing in the UI.
     public var message: String {

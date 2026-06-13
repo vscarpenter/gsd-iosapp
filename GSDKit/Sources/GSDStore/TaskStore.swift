@@ -174,6 +174,20 @@ public final class TaskStore {
         archiveObserverTask?.cancel()
     }
 
+    // MARK: Reads
+
+    /// Direct repository read, independent of the observation snapshot. Deep-link
+    /// routing on a cold launch (and intents launched in the background, where no
+    /// scene has started observation) must not depend on `tasks` being populated.
+    public func fetchTask(id: String) async throws -> Task? {
+        try await repository.fetch(id: id)
+    }
+
+    /// Direct repository read of all tasks (see `fetchTask(id:)` for why).
+    public func fetchAllTasks() async throws -> [Task] {
+        try await repository.fetchAll()
+    }
+
     // MARK: Mutations (all stamp updatedAt via the injected clock)
 
     public func add(_ parsed: ParsedCapture, override: Quadrant? = nil) async throws {
@@ -216,7 +230,9 @@ public final class TaskStore {
         let now = clock()
         var copy = task
         copy.id = newID()
-        copy.title = String(localized: "Copy of \(task.title)")
+        // Clamp: the localized prefix can push a near-limit title past titleRange.
+        let prefixed = String(localized: "Copy of \(task.title)")
+        copy.title = String(prefixed.prefix(FieldLimits.titleRange.upperBound))
         copy.completed = false
         copy.completedAt = nil
         copy.createdAt = now

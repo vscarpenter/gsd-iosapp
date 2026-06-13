@@ -84,6 +84,17 @@ struct TaskStoreBulkTests {
         #expect(result.failedIDs == ["full"])
     }
 
+    @Test func duplicateClampsLongTitlesToTheLimit() async throws {
+        // "Copy of " + a near-limit title must not fail validation (titleRange 1...80).
+        let store = try makeStore()
+        let longTitle = String(repeating: "x", count: FieldLimits.titleRange.upperBound)
+        try await seed(store, [task(longTitle)])
+        let original = try #require(store.tasks.first)
+        let copy = try await store.duplicate(original)
+        #expect(copy.title.count == FieldLimits.titleRange.upperBound)
+        #expect(copy.title.hasPrefix("Copy of "))
+    }
+
     @Test func duplicateCreatesActiveCopy() async throws {
         let store = try makeStore()
         try await seed(store, [task("original", tags: ["focus"])])

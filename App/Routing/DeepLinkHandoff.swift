@@ -20,6 +20,13 @@ enum DeepLinkHandoff {
         NotificationCenter.default.post(name: .gsdOpenDeepLink, object: url)
     }
 
+    /// Call when the notification path handled the link live: the persisted copy exists
+    /// only as a cold-launch fallback, and left behind it would replay on the next launch.
+    @MainActor
+    static func clearPendingURL() {
+        AppGroupDefaults.shared.removeObject(forKey: pendingURLKey)
+    }
+
     @MainActor
     static func consumePendingURL() -> URL? {
         guard let raw = AppGroupDefaults.shared.string(forKey: pendingURLKey),

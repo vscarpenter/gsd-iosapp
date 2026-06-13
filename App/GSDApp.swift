@@ -1,3 +1,4 @@
+import AppIntents
 import SwiftUI
 import UIKit
 import GSDStore
@@ -96,6 +97,12 @@ struct GSDApp: App {
             auth: authService, tokenStore: tokenStore, coordinator: coordinator,
             hasLocalActiveTasks: { !store.tasks.isEmpty },
             eraseLocal: { try await store.eraseAllData() }))
+        // In-app intents (Siri/Shortcuts run in this process) resolve the SAME store via
+        // AppDependencyManager. A second connection on the live DB would be invisible to
+        // this one's ValueObservation (stale UI/widgets/reminders) and racing the open
+        // mid-write risks SQLITE_BUSY. Registered in init(): background intent launches
+        // run App.init before any perform().
+        AppDependencyManager.shared.add(dependency: store)
         // BGTaskScheduler handlers MUST be registered before the app finishes launching —
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
         // and would trip "all launch handlers must be registered before application finishes

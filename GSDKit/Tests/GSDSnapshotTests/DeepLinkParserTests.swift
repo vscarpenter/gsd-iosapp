@@ -20,6 +20,15 @@ struct DeepLinkParserTests {
         #expect(DeepLinkParser.route(from: URL(string: "gsd://nonsense")!) == nil)
     }
 
+    @Test func idsWithReservedCharactersRoundTrip() {
+        // App-generated nanoid IDs are URL-safe, but imported/foreign IDs are arbitrary:
+        // '%' must not be double-decoded and '/' must not split the ID into path segments.
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.task("50%").url) == .task("50%"))
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.task("a/b").url) == .task("a/b"))
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.task("50%20x").url) == .task("50%20x"))
+        #expect(DeepLinkParser.route(from: DeepLinkRoute.smartView("week 1/2").url) == .smartView("week 1/2"))
+    }
+
     @Test func routeURLRoundTrips() {
         #expect(DeepLinkParser.route(from: DeepLinkRoute.focus.url) == .focus)
         #expect(DeepLinkParser.route(from: DeepLinkRoute.capture.url) == .capture)

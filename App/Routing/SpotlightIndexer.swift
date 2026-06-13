@@ -37,13 +37,16 @@ final class SpotlightIndexer {
         attributes.title = task.title
         attributes.contentDescription = task.description.isEmpty ? task.quadrant.title : task.description
         attributes.keywords = task.tags + [task.quadrant.title, "GSD"]
-        attributes.relatedUniqueIdentifier = DeepLinkRoute.task(task.id).url.absoluteString
+        // No relatedUniqueIdentifier: it links an item to a separately indexed
+        // NSUserActivity (none here) — a dangling value misuses the field.
         let item = CSSearchableItem(
             uniqueIdentifier: task.id,
             domainIdentifier: "dev.vinny.gsd.tasks",
             attributeSet: attributes
         )
-        item.expirationDate = nil
+        // The property is null_resettable: nil RESETS to the ~30-day default TTL.
+        // distantFuture is the "keep until we delete it" idiom.
+        item.expirationDate = .distantFuture
         return item
     }
 }

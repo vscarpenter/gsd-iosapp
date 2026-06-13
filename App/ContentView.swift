@@ -39,6 +39,8 @@ struct ContentView: View {
             .onContinueUserActivity(CSSearchableItemActionType, perform: handleSpotlightActivity)
             .onReceive(NotificationCenter.default.publisher(for: .gsdOpenDeepLink)) { notification in
                 guard let url = notification.object as? URL else { return }
+                // Delivered live — clear the persisted copy or it replays on the next cold launch.
+                DeepLinkHandoff.clearPendingURL()
                 handleDeepLink(url)
             }
             .task {
@@ -101,14 +103,11 @@ struct ContentView: View {
             navigate(to: .matrix)   // the Matrix's Q1 quadrant IS today's focus
         case .capture:
             paletteEditor = .new(.urgentImportant, prefill: nil)
-        case .quadrant:
+        case .quadrant(let quadrant):
             navigate(to: .matrix)
+            palette.focusedQuadrant = quadrant
         case .task(let id):
-            if let task = store.tasks.first(where: { $0.id == id }) {
-                paletteEditor = .edit(task)
-            } else {
-                navigate(to: .matrix)
-            }
+            openTask(id)
         case .smartView(let id):
             openSmartView(id)
         case .dashboard:
@@ -117,6 +116,19 @@ struct ContentView: View {
             navigate(to: .settings)
         case .archive:
             navigate(to: .archive)
+        }
+    }
+
+    /// Resolve a task link by direct repository read: on a cold launch (widget tap,
+    /// Spotlight result, pending handoff) the observation snapshot is still empty when
+    /// the URL arrives, so a `store.tasks` lookup would silently miss every time.
+    private func openTask(_ id: String) {
+        _Concurrency.Task { @MainActor in
+            if let task = try? await store.fetchTask(id: id) {
+                paletteEditor = .edit(task)
+            } else {
+                navigate(to: .matrix)
+            }
         }
     }
 

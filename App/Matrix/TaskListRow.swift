@@ -11,13 +11,19 @@ struct TaskListRow: View {
     let blockingCount: Int
     let actions: TaskActions
     var onEdit: (Task) -> Void
+    @Environment(\.editMode) private var editMode
+
+    private var isSelecting: Bool { editMode?.wrappedValue.isEditing == true }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             TaskCardView(task: task, now: context.date,
                          blockedByCount: blockedByCount, blockingCount: blockingCount)
         }
-        .onTapGesture { onEdit(task) }
+        // Masked off while multi-selecting: a content tap gesture outranks the List
+        // cell's selection tap, so an always-on gesture would open the editor instead
+        // of toggling selection. `.subviews` keeps identity stable (no if/else branch).
+        .gesture(TapGesture().onEnded { onEdit(task) }, including: isSelecting ? .subviews : .all)
         .swipeActions(edge: .leading) {
             Button { actions.toggle(task) } label: {
                 Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"),

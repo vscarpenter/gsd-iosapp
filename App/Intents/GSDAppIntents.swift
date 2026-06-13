@@ -4,29 +4,10 @@ import GSDModel
 import GSDStore
 import GSDSnapshot
 
-enum GSDIntentStore {
-    @MainActor
-    static func makeStore() throws -> TaskStore {
-        let database = try AppDatabase.liveWithRecovery()
-        let queue = GRDBSyncQueueRepository(database)
-        return TaskStore(
-            repository: GRDBTaskRepository(database),
-            smartViewRepository: GRDBSmartViewRepository(database),
-            archiveRepository: GRDBArchiveRepository(database),
-            syncQueue: queue
-        )
-    }
-
-    static func fetchTasks() async throws -> [Task] {
-        let database = try AppDatabase.liveWithRecovery()
-        return try await GRDBTaskRepository(database).fetchAll()
-    }
-
-    static func fetchTask(id: String) async throws -> Task? {
-        let database = try AppDatabase.liveWithRecovery()
-        return try await GRDBTaskRepository(database).fetch(id: id)
-    }
-}
+// Intents run in the app's process and resolve the ONE app-wired TaskStore via
+// @Dependency (registered in GSDApp.init). Opening a second database connection here
+// would bypass the app's ValueObservation (writes invisible to the UI/widgets/sync
+// hooks), skip the LiveReminderScheduler, and contend with the app's open writer.
 
 enum IntentQuadrant: String, AppEnum {
     case doFirst
@@ -102,15 +83,20 @@ struct GSDTaskEntity: AppEntity {
 }
 
 struct GSDTaskQuery: EntityQuery, EntityStringQuery {
+    @Dependency private var store: TaskStore
+
     func entities(for identifiers: [GSDTaskEntity.ID]) async throws -> [GSDTaskEntity] {
-        let ids = Set(identifiers)
-        return try await GSDIntentStore.fetchTasks()
-            .filter { ids.contains($0.id) }
-            .map { GSDTaskEntity(task: $0) }
+        var found: [GSDTaskEntity] = []
+        for id in identifiers {
+            if let task = try await store.fetchTask(id: id) {
+                found.append(GSDTaskEntity(task: task))
+            }
+        }
+        return found
     }
 
     func suggestedEntities() async throws -> [GSDTaskEntity] {
-        try await GSDIntentStore.fetchTasks()
+        try await store.fetchAllTasks()
             .filter { !$0.completed }
             .prefix(20)
             .map { GSDTaskEntity(task: $0) }
@@ -118,7 +104,7 @@ struct GSDTaskQuery: EntityQuery, EntityStringQuery {
 
     func entities(matching string: String) async throws -> [GSDTaskEntity] {
         let query = string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return try await GSDIntentStore.fetchTasks()
+        return try await store.fetchAllTasks()
             .filter { task in
                 query.isEmpty
                 || task.title.lowercased().contains(query)
@@ -145,13 +131,17 @@ struct CreateTaskIntent: AppIntent {
     @Parameter(title: "Task")
     var taskTitle: String
 
-    @Parameter(title: "Quadrant", default: .doFirst)
-    var quadrant: IntentQuadrant
+    /// Optional on purpose: nil lets the capture shorthand (!, !!, *) place the task —
+    /// a non-nil default here would silently discard the very shorthand we advertise.
+    @Parameter(title: "Quadrant")
+    var quadrant: IntentQuadrant?
 
+    @Dependency private var store: TaskStore
+
+    @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let parsed = CaptureParser.parse(taskTitle)
-        let store = try await GSDIntentStore.makeStore()
-        try await store.add(parsed, override: quadrant.quadrant)
+        try await store.add(parsed, override: quadrant?.quadrant)
         return .result(dialog: "Added \(parsed.title) to GSD.")
     }
 }
@@ -164,12 +154,14 @@ struct CompleteTaskIntent: AppIntent {
     @Parameter(title: "Task")
     var task: GSDTaskEntity
 
+    @Dependency private var store: TaskStore
+
+    @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let domainTask = try await GSDIntentStore.fetchTask(id: task.id) else {
+        guard let domainTask = try await store.fetchTask(id: task.id) else {
             return .result(dialog: "That task is no longer available.")
         }
         if !domainTask.completed {
-            let store = try await GSDIntentStore.makeStore()
             try await store.toggleComplete(domainTask)
         }
         return .result(dialog: "Completed \(domainTask.title).")

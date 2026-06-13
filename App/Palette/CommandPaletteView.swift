@@ -36,6 +36,9 @@ final class PaletteController {
     /// iPad sidebar selection, mirrored here so the palette handler can set it. Optional
     /// because `List(selection:)` single-selection requires an optional binding.
     var regularSelection: RegularItem? = .matrix
+    /// One-shot quadrant focus request (⌘1–⌘4 / `gsd://quadrant/<q>`): the matrix view
+    /// scrolls to the quadrant and clears it.
+    var focusedQuadrant: Quadrant?
 }
 
 /// iPad sidebar selection. Shared so the palette handler can drive it; `RegularRootView`
