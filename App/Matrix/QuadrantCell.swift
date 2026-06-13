@@ -95,14 +95,16 @@ struct QuadrantCell: View {
             actions: actions,
             onEdit: onEdit,
             openTaskID: $openTaskID,
-            menu: { cellMenu(task) },
+            menu: { TaskRowMenu(task: task, actions: actions, onEdit: onEdit) },
             content: {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     TaskCardView(
                         task: task,
                         now: context.date,
                         blockedByCount: graph.uncompletedBlockers(of: task.id).count,
-                        blockingCount: graph.blockedTasks(of: task.id).count
+                        blockingCount: graph.blockedTasks(of: task.id).count,
+                        onToggle: { actions.toggle(task) },
+                        menu: { AnyView(TaskRowMenu(task: task, actions: actions, onEdit: onEdit)) }
                     )
                 }
             }
@@ -119,41 +121,6 @@ struct QuadrantCell: View {
                 Button(String(localized: "Stop timer")) { actions.stopTimer(task) }
             }
         }
-    }
-
-    @ViewBuilder private func cellMenu(_ task: Task) -> some View {
-        Button { onEdit(task) } label: { Label(String(localized: "Edit"), systemImage: "pencil") }
-        Button { actions.duplicate(task) } label: {
-            Label(String(localized: "Duplicate"), systemImage: "plus.square.on.square")
-        }
-        ShareLink(item: task.shareText) {
-            Label(String(localized: "Share"), systemImage: "square.and.arrow.up")
-        }
-        Button { actions.toggle(task) } label: {
-            Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"), systemImage: "checkmark")
-        }
-        if TimeTracking.runningEntry(task.timeEntries) == nil {
-            Button(String(localized: "Start Timer")) { actions.startTimer(task) }
-        } else {
-            Button(String(localized: "Stop Timer")) { actions.stopTimer(task) }
-        }
-        Menu(String(localized: "Snooze")) {
-            ForEach(snoozeMenuPresets.indices, id: \.self) { i in
-                Button(snoozeMenuPresets[i].0) { actions.snooze(task, by: snoozeMenuPresets[i].1) }
-            }
-        }
-        Button(role: .destructive) { actions.delete(task) } label: { Label(String(localized: "Delete"), systemImage: "trash") }
-    }
-
-    /// Six §6.7 snooze presets. Intentionally NOT extracted to a shared constant
-    /// (duplicated in the editor per plan decision).
-    private var snoozeMenuPresets: [(String, SnoozePreset)] {
-        [(String(localized: "15 minutes"), .fifteenMinutes),
-         (String(localized: "30 minutes"), .thirtyMinutes),
-         (String(localized: "1 hour"), .oneHour),
-         (String(localized: "3 hours"), .threeHours),
-         (String(localized: "Tomorrow"), .tomorrow),
-         (String(localized: "Next week"), .nextWeek)]
     }
 
     private func toggleSelection(_ id: String) {

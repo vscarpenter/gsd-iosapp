@@ -13,6 +13,7 @@
 		148AA072429C982C5B7B77C0 /* TaskEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */; };
 		1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CAA477CE99B7420D83C9362 /* Theme.swift */; };
 		1995E0D8DB3D1CD07A579638 /* ArchiveListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923FB39E62F676CE76DDE26A /* ArchiveListView.swift */; };
+		199FBD01812B3761F312A745 /* TaskRowMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C3752E464ACF9EDB1EE803 /* TaskRowMenu.swift */; };
 		1F2495DBB050390A9BDCFE81 /* WidgetSnapshotRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7955446497B26D20179DFD36 /* WidgetSnapshotRefresher.swift */; };
 		1F424C37BED56024B5CCD41A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
 		1FDBA6B34191BD05C33E7153 /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4AB4A7D546F89E5F67F5AA /* QuickActions.swift */; };
@@ -177,6 +178,7 @@
 		BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixView.swift; sourceTree = "<group>"; };
 		C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
+		D5C3752E464ACF9EDB1EE803 /* TaskRowMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowMenu.swift; sourceTree = "<group>"; };
 		DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
 		E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncHistoryView.swift; sourceTree = "<group>"; };
 		E77900FA416C5BD27D556B5F /* GSDWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -500,6 +502,7 @@
 				53A151034146B4714F731EE2 /* TaskActions.swift */,
 				B6988BDFABF5E325C967D8EA /* TaskCardView.swift */,
 				721AA423A1BF176E1CB41486 /* TaskListRow.swift */,
+				D5C3752E464ACF9EDB1EE803 /* TaskRowMenu.swift */,
 			);
 			path = Matrix;
 			sourceTree = "<group>";
@@ -741,6 +744,7 @@
 				EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */,
 				148AA072429C982C5B7B77C0 /* TaskEditorView.swift in Sources */,
 				88A8C4B6149243B4E448B079 /* TaskListRow.swift in Sources */,
+				199FBD01812B3761F312A745 /* TaskRowMenu.swift in Sources */,
 				052F228DC3DF13B25763A8FA /* TaskShareText.swift in Sources */,
 				1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */,
 				1F2495DBB050390A9BDCFE81 /* WidgetSnapshotRefresher.swift in Sources */,

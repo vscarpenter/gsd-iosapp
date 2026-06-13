@@ -15,6 +15,12 @@ struct TaskCardView: View {
     var blockedByCount: Int = 0
     var blockingCount: Int = 0
 
+    /// When non-nil, the completion disc becomes a tappable button (parity with the
+    /// web's complete circle). Nil keeps the disc decorative (previews/non-interactive hosts).
+    var onToggle: (() -> Void)?
+    /// When non-nil, a trailing `⋯` button presents this menu content.
+    var menu: (() -> AnyView)?
+
     private var isBlocked: Bool { blockedByCount > 0 }
 
     var body: some View {
@@ -46,7 +52,7 @@ struct TaskCardView: View {
 
             Spacer(minLength: 0)
 
-            completionDisc
+            trailingControls
         }
         .opacity(isBlocked && !task.completed ? 0.62 : 1)
         .padding(.vertical, 8)
@@ -62,6 +68,36 @@ struct TaskCardView: View {
         return (d.hasPrefix("http://") || d.hasPrefix("https://")) ? Surface.ink3 : Surface.ink2
     }
 
+    /// Trailing cluster: the optional `⋯` overflow menu and the completion control.
+    /// Both collapse to nothing when their callback is absent (decorative previews).
+    @ViewBuilder private var trailingControls: some View {
+        HStack(spacing: 10) {
+            if let menu {
+                Menu { menu() } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Surface.ink3)
+                        .frame(width: 30, height: 30)          // glyph target; row's 44pt height supplies the rest
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel(String(localized: "More actions"))
+            }
+            completionControl
+        }
+    }
+
+    @ViewBuilder private var completionControl: some View {
+        if let onToggle {
+            Button(action: onToggle) { completionDisc }
+                .buttonStyle(.plain)
+                .frame(width: 44, height: 44)                  // ≥44pt hit target around the 28pt disc (§12.3)
+                .contentShape(Rectangle())
+                .accessibilityLabel(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"))
+        } else {
+            completionDisc.accessibilityHidden(true)
+        }
+    }
+
     private var completionDisc: some View {
         ZStack {
             if task.completed {
@@ -74,7 +110,6 @@ struct TaskCardView: View {
             }
         }
         .frame(width: 28, height: 28)
-        .accessibilityHidden(true)
     }
 
     private var tagRow: some View {
