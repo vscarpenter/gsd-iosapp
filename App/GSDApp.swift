@@ -129,12 +129,14 @@ struct GSDApp: App {
                 .onChange(of: scenePhase) { _, phase in
                     switch phase {
                     case .active:
+                        AppDatabase.resume()   // restore writes before any foreground sync runs
                         coordinator.enteredForeground()
                         _Concurrency.Task { await store.refreshBadge() }
                         _Concurrency.Task { await shareInbox.drain { try await store.create($0) } }
                     case .background:
                         coordinator.enteredBackground()
                         BackgroundRefresh.schedule()
+                        AppDatabase.suspend()  // release DB locks so iOS won't kill us (0xDEAD10CC)
                     default:
                         break
                     }

@@ -34,11 +34,20 @@ enum BackgroundRefresh {
     private static func handle(_ task: BGAppRefreshTask, store: TaskStore) {
         schedule()   // always queue the next one
         let work = _Concurrency.Task { @MainActor in
+            // The database was suspended on backgrounding (0xDEAD10CC mitigation). Resume it for
+            // this background window, then re-suspend so we never hold a lock when the OS suspends
+            // us again after setTaskCompleted.
+            AppDatabase.resume()
             try? await store.runAutoArchiveSweep()
             await store.refreshBadge()
             // NOTE (Phase 5): perform an opportunistic sync here so data is fresh on next open.
+            AppDatabase.suspend()
             task.setTaskCompleted(success: true)
         }
-        task.expirationHandler = { work.cancel(); task.setTaskCompleted(success: false) }
+        task.expirationHandler = {
+            work.cancel()
+            AppDatabase.suspend()
+            task.setTaskCompleted(success: false)
+        }
     }
 }
