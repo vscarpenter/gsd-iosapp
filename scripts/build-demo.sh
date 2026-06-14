@@ -60,7 +60,7 @@ seg "$CLIPS/dashboard.mp4" 11.5 9 "See where your effort goes" "Insights, on-dev
 
 # ---- Device segments (only if the owner has dropped them in build/demo/device/) ----
 [ -f "$DEV/widgets.mov" ] && seg "$DEV/widgets.mov" 0 8 "Always one glance away" "Home & Lock Screen widgets" "0x8A6A22"
-[ -f "$DEV/siri.mov" ]    && seg "$DEV/siri.mov"    0 7 "Just ask Siri"          "Hands-free capture"          "0x6F685F"
+[ -f "$DEV/siri.mov" ]    && seg "$DEV/siri.mov"    0 7 "Just ask Siri"          "Add tasks with Siri"         "0x6F685F"
 [ -f "$DEV/share.mov" ]   && seg "$DEV/share.mov"   0 6 "Add from anywhere"      "Share into GSD from any app" "0x2C6680"
 
 # ---- Concat in storyboard order (skip any missing optional segment) ----
