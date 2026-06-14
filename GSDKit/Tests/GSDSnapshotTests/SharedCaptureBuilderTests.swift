@@ -72,6 +72,35 @@ struct SharedCaptureBuilderTests {
         #expect(task.tags.count == 20)            // capped
     }
 
+    // MARK: committedTags(fromField:) — the live chip preview for the comma field
+
+    @Test func noCommittedTagsForEmptyField() {
+        #expect(SharedCaptureBuilder.committedTags(fromField: "") == [])
+    }
+
+    @Test func tokenWithoutTrailingCommaIsStillBeingTyped() {
+        // "book" with no comma yet → not committed; no chip until the comma is typed.
+        #expect(SharedCaptureBuilder.committedTags(fromField: "book") == [])
+    }
+
+    @Test func trailingCommaCommitsTheTag() {
+        #expect(SharedCaptureBuilder.committedTags(fromField: "book,") == ["book"])
+    }
+
+    @Test func lastTokenInProgressIsExcluded() {
+        // "book, readi" → "book" is committed, "readi" is still being typed.
+        #expect(SharedCaptureBuilder.committedTags(fromField: "book, readi") == ["book"])
+    }
+
+    @Test func allTokensCommittedWithTrailingComma() {
+        #expect(SharedCaptureBuilder.committedTags(fromField: "book, reading,") == ["book", "reading"])
+    }
+
+    @Test func committedTagsAreNormalizedAndDeduped() {
+        // Same normalization as the saved task: trim, lowercase, dedupe, keep order.
+        #expect(SharedCaptureBuilder.committedTags(fromField: " Read , READ , later,") == ["read", "later"])
+    }
+
     @Test func alwaysProducesValidTask() throws {
         // Adversarial: huge title, too many over-long tags, unsafe URL, empty everything.
         let adversarial = [

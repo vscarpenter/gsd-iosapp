@@ -32,6 +32,16 @@ public enum SharedCaptureBuilder {
             : joined
     }
 
+    /// The chips to show under a live "comma, separated" tags field. A token is *committed* (chipped)
+    /// only once a comma follows it; the trailing token (no comma yet) is still being typed and is
+    /// excluded. Normalized identically to `task(from:)`, so the preview never shows a tag that the
+    /// save would silently drop.
+    public static func committedTags(fromField field: String) -> [String] {
+        let tokens = field.split(separator: ",").map(String.init)
+        let committed = field.last == "," ? tokens : Array(tokens.dropLast())
+        return normalizedTags(committed)
+    }
+
     private static func normalizedTags(_ raw: [String]) -> [String] {
         var seen = Set<String>()
         var result: [String] = []

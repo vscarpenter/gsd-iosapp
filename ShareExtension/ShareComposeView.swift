@@ -39,10 +39,27 @@ struct ShareComposeView: View {
                         }
                     }
                 }
-                Section(String(localized: "Tags")) {
+                Section {
                     TextField(String(localized: "comma, separated, tags"), text: $tagsText)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                    let chips = SharedCaptureBuilder.committedTags(fromField: tagsText)
+                    if !chips.isEmpty {
+                        FlowLayout(spacing: 6) {
+                            ForEach(chips, id: \.self) { tag in
+                                Text(tag)
+                                    .font(.footnote)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(.quaternary, in: Capsule())
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } header: {
+                    Text(String(localized: "Tags"))
+                } footer: {
+                    Text(String(localized: "Separate tags with commas"))
                 }
                 if !urls.isEmpty {
                     Section(String(localized: "Link")) {
@@ -82,6 +99,43 @@ struct ShareComposeView: View {
             onComplete()
         } catch {
             errorMessage = String(localized: "Couldn't save to GSD. Please try again.")
+        }
+    }
+}
+
+/// Flows its subviews left-to-right, wrapping to a new row when the next one won't fit — SwiftUI
+/// has no built-in wrap layout, and the tag chips can exceed one line (up to 20 tags).
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0, rowHeight: CGFloat = 0, totalHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > 0, x + size.width > maxWidth {
+                totalHeight += rowHeight + spacing
+                x = 0
+                rowHeight = 0
+            }
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: maxWidth, height: totalHeight + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
+        for subview in subviews {
+            let size = subview.sizeThatFits(.unspecified)
+            if x > bounds.minX, x + size.width > bounds.maxX {
+                x = bounds.minX
+                y += rowHeight + spacing
+                rowHeight = 0
+            }
+            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
         }
     }
 }
