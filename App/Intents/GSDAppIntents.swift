@@ -3,6 +3,7 @@ import Foundation
 import GSDModel
 import GSDStore
 import GSDSnapshot
+import UIKit
 
 // Intents run in the app's process and resolve the ONE app-wired TaskStore via
 // @Dependency (registered in GSDApp.init). Opening a second database connection here
@@ -123,6 +124,20 @@ extension GSDTaskEntity {
     }
 }
 
+/// Siri/Shortcuts intents run in the background, where the database is suspended as the
+/// `0xDEAD10CC` mitigation (see `AppDatabase`). A `DatabaseQueue` rejects BOTH reads and writes
+/// while suspended ("Database is suspended" / `SQLITE_ABORT` on `BEGIN IMMEDIATE`), so any intent
+/// that touches the store must resume it for its work window — then restore the prior state,
+/// exactly as `BackgroundRefresh` does for BG refresh. Foreground runs (`applicationState ==
+/// .active`) are already resumed; re-suspending one would wrongly lock out the live UI, so gate on it.
+@MainActor
+private func withDatabaseResumedForIntent<R>(_ body: () async throws -> R) async throws -> R {
+    let wasSuspended = UIApplication.shared.applicationState != .active
+    if wasSuspended { AppDatabase.resume() }
+    defer { if wasSuspended { AppDatabase.suspend() } }
+    return try await body()
+}
+
 struct CreateTaskIntent: AppIntent {
     static let title: LocalizedStringResource = "Create Task"
     static let description = IntentDescription("Create a task in GSD using capture shorthand like !, !!, *, and #tags.")
@@ -141,7 +156,9 @@ struct CreateTaskIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let parsed = CaptureParser.parse(taskTitle)
-        try await store.add(parsed, override: quadrant?.quadrant)
+        try await withDatabaseResumedForIntent {
+            try await store.add(parsed, override: quadrant?.quadrant)
+        }
         return .result(dialog: "Added \(parsed.title) to GSD.")
     }
 }
@@ -158,13 +175,16 @@ struct CompleteTaskIntent: AppIntent {
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        guard let domainTask = try await store.fetchTask(id: task.id) else {
-            return .result(dialog: "That task is no longer available.")
+        let message = try await withDatabaseResumedForIntent { () -> String in
+            guard let domainTask = try await store.fetchTask(id: task.id) else {
+                return "That task is no longer available."
+            }
+            if !domainTask.completed {
+                try await store.toggleComplete(domainTask)
+            }
+            return "Completed \(domainTask.title)."
         }
-        if !domainTask.completed {
-            try await store.toggleComplete(domainTask)
-        }
-        return .result(dialog: "Completed \(domainTask.title).")
+        return .result(dialog: "\(message)")
     }
 }
 
