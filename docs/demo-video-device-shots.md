@@ -35,6 +35,6 @@ any file present in `build/demo/device/` and inserts that beat in storyboard ord
 (widgets after the dashboard, then share, then Siri, before the closing card).
 
 ## Music (optional)
-Drop one royalty-free track at `assets/demo-music.mp3` (e.g. a CC0 track from Pixabay or
+Drop one royalty-free track at `docs/assets/demo-music.mp3` (e.g. a CC0 track from Pixabay or
 Uppbeat) and re-run the build; it's mixed in at -10 dB with a 2s fade-out. Leave it absent
 for a music-free cut.

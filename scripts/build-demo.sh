@@ -11,7 +11,7 @@ SERIF="/System/Library/Fonts/Supplemental/Georgia.ttf"
 SANS="/System/Library/Fonts/Supplemental/Arial.ttf"
 ICON="${ICON:-App/Assets.xcassets/AppIcon.appiconset/AppIcon.png}"
 PAPER="0xF4F1E9"; INK="0x17150F"
-MUSIC="${MUSIC:-assets/demo-music.mp3}"   # optional
+MUSIC="${MUSIC:-docs/assets/demo-music.mp3}"   # optional
 
 # Homebrew ffmpeg lacks drawtext; /usr/local ffmpeg 7.x is built with libfreetype. Override
 # with FF=… if your drawtext-capable binary lives elsewhere.
