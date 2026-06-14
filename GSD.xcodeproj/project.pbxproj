@@ -53,6 +53,7 @@
 		8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */; };
 		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
+		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
 		A6BD5A7B14A9BEC633DE1C66 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
 		A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D97811D144C615B847BA217 /* SettingsView.swift */; };
@@ -184,6 +185,7 @@
 		DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
 		E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncHistoryView.swift; sourceTree = "<group>"; };
 		E77900FA416C5BD27D556B5F /* GSDWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E859591AFA113674374C5700 /* DemoChoreography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoChoreography.swift; sourceTree = "<group>"; };
 		E87C46CC1405702B23330578 /* ScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTests.swift; sourceTree = "<group>"; };
 		EA24761F3BB6078DC0F318A8 /* TodaysFocusProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusProvider.swift; sourceTree = "<group>"; };
 		EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandPaletteView.swift; sourceTree = "<group>"; };
@@ -459,6 +461,7 @@
 		D91E23D34EABC2DCA97A941B /* ScreenshotTests */ = {
 			isa = PBXGroup;
 			children = (
+				E859591AFA113674374C5700 /* DemoChoreography.swift */,
 				664E6FF5137DE167118E123D /* PreviewChoreography.swift */,
 				E87C46CC1405702B23330578 /* ScreenshotTests.swift */,
 			);
@@ -759,6 +762,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */,
 				32AC8D69042D0AA6FEA03C34 /* PreviewChoreography.swift in Sources */,
 				C8EFB5F817DADDA1C48B0356 /* ScreenshotTests.swift in Sources */,
 			);
