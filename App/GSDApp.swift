@@ -120,6 +120,7 @@ struct GSDApp: App {
                 .tint(Surface.ink) // quiet graphite chrome; genuine actions opt into Surface.tint
                 .task {
                     store.start()
+                    await DemoSeed.seedIfRequested(store)
                     await shareInbox.drain { try await store.create($0) }
                     widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()

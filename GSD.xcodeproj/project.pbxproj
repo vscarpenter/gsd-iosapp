@@ -10,6 +10,7 @@
 		002BFF4E14DD42A9716D323B /* GSDStore in Frameworks */ = {isa = PBXBuildFile; productRef = 579A119DFC479E75D3534B6C /* GSDStore */; };
 		046100EB23A8521EA8275EAE /* CaptureBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30A03169462530BB59EC808C /* CaptureBar.swift */; };
 		052F228DC3DF13B25763A8FA /* TaskShareText.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD40180D8547F48338624F7D /* TaskShareText.swift */; };
+		0E93D023C335817A371DBFF3 /* DemoSeed.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2C9EE64F35A42788D229B1E /* DemoSeed.swift */; };
 		148AA072429C982C5B7B77C0 /* TaskEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */; };
 		1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CAA477CE99B7420D83C9362 /* Theme.swift */; };
 		1995E0D8DB3D1CD07A579638 /* ArchiveListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 923FB39E62F676CE76DDE26A /* ArchiveListView.swift */; };
@@ -164,6 +165,7 @@
 		94ED783FE5C2324C295B0273 /* RelativeDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeDate.swift; sourceTree = "<group>"; };
 		9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusChip.swift; sourceTree = "<group>"; };
 		9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredTaskListView.swift; sourceTree = "<group>"; };
+		A2C9EE64F35A42788D229B1E /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
 		A706546D6BC547A4D13660DC /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A92D91657DBB6423E6BBE725 /* DataStorageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStorageView.swift; sourceTree = "<group>"; };
 		ABCFD2CB1A7F53B54E6E1725 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -420,6 +422,7 @@
 		CAB18B8FF69C32795537F4B3 /* Support */ = {
 			isa = PBXGroup;
 			children = (
+				A2C9EE64F35A42788D229B1E /* DemoSeed.swift */,
 				52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */,
 				94ED783FE5C2324C295B0273 /* RelativeDate.swift */,
 				BD40180D8547F48338624F7D /* TaskShareText.swift */,
@@ -713,6 +716,7 @@
 				D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */,
 				897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */,
 				91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */,
+				0E93D023C335817A371DBFF3 /* DemoSeed.swift in Sources */,
 				607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
 				8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */,
