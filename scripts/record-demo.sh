@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SCHEME="GSDScreenshots"
-SCENES=(capture matrix complete organize dashboard)
+SCENES=(capture matrix complete organize dashboard widgets)
 CLIPS="build/demo/clips"
 mkdir -p "$CLIPS"
 
@@ -15,6 +15,12 @@ echo "Recording on $UDID"
 xcodegen generate >/dev/null
 xcodebuild build-for-testing -project GSD.xcodeproj -scheme "$SCHEME" \
   -destination "platform=iOS Simulator,id=$UDID" >/dev/null
+
+# App-Store-style status bar (9:41, full signal/battery) across every recorded scene; cleared on exit.
+xcrun simctl status_bar "$UDID" override \
+  --time "9:41" --batteryState charged --batteryLevel 100 \
+  --cellularBars 4 --wifiBars 3 --dataNetwork wifi 2>/dev/null || true
+trap 'xcrun simctl status_bar "$UDID" clear 2>/dev/null || true' EXIT
 
 for scene in "${SCENES[@]}"; do
   echo "=== scene: $scene ==="

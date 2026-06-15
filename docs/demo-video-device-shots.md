@@ -1,16 +1,15 @@
 # GSD demo video — device shot list
 
-Record these 2 (optionally 3) clips on your iPhone, then AirDrop them to the Mac into
+Record these (optional) clips on your iPhone, then AirDrop them to the Mac into
 `build/demo/device/` with the exact filenames below. Keep the phone vertical. Use
 Control Center's screen record (red dot). Leave ~2s of stillness at the start and end of each.
 
-## 1. Widgets → `widgets.mov` (~10s raw)
-Before recording: add the **Today's Focus** widget to both your Home Screen and a Lock
-Screen. Have a few tasks due so it isn't empty.
-Record: start on the Home Screen showing the widget (hold ~3s) → raise-to-wake / swipe to
-the Lock Screen showing the widget there (hold ~3s).
+> **The widgets beat is now simulated** — the Today's Focus widget on a faux Home Screen is
+> recorded automatically on the Simulator (`App/Demo/DemoHomeScreen.swift`, scene `widgets` in
+> `scripts/record-demo.sh`). No device widget recording is needed. Siri and Share stay optional
+> below because they are inherently system features.
 
-## 2. Siri → `siri.mov` (~10s raw)
+## 1. Siri → `siri.mov` (~10s raw)
 Siri only fires on the app's **registered** phrases (see `App/Intents/GSDAppIntents.swift`):
 "Add a task in GSD" / "Create a task in GSD". The task text is a follow-up, not part of the
 phrase. "Add buy milk to GSD" will NOT work.
@@ -25,14 +24,14 @@ Most reliable for recording — **Type to Siri** (no voice-recognition risk):
 
 Voice works too if you prefer: "Hey Siri, **Add a task in GSD**", then say "Buy milk" when asked.
 
-## 3. (Optional) Share sheet → `share.mov` (~8s)
+## 2. (Optional) Share sheet → `share.mov` (~8s)
 Only needed if the in-app share auto-capture is dropped. In Safari, open any article →
 Share → tap **GSD** → the compose sheet appears with the title prefilled → tap Add.
 
 After dropping the files in, re-run `./scripts/build-demo.sh` (or
 `FF=/usr/local/bin/ffmpeg bash scripts/build-demo.sh`) to fold them in. The script auto-detects
 any file present in `build/demo/device/` and inserts that beat in storyboard order
-(widgets after the dashboard, then share, then Siri, before the closing card).
+(share, then Siri, before the closing card).
 
 ## Music (optional)
 Drop one royalty-free track at `docs/assets/demo-music.mp3` (e.g. a CC0 track from Pixabay or

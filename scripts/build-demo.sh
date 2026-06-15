@@ -57,6 +57,13 @@ seg "$CLIPS/matrix.mp4"    10.0 9 "Urgency x importance"       "Four quadrants, 
 seg "$CLIPS/complete.mp4"  12.5 6 "Done feels good"            "Swipe to complete"                  "0xB23A2E"
 seg "$CLIPS/organize.mp4"  12.5 8 "Built for real work"        "Subtasks, recurring, dependencies"  "0x8A6A22"
 seg "$CLIPS/dashboard.mp4" 11.5 9 "See where your effort goes" "Insights, on-device"                "0x2C6680"
+# Widgets: the simulated faux Home Screen recorded on the sim (replaces the old device clip).
+# simctl records VFR and only keyframes on screen *change*; the static Home Screen leaves a long
+# keyframe gap that makes seg()'s input-seek render gray. Normalize to CFR-30 + dense keyframes
+# (decoded from the start, so the gap is harmless), then cut the settled window (~6–12s).
+mkdir -p "$SEG/_cfr"
+"$FF" -y -i "$CLIPS/widgets.mp4" -vf fps=30 -g 15 -c:v libx264 -pix_fmt yuv420p -an "$SEG/_cfr/widgets.mp4"
+seg "$SEG/_cfr/widgets.mp4" 6.5 5 "Always one glance away"     "Today’s Focus on your Home Screen"  "0x8A6A22"
 
 # ---- Device segments (only if the owner has dropped them in build/demo/device/) ----
 # Accept any common screen-recording extension/case (.mov/.mp4/.m4v). `if`-guarded so a
@@ -64,7 +71,6 @@ seg "$CLIPS/dashboard.mp4" 11.5 9 "See where your effort goes" "Insights, on-dev
 dev_clip() { for e in mov MOV mp4 MP4 m4v; do [ -f "$DEV/$1.$e" ] && { printf '%s' "$DEV/$1.$e"; return 0; }; done; return 1; }
 # NOTE: caption text is single-quoted in the ffmpeg filtergraph — use a typographic
 # apostrophe (’ U+2019), never an ASCII ' which would terminate the string and corrupt the filter.
-if w=$(dev_clip widgets); then seg "$w" 1.5 6.5 "Always one glance away" "Today’s Focus on your Home Screen" "0x8A6A22"; fi
 if s=$(dev_clip siri);    then seg "$s" 0   7   "Just ask Siri"          "Add tasks with Siri"                "0x6F685F"; fi
 if h=$(dev_clip share);   then seg "$h" 0   6   "Add from anywhere"      "Share into GSD from any app"        "0x2C6680"; fi
 
