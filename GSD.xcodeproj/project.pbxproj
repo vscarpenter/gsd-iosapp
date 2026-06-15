@@ -41,6 +41,7 @@
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
 		65F938AD7F2AD90B26C4E67A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AE084189B67CD4EE1370674E /* PrivacyInfo.xcprivacy */; };
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
+		753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
 		7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ED783FE5C2324C295B0273 /* RelativeDate.swift */; };
 		8004840C42749CB157F55F18 /* MatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */; };
 		8036F79C226CB3A58EAD44E4 /* GSDSync in Frameworks */ = {isa = PBXBuildFile; productRef = 4D69B433643C83344AA85FF9 /* GSDSync */; };
@@ -55,6 +56,7 @@
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
 		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
+		A004032986C5ACEB406BB2C5 /* DemoHomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7B229DAFAC4E845FCCC5C5 /* DemoHomeScreen.swift */; };
 		A6BD5A7B14A9BEC633DE1C66 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
 		A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D97811D144C615B847BA217 /* SettingsView.swift */; };
 		A92FC63E75447B51AB504FE8 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 10C5831BD27556073CD6CD9F /* GSDModel */; };
@@ -75,6 +77,7 @@
 		EA9DA80415D88FF601FCBF70 /* GSDWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E77900FA416C5BD27D556B5F /* GSDWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EEED564CCDE3349B5B966A0C /* SyncHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */; };
 		F1B330A8B3AF352E918AA98B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8908894C46A7A691FFED08F0 /* PrivacyInfo.xcprivacy */; };
+		F6BD77CCE7D8D5B7A4953F00 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
 		FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */; };
 		FE0F884C571B70DC1021DC4F /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A151034146B4714F731EE2 /* TaskActions.swift */; };
 		FF5DA971C1D7F0E459C85820 /* GSDAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A940BB6BB7707C5631927A0 /* GSDAppIntents.swift */; };
@@ -142,6 +145,7 @@
 		53A151034146B4714F731EE2 /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantCell.swift; sourceTree = "<group>"; };
+		5A7B229DAFAC4E845FCCC5C5 /* DemoHomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoHomeScreen.swift; sourceTree = "<group>"; };
 		5A940BB6BB7707C5631927A0 /* GSDAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDAppIntents.swift; sourceTree = "<group>"; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartViewEditorView.swift; sourceTree = "<group>"; };
@@ -242,6 +246,7 @@
 				13F17FD694362B5F0CFE7108 /* Browse */,
 				673A791563D7F81CCA41A63F /* Bulk */,
 				BAC77554DBBDEEACBDA67AE5 /* Dashboard */,
+				0C2D45D930316312A499B9CB /* Demo */,
 				3CBE7AF1D884DE679CAEE64D /* Editor */,
 				CA9A551E91A1952A1BA0DAFB /* Effects */,
 				D3E7E0EFB2BB28BBEDE11E7C /* Intents */,
@@ -258,6 +263,14 @@
 				52DDCB447C1EA39D55F1D7FD /* Widgets */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		0C2D45D930316312A499B9CB /* Demo */ = {
+			isa = PBXGroup;
+			children = (
+				5A7B229DAFAC4E845FCCC5C5 /* DemoHomeScreen.swift */,
+			);
+			path = Demo;
 			sourceTree = "<group>";
 		};
 		13F17FD694362B5F0CFE7108 /* Browse */ = {
@@ -719,6 +732,7 @@
 				D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */,
 				897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */,
 				91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */,
+				A004032986C5ACEB406BB2C5 /* DemoHomeScreen.swift in Sources */,
 				0E93D023C335817A371DBFF3 /* DemoSeed.swift in Sources */,
 				607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
@@ -754,6 +768,8 @@
 				199FBD01812B3761F312A745 /* TaskRowMenu.swift in Sources */,
 				052F228DC3DF13B25763A8FA /* TaskShareText.swift in Sources */,
 				1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */,
+				753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */,
+				F6BD77CCE7D8D5B7A4953F00 /* TodaysFocusView.swift in Sources */,
 				1F2495DBB050390A9BDCFE81 /* WidgetSnapshotRefresher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

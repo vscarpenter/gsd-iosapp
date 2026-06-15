@@ -30,6 +30,10 @@ targets:
     platform: iOS
     sources:
       - App
+      # The marketing-demo faux Home Screen renders the real widget view in-app; compiling
+      # these two GSDWidgets sources into the app too keeps a single source of truth.
+      - Widgets/TodaysFocusView.swift
+      - Widgets/TodaysFocusEntry.swift
     info:
       path: App/Info.plist
       properties:

@@ -13,6 +13,9 @@ final class DemoChoreography: XCTestCase {
         guard ProcessInfo.processInfo.environment["DEMO"] == "1" else {
             throw XCTSkip("demo choreography runs only with TEST_RUNNER_DEMO=1")
         }
+        // The widget beat is a faux Home Screen, not the app's tabbed UI — handle it before the
+        // shared --demo-seed launch + tab-bar wait below.
+        if sceneName == "widgets" { try sceneWidgets(); return }
         let app = XCUIApplication()
         app.launchArguments = ["--demo-seed"]
         app.launch()
@@ -77,6 +80,16 @@ final class DemoChoreography: XCTestCase {
     private func sceneDashboard(_ app: XCUIApplication, _ tabs: XCUIElement) throws {
         tabs.buttons["Dashboard"].tap(); pause(4.5)   // charts animate in
         app.swipeUp(velocity: .slow); pause(2.5)
+    }
+
+    // Faux Home Screen (--demo-home): hold on the Today's Focus widget tile while it settles.
+    private func sceneWidgets() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo-home"]
+        app.launch()
+        let label = app.staticTexts["Today's Focus"]
+        XCTAssertTrue(label.waitForExistence(timeout: 25), "widget tile never appeared")
+        pause(6.0)   // hold while the entrance settles and the recording captures it
     }
 
     private func pause(_ seconds: TimeInterval) { Thread.sleep(forTimeInterval: seconds) }

@@ -112,6 +112,11 @@ struct GSDApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // Demo-only: the marketing-video choreography launches with --demo-home to record the
+            // faux Home Screen widget beat. The app itself never passes it, so this stays unreachable.
+            if ProcessInfo.processInfo.arguments.contains(DemoHomeScreen.launchArgument) {
+                DemoHomeScreen()
+            } else {
             ContentView()
                 .environment(store)
                 .environment(session)
@@ -158,6 +163,7 @@ struct GSDApp: App {
                         }
                     )
                 }
+            }
         }
     }
 }
