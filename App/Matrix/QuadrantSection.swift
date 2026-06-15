@@ -40,7 +40,8 @@ struct QuadrantSection: View {
         } header: {
             HStack(spacing: 8) {
                 Image(systemName: QuadrantStyle.symbol(quadrant))
-                    .font(.title3)
+                    .imageScale(.medium)
+                    .frame(width: 26)   // one shared icon column so all four serif titles share a left edge
                     .foregroundStyle(QuadrantStyle.accent(quadrant))
                 Text(quadrant.title)
                     .font(.serif(.title3).weight(.semibold))
@@ -48,6 +49,7 @@ struct QuadrantSection: View {
                 Spacer()
                 Text("\(activeCount)")
                     .font(.callout).monospacedDigit()
+                    .contentTransition(.numericText())   // counts roll when tasks move between quadrants
                     .foregroundStyle(Surface.ink3)
                     .accessibilityLabel(String(localized: "\(activeCount) active"))
             }

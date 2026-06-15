@@ -55,7 +55,7 @@ struct TaskCardView: View {
             trailingControls
         }
         .opacity(isBlocked && !task.completed ? 0.62 : 1)
-        .padding(.vertical, 8)
+        .padding(.vertical, 12)               // in-card vertical air (4-pt grid)
         .frame(minHeight: 44)                 // ≥44pt hit target (§12.3)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)

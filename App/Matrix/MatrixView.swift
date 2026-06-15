@@ -55,7 +55,8 @@ private struct MatrixListContent: View {
                         }
                     }
                     .listStyle(.insetGrouped)
-                    .listSectionSpacing(28)
+                    .listSectionSpacing(32)                         // 4-pt grid: between-quadrant rhythm
+                    .contentMargins(.top, 12, for: .scrollContent)  // first card clears the pinned capture bar when scrolled
                     .scrollContentBackground(.hidden)
                     .refreshable { await sync.syncNow() }
                     .onChange(of: palette.focusedQuadrant) { _, _ in consumeQuadrantFocus(proxy) }

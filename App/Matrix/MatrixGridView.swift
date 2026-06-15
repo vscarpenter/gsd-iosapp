@@ -30,7 +30,7 @@ private struct MatrixGridContent: View {
     @Environment(\.editMode) private var editMode
     var onCompleted: () -> Void
 
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
     private var isSelecting: Bool { editMode?.wrappedValue.isEditing == true }
 
     var body: some View {
@@ -40,7 +40,7 @@ private struct MatrixGridContent: View {
             }
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 12) {
+                    LazyVGrid(columns: columns, spacing: 16) {   // equal 16-pt panel rhythm (H + V)
                         ForEach(Quadrant.allCases, id: \.self) { q in
                             QuadrantCell(
                                 quadrant: q, showCompleted: showCompleted,

@@ -38,7 +38,7 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
-            .tint(Surface.tint)   // actions/links use the single calm tint, never system blue
+            .tint(Surface.tint)   // baseline calm action tint (never system blue); values → ink3 and navigation → ink are overridden by role below
             .navigationTitle(String(localized: "Settings"))
             .toolbar { paletteButton(palette) }
             .onAppear {
@@ -54,6 +54,7 @@ struct SettingsView: View {
             Picker(String(localized: "Theme"), selection: $themeRaw) {
                 ForEach(AppTheme.allCases) { theme in Text(theme.label).tag(theme.rawValue) }
             }
+            .tint(Surface.ink3)   // value is information, not an action — read it graphite
             Toggle(String(localized: "Show Completed Tasks"), isOn: $showCompleted)
                 .tint(Surface.success)
         }
@@ -91,6 +92,7 @@ struct SettingsView: View {
                 } label: {
                     Label(String(localized: "Sync History"), systemImage: "clock.arrow.circlepath")
                 }
+                .foregroundStyle(Surface.ink)   // navigation reads ink, not tide; chevron stays system gray
                 Button(role: .destructive) {
                     session.signOut()
                 } label: {
@@ -159,6 +161,8 @@ struct SettingsView: View {
                         Text(String(localized: "\(d) days")).tag(d)
                     }
                 }
+                .tint(Surface.ink3)   // value graphite
+
             }
             Button {
                 _Concurrency.Task {
@@ -198,6 +202,8 @@ struct SettingsView: View {
                         Text(reminderLabel(minutes)).tag(minutes)
                     }
                 }
+                .tint(Surface.ink3)   // value graphite
+
                 Toggle(String(localized: "Sound"), isOn: Binding(
                     get: { notificationSettings.soundEnabled },
                     set: { notificationSettings.soundEnabled = $0; flushNotificationSettings() }
@@ -316,7 +322,9 @@ struct SettingsView: View {
             Text(String(localized: "GSD stores your data locally on your device. When you sign in, your tasks sync with your account; signed out, nothing leaves your device."))
                 .font(.footnote).foregroundStyle(Surface.ink3)
             Link(String(localized: "Privacy Policy"), destination: URL(string: "https://gsd.vinny.dev/privacy")!)
+                .foregroundStyle(Surface.ink)   // reference link reads ink, not tide
             Link(String(localized: "Contact Support"), destination: URL(string: "mailto:vscarpenter@gmail.com?subject=GSD%20Task%20Manager%20Support")!)
+                .foregroundStyle(Surface.ink)
             Button {
                 hasOnboarded = false       // App root re-presents onboarding on the flag change
             } label: {

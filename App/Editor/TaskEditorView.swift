@@ -97,7 +97,7 @@ struct TaskEditorView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
-            .tint(Surface.tint)
+            .tint(Surface.tint)   // baseline calm action tint (carets + true actions, never system blue); picker values → ink3 by role
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { EditButton() }
@@ -208,6 +208,7 @@ struct TaskEditorView: View {
                     Text(recurrenceLabel(kind)).tag(kind)
                 }
             }
+            .tint(Surface.ink3)   // value (e.g. "Never") reads graphite, not tide
         }
     }
 
@@ -287,6 +288,7 @@ struct TaskEditorView: View {
                     Text(String(localized: "2 hours before")).tag(ReminderOption.offset(120))
                     Text(String(localized: "1 day before")).tag(ReminderOption.offset(1440))
                 }
+                .tint(Surface.ink3)   // value graphite
             }
         }
     }

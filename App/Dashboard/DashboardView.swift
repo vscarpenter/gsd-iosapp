@@ -180,7 +180,7 @@ struct DashboardView: View {
                     Chart(s.topTags) { stat in
                         BarMark(x: .value(String(localized: "Count"), stat.count),
                                 y: .value(String(localized: "Tag"), stat.tag))
-                            .foregroundStyle(QuadrantStyle.accent(.notUrgentImportant).opacity(0.82)) // tide
+                            .foregroundStyle(Surface.ink3.opacity(0.82)) // graphite — a tag isn't a quadrant, so it doesn't borrow a pigment
                             .annotation(position: .trailing, alignment: .leading) {
                                 Text("\(stat.count)").font(.footnote).monospacedDigit()
                                     .foregroundStyle(Surface.ink3)
