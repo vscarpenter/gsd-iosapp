@@ -86,8 +86,10 @@ targets:
         product: GSDSnapshot
       - target: GSDWidgets
         embed: true
+        platformFilter: iOS
       - target: GSDShareExtension
         embed: true
+        platformFilter: iOS
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd
@@ -95,6 +97,12 @@ targets:
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: App/GSD.entitlements
         CODE_SIGN_STYLE: Automatic
+        # --- Mac Catalyst ---
+        SUPPORTS_MACCATALYST: "YES"
+        # Keep dev.vinny.gsd on both platforms (one App Store Connect record).
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: "NO"
+        # macOS-SDK (Catalyst) build uses sandbox entitlements; iOS keeps GSD.entitlements.
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/GSD-Catalyst.entitlements
   GSDWidgets:
     type: app-extension
     platform: iOS
