@@ -4,6 +4,7 @@ import GSDSnapshot
 
 extension Notification.Name {
     static let gsdOpenDeepLink = Notification.Name("dev.vinny.gsd.openDeepLink")
+    static let gsdShowCommandPalette = Notification.Name("dev.vinny.gsd.showCommandPalette")
 }
 
 enum DeepLinkHandoff {

@@ -17,6 +17,7 @@
 		199FBD01812B3761F312A745 /* TaskRowMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5C3752E464ACF9EDB1EE803 /* TaskRowMenu.swift */; };
 		1F2495DBB050390A9BDCFE81 /* WidgetSnapshotRefresher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7955446497B26D20179DFD36 /* WidgetSnapshotRefresher.swift */; };
 		1F424C37BED56024B5CCD41A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
+		1F6721700983447468D664C1 /* GSDMenuCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8E3161EF21EF57F6E08CB8 /* GSDMenuCommands.swift */; };
 		1FDBA6B34191BD05C33E7153 /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4AB4A7D546F89E5F67F5AA /* QuickActions.swift */; };
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
@@ -52,7 +53,7 @@
 		897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92D91657DBB6423E6BBE725 /* DataStorageView.swift */; };
 		8C598D4A09D89CC736EB8DD5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */; };
 		8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */; };
-		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
 		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
@@ -74,7 +75,7 @@
 		E85D86A3C5BC5FC8E8E6A062 /* SyncStatusChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */; };
 		EA4E73E505B881123C11206C /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 772006EE80317C193341A8F4 /* GSDSnapshot */; };
 		EA9A76CFD282A149ABFD0FE3 /* TaskCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6988BDFABF5E325C967D8EA /* TaskCardView.swift */; };
-		EA9DA80415D88FF601FCBF70 /* GSDWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E77900FA416C5BD27D556B5F /* GSDWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		EA9DA80415D88FF601FCBF70 /* GSDWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E77900FA416C5BD27D556B5F /* GSDWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EEED564CCDE3349B5B966A0C /* SyncHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */; };
 		F1B330A8B3AF352E918AA98B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8908894C46A7A691FFED08F0 /* PrivacyInfo.xcprivacy */; };
 		F6BD77CCE7D8D5B7A4953F00 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
@@ -137,6 +138,7 @@
 		3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReminderScheduler.swift; sourceTree = "<group>"; };
 		3D312C99EDD96DCCCA77715B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3D8E3161EF21EF57F6E08CB8 /* GSDMenuCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDMenuCommands.swift; sourceTree = "<group>"; };
 		454069942C9F75AFFB235E5C /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDShareExtension.entitlements; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
@@ -189,6 +191,7 @@
 		DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
 		E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncHistoryView.swift; sourceTree = "<group>"; };
 		E77900FA416C5BD27D556B5F /* GSDWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E82FA87A467E8E3CB5B6E075 /* GSD-Catalyst.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GSD-Catalyst.entitlements"; sourceTree = "<group>"; };
 		E859591AFA113674374C5700 /* DemoChoreography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoChoreography.swift; sourceTree = "<group>"; };
 		E87C46CC1405702B23330578 /* ScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotTests.swift; sourceTree = "<group>"; };
 		EA24761F3BB6078DC0F318A8 /* TodaysFocusProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusProvider.swift; sourceTree = "<group>"; };
@@ -236,6 +239,7 @@
 			children = (
 				249F029B40FD9FDAA6A68A25 /* Assets.xcassets */,
 				F13D65075CBAAF0DA403E950 /* ContentView.swift */,
+				E82FA87A467E8E3CB5B6E075 /* GSD-Catalyst.entitlements */,
 				1E44544249232FE202E59EB0 /* GSD.entitlements */,
 				834FF1E8BA076E31BA383962 /* GSDApp.swift */,
 				ABCFD2CB1A7F53B54E6E1725 /* Info.plist */,
@@ -250,6 +254,7 @@
 				3CBE7AF1D884DE679CAEE64D /* Editor */,
 				CA9A551E91A1952A1BA0DAFB /* Effects */,
 				D3E7E0EFB2BB28BBEDE11E7C /* Intents */,
+				D9C6756FD18851BA4C3EE85C /* Mac */,
 				FA90F57386B51F3EB784FDB4 /* Matrix */,
 				F3FD8333B4094D82335A01F0 /* Notifications */,
 				934B723B6C53CBA69947D7C1 /* Onboarding */,
@@ -479,6 +484,14 @@
 				E87C46CC1405702B23330578 /* ScreenshotTests.swift */,
 			);
 			path = ScreenshotTests;
+			sourceTree = "<group>";
+		};
+		D9C6756FD18851BA4C3EE85C /* Mac */ = {
+			isa = PBXGroup;
+			children = (
+				3D8E3161EF21EF57F6E08CB8 /* GSDMenuCommands.swift */,
+			);
+			path = Mac;
 			sourceTree = "<group>";
 		};
 		E3E7A9EE8C0A43B83CCADEC0 /* Settings */ = {
@@ -740,6 +753,7 @@
 				58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
 				FF5DA971C1D7F0E459C85820 /* GSDAppIntents.swift in Sources */,
+				1F6721700983447468D664C1 /* GSDMenuCommands.swift in Sources */,
 				CD46F261D6842C4865DDACB6 /* KeychainTokenStore.swift in Sources */,
 				34A8E574358FAB0570162302 /* LiveReminderScheduler.swift in Sources */,
 				83388C6EE74A09C1F6C7AC1E /* LiveWebAuthPresenter.swift in Sources */,
@@ -789,11 +803,13 @@
 /* Begin PBXTargetDependency section */
 		23293F0D3E5D5FC728EE1818 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = 3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */;
 			targetProxy = F84A37D89CDEAAC02B1DA7F2 /* PBXContainerItemProxy */;
 		};
 		4E68D6359FE50C2C55CABBEF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
+			platformFilter = ios;
 			target = FB5769502DA33695CDF99A6E /* GSDWidgets */;
 			targetProxy = 9F2BB16D90F4AFDB23B6F144 /* PBXContainerItemProxy */;
 		};
@@ -828,8 +844,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/GSD.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "App/GSD-Catalyst.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -838,6 +856,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd;
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -848,8 +867,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/GSD.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "App/GSD-Catalyst.entitlements";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
+				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -858,6 +879,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd;
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

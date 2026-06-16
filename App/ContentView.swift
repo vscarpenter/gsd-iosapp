@@ -43,6 +43,9 @@ struct ContentView: View {
                 DeepLinkHandoff.clearPendingURL()
                 handleDeepLink(url)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdShowCommandPalette)) { _ in
+                palette.showPalette = true
+            }
             .task {
                 if let url = DeepLinkHandoff.consumePendingURL() {
                     handleDeepLink(url)
@@ -76,6 +79,9 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var keyboardShortcuts: some View {
+        #if targetEnvironment(macCatalyst)
+        EmptyView()   // On Mac these live in the menu bar (GSDMenuCommands) — avoid double-binding.
+        #else
         Group {
             Button("", action: { palette.showPalette = true })
                 .keyboardShortcut("k", modifiers: .command)
@@ -94,6 +100,7 @@ struct ContentView: View {
         }
         .opacity(0)
         .accessibilityHidden(true)
+        #endif
     }
 
     private func handleDeepLink(_ url: URL) {
