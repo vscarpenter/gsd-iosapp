@@ -80,7 +80,10 @@ struct ContentView: View {
 
     @ViewBuilder private var keyboardShortcuts: some View {
         #if targetEnvironment(macCatalyst)
-        EmptyView()   // On Mac these live in the menu bar (GSDMenuCommands) — avoid double-binding.
+        // On Mac these shortcuts live in the menu bar (GSDMenuCommands) — avoid double-binding.
+        // ⌘F is intentionally not re-provided on Mac (the palette opens with ⌘K); ⌘F is left to
+        // the system text-find layer.
+        EmptyView()
         #else
         Group {
             Button("", action: { palette.showPalette = true })

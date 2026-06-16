@@ -14,15 +14,13 @@ struct GSDMenuCommands: Commands {
             }
             .keyboardShortcut("n", modifiers: .command)
         }
-        // Find ▸ open the ⌘K command palette.
-        CommandGroup(after: .newItem) {
+        // Top-level "View" menu mirroring the quadrant/navigation shortcuts.
+        CommandMenu(String(localized: "View")) {
             Button(String(localized: "Find…")) {
                 NotificationCenter.default.post(name: .gsdShowCommandPalette, object: nil)
             }
             .keyboardShortcut("k", modifiers: .command)
-        }
-        // Top-level "View" menu mirroring the quadrant/navigation shortcuts.
-        CommandMenu(String(localized: "View")) {
+            Divider()
             Button(String(localized: "Today's Focus")) { DeepLinkHandoff.open(.focus) }
             Divider()
             Button(Quadrant.urgentImportant.title) { DeepLinkHandoff.open(.quadrant(.urgentImportant)) }
