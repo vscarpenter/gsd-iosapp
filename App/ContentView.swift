@@ -31,10 +31,14 @@ struct ContentView: View {
             // Hidden ⌘K trigger — a zero-size button carrying the keyboard shortcut so the
             // hardware ⌘K opens the palette anywhere in the app.
             .background { keyboardShortcuts }
+            // Catalyst re-inject: its sheet hosting controller evaluates the presentation's
+            // preferences before it inherits the presenter's environment, so @Observable stores
+            // must be re-applied on the presented content (a no-op on iOS). Without it, the sheet's
+            // @Environment(TaskStore.self) read traps ("No Observable object of type TaskStore").
             .sheet(isPresented: $palette.showPalette, onDismiss: presentPendingEditor) {
-                CommandPaletteView(onSelect: handle)
+                CommandPaletteView(onSelect: handle).environment(store)
             }
-            .sheet(item: $paletteEditor) { TaskEditorView(request: $0) }
+            .sheet(item: $paletteEditor) { TaskEditorView(request: $0).environment(store) }
             .onOpenURL { handleDeepLink($0) }
             .onContinueUserActivity(CSSearchableItemActionType, perform: handleSpotlightActivity)
             .onReceive(NotificationCenter.default.publisher(for: .gsdOpenDeepLink)) { notification in
@@ -232,8 +236,8 @@ private struct RegularRootView: View {
         @Bindable var palette = palette
         NavigationSplitView {
             List(selection: $palette.regularSelection) {
-                sidebarNavLabel(String(localized: "Matrix"), "square.grid.2x2").tag(RegularItem.matrix)
-                sidebarNavLabel(String(localized: "Dashboard"), "chart.bar.xaxis").tag(RegularItem.dashboard)
+                sidebarNavLabel(String(localized: "Matrix"), "square.grid.2x2", .matrix)
+                sidebarNavLabel(String(localized: "Dashboard"), "chart.bar.xaxis", .dashboard)
 
                 Section(String(localized: "Smart Views")) {
                     ForEach(store.pinnedViews) { view in sidebarRow(view) }
@@ -250,8 +254,8 @@ private struct RegularRootView: View {
                 }
 
                 Section(String(localized: "Library")) {
-                    sidebarNavLabel(String(localized: "Archive"), "archivebox").tag(RegularItem.archive)
-                    sidebarNavLabel(String(localized: "Settings"), "gearshape").tag(RegularItem.settings)
+                    sidebarNavLabel(String(localized: "Archive"), "archivebox", .archive)
+                    sidebarNavLabel(String(localized: "Settings"), "gearshape", .settings)
                 }
             }
             .scrollContentBackground(.hidden)
@@ -268,7 +272,7 @@ private struct RegularRootView: View {
                                    health: sync.health) { palette.regularSelection = .settings }
                 }
             }
-            .sheet(item: $editorTarget) { SmartViewEditorView(target: $0) }
+            .sheet(item: $editorTarget) { SmartViewEditorView(target: $0).environment(store) }  // Catalyst re-inject (see above)
             .taskActionFailureAlert($actionFailure)
         } detail: {
             switch palette.regularSelection {
@@ -291,16 +295,27 @@ private struct RegularRootView: View {
     }
 
     /// A top-level sidebar destination: graphite icon + ink label (de-blued chrome).
-    private func sidebarNavLabel(_ title: String, _ icon: String) -> some View {
+    private func sidebarNavLabel(_ title: String, _ icon: String, _ item: RegularItem) -> some View {
         Label {
-            Text(title).foregroundStyle(Surface.ink)
+            Text(title).foregroundStyle(sidebarInk(item, base: Surface.ink))
         } icon: {
-            Image(systemName: icon).foregroundStyle(Surface.ink2)
+            Image(systemName: icon).foregroundStyle(sidebarInk(item, base: Surface.ink2))
         }
+        .tag(item)
+    }
+
+    /// The row's normal ink, or the on-accent glyph color when it is the selected row over the
+    /// opaque Catalyst selection fill. iPad's selection is translucent, so it keeps the graphite ink.
+    private func sidebarInk(_ item: RegularItem, base: Color) -> Color {
+        #if targetEnvironment(macCatalyst)
+        palette.regularSelection == item ? Surface.inkOnAccent : base
+        #else
+        base
+        #endif
     }
 
     @ViewBuilder private func sidebarRow(_ view: SmartView) -> some View {
-        SmartViewRow(view: view)
+        SmartViewRow(view: view, selected: palette.regularSelection == .smartView(view.id))
             .tag(RegularItem.smartView(view.id))
             .contextMenu {
                 let isPinned = store.pinnedSmartViewIds.contains(view.id)

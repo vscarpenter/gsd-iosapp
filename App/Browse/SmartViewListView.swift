@@ -63,7 +63,7 @@ struct SmartViewListView: View {
                     }
                 }
             }
-            .sheet(item: $editorTarget) { SmartViewEditorView(target: $0) }
+            .sheet(item: $editorTarget) { SmartViewEditorView(target: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
             .taskActionFailureAlert($actionFailure)
         }
     }
@@ -117,20 +117,33 @@ struct SmartViewListView: View {
 struct SmartViewRow: View {
     @Environment(TaskStore.self) private var store
     let view: SmartView
+    /// When this is the selected sidebar row on Catalyst, the content sits on the opaque accent
+    /// fill, so its colors flip to the on-accent glyph color. Default false (the Browse list and
+    /// iPad's translucent selection) keeps the identity/ink colors.
+    var selected: Bool = false
     private var count: Int { store.tasks(matching: view.criteria).count }
 
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: view.icon)
                 .font(.body)
-                .foregroundStyle(Self.identityColor(for: view.id))
+                .foregroundStyle(onAccent(or: Self.identityColor(for: view.id)))
                 .frame(width: 28)
-            Text(view.name).foregroundStyle(Surface.ink)
+            Text(view.name).foregroundStyle(onAccent(or: Surface.ink))
             Spacer()
-            Text("\(count)").font(.callout).monospacedDigit().foregroundStyle(Surface.ink3)
+            Text("\(count)").font(.callout).monospacedDigit().foregroundStyle(onAccent(or: Surface.ink3))
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "\(view.name), \(count) tasks"))
+    }
+
+    /// `Surface.inkOnAccent` when selected over the opaque Catalyst fill; otherwise `base`.
+    private func onAccent(or base: Color) -> Color {
+        #if targetEnvironment(macCatalyst)
+        selected ? Surface.inkOnAccent : base
+        #else
+        base
+        #endif
     }
 
     /// Graphite by default; an accent only where the view has identity.

@@ -44,7 +44,7 @@ struct DashboardView: View {
             .background(Surface.paper)
             .navigationTitle(String(localized: "Dashboard"))
             .toolbar { paletteButton(palette) }
-            .sheet(item: $editor) { TaskEditorView(request: $0) }
+            .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         }
     }
 
