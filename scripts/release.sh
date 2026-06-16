@@ -15,6 +15,8 @@
 #   scripts/release.sh --no-bump        # release the current project.yml version unchanged
 #   scripts/release.sh --build-only     # archive + export the .ipa, but DO NOT upload
 #   scripts/release.sh patch --build-only   # combine a bump with build-only
+#   scripts/release.sh --mac                # Mac Catalyst: archive for macOS, export .pkg, upload to TestFlight
+#   scripts/release.sh --mac --build-only   # Catalyst build + export .pkg, but DO NOT upload
 #
 # Authentication (pick ONE; auto-detected from the environment — nothing secret lives in the repo):
 #
@@ -136,8 +138,8 @@ xcodebuild \
   "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}" \
   archive
 
-# --- export the .ipa ----------------------------------------------------------
-note "Exporting .ipa"
+# --- export the artifact (.ipa or .pkg) ---------------------------------------
+note "Exporting artifact"
 xcodebuild \
   -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
@@ -146,23 +148,23 @@ xcodebuild \
   -allowProvisioningUpdates \
   "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
 
-IPA="$(/usr/bin/find "$EXPORT_PATH" -maxdepth 1 -name "$ARTIFACT_GLOB" | head -1)"
-[[ -n "$IPA" ]] || die "no $ARTIFACT_GLOB produced in $EXPORT_PATH"
-note "Exported: $IPA"
+ARTIFACT="$(/usr/bin/find "$EXPORT_PATH" -maxdepth 1 -name "$ARTIFACT_GLOB" | head -1)"
+[[ -n "$ARTIFACT" ]] || die "no $ARTIFACT_GLOB produced in $EXPORT_PATH"
+note "Exported: $ARTIFACT"
 
 # --- upload to TestFlight -----------------------------------------------------
 if [[ "$UPLOAD" -eq 0 ]]; then
   note "Build-only: skipping upload. Upload manually with Transporter, or re-run without --build-only."
-  printf '\nDone. .ipa ready at:\n  %s\n' "$IPA"
+  printf '\nDone. Artifact ready at:\n  %s\n' "$ARTIFACT"
   exit 0
 fi
 
 note "Uploading to App Store Connect / TestFlight ($AUTH_MODE)"
 if [[ "$AUTH_MODE" == "apikey" ]]; then
-  xcrun altool --upload-app -f "$IPA" --type "$ALTOOL_TYPE" \
+  xcrun altool --upload-app -f "$ARTIFACT" --type "$ALTOOL_TYPE" \
     --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
 else
-  xcrun altool --upload-app -f "$IPA" --type "$ALTOOL_TYPE" \
+  xcrun altool --upload-app -f "$ARTIFACT" --type "$ALTOOL_TYPE" \
     --username "$ASC_USERNAME" --password "@env:ASC_APP_PASSWORD"
 fi
 

@@ -2,17 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <!-- Mac Catalyst App Store / TestFlight distribution (.pkg). -->
+    <!-- Mac Catalyst App Store / TestFlight distribution. Used by scripts/release.sh --mac. -->
     <key>method</key>
     <string>app-store-connect</string>
+    <!-- Export a local .pkg; scripts/release.sh performs the upload as a separate, auditable step. -->
     <key>destination</key>
     <string>export</string>
     <key>teamID</key>
     <string>52HVJ3VDSM</string>
+    <!-- Let Xcode pick/create the distribution cert + App Store profile (needs -allowProvisioningUpdates + auth). -->
     <key>signingStyle</key>
     <string>automatic</string>
     <key>uploadSymbols</key>
     <true/>
+    <!-- We own the version/build via scripts/bump-version.sh; do not let Xcode rewrite CFBundleVersion. -->
     <key>manageAppVersionAndBuildNumber</key>
     <false/>
 </dict>
