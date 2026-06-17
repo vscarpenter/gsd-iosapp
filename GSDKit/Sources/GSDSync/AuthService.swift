@@ -66,8 +66,8 @@ public struct AuthService: Sendable {
     /// The caller MUST erase the user's tasks (SyncEngine.eraseAllRemote) BEFORE this — once the
     /// record is gone the token is invalid and tasks can no longer be removed.
     public func deleteAccount() async throws {
-        guard let token = try await validToken() else { throw AuthError.notSignedIn }
         guard let id = currentUserId() else { throw AuthError.notSignedIn }
+        guard let token = try await validToken() else { throw AuthError.notSignedIn }
         let request = client.authedRequest(
             path: "/api/collections/users/records/\(id)", method: "DELETE", token: token)
         do {

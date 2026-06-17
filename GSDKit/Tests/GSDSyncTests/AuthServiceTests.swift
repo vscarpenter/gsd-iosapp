@@ -76,21 +76,15 @@ struct AuthServiceTests {
         await #expect(throws: AuthError.providerNotFound("apple")) { _ = try await service.signIn(provider: "apple") }
     }
 
-    private func makeJWT(exp: Int) -> String {
+    private func makeJWT(id: String? = nil, exp: Int) -> String {
         func b64url(_ d: Data) -> String {
             d.base64EncodedString().replacingOccurrences(of: "+", with: "-")
                 .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
         }
         let h = b64url(Data(#"{"alg":"HS256","typ":"JWT"}"#.utf8))
-        return "\(h).\(b64url(Data("{\"exp\":\(exp)}".utf8))).sig"
-    }
-    private func makeJWT(id: String, exp: Int) -> String {
-        func b64url(_ d: Data) -> String {
-            d.base64EncodedString().replacingOccurrences(of: "+", with: "-")
-                .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
-        }
-        let h = b64url(Data(#"{"alg":"HS256","typ":"JWT"}"#.utf8))
-        return "\(h).\(b64url(Data("{\"id\":\"\(id)\",\"exp\":\(exp)}".utf8))).sig"
+        var claims = "\"exp\":\(exp)"
+        if let id { claims = "\"id\":\"\(id)\",\(claims)" }
+        return "\(h).\(b64url(Data("{\(claims)}".utf8))).sig"
     }
     private func refreshService(store: TokenStore, exec: FakeExecutor, now: Date) -> AuthService {
         AuthService(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
