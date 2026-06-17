@@ -26,6 +26,8 @@ struct SettingsView: View {
     @State private var authStatusText: String?
     @State private var authIsDenied = false
 
+    @State private var showDeleteAccount = false
+
     var body: some View {
         NavigationStack {
             Form {
@@ -98,6 +100,12 @@ struct SettingsView: View {
                 } label: {
                     Label(String(localized: "Sign Out"), systemImage: "rectangle.portrait.and.arrow.right")
                 }
+                Button(role: .destructive) {
+                    showDeleteAccount = true
+                } label: {
+                    Label(String(localized: "Delete Account…"), systemImage: "trash")
+                }
+                .disabled(session.inProgress)
             } else {
                 Button {
                     _Concurrency.Task { await session.signIn(provider: "google") }
@@ -142,6 +150,21 @@ struct SettingsView: View {
             if let error = session.lastError {
                 Text(error).font(.footnote).foregroundStyle(Surface.alert)
             }
+        }
+        .confirmationDialog(
+            String(localized: "Delete your account?"),
+            isPresented: $showDeleteAccount,
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "Delete & keep tasks on this device"), role: .destructive) {
+                _Concurrency.Task { await session.deleteAccount(eraseLocalData: false) }
+            }
+            Button(String(localized: "Delete & erase everything"), role: .destructive) {
+                _Concurrency.Task { await session.deleteAccount(eraseLocalData: true) }
+            }
+            Button(String(localized: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "This permanently deletes your account and every task synced to it. This can't be undone."))
         }
     }
 
