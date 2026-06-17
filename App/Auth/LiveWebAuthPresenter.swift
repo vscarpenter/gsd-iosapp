@@ -16,7 +16,12 @@ final class LiveWebAuthPresenter: NSObject, WebAuthPresenting, @unchecked Sendab
                     continuation.resume(throwing: AuthError.presentationFailed)
                     return
                 }
-                let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: callbackURLScheme) { callbackURL, error in
+                // `@Sendable` is load-bearing: under Mac Catalyst, AuthenticationServices invokes this
+                // completion on a background XPC queue (com.apple.NSXPCConnection…SafariLaunchAgent), not
+                // the main thread as on iOS. Without it, the closure inherits @MainActor from the enclosing
+                // Task and the synthesized isolation check trips dispatch_assert_queue(main) → crash. The
+                // body is thread-agnostic: a Sendable continuation plus an explicit @MainActor hop below.
+                let session = ASWebAuthenticationSession(url: authURL, callbackURLScheme: callbackURLScheme) { @Sendable callbackURL, error in
                     Task { @MainActor in
                         self.session = nil
                         self.anchor = nil

@@ -269,9 +269,15 @@ struct SettingsView: View {
         }
         if authIsDenied {
             Button(String(localized: "Open System Settings")) {
+                #if targetEnvironment(macCatalyst)
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.notifications") {
+                    UIApplication.shared.open(url)
+                }
+                #else
                 if let url = URL(string: UIApplication.openSettingsURLString) {
                     UIApplication.shared.open(url)
                 }
+                #endif
             }
         } else if !store.notificationSettings.permissionAsked {
             Button(String(localized: "Enable Notifications")) {

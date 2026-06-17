@@ -165,5 +165,8 @@ struct GSDApp: App {
                 }
             }
         }
+        #if targetEnvironment(macCatalyst)
+        .commands { GSDMenuCommands() }
+        #endif
     }
 }

@@ -86,7 +86,7 @@ private struct MatrixListContent: View {
                     .background(.bar)
             }
         }
-        .sheet(item: $editor) { TaskEditorView(request: $0) }
+        .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }

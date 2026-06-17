@@ -17,19 +17,26 @@ enum BackgroundRefresh {
     /// main actor throughout; `handle` does only trivial sync work and offloads the real work to a Task.
     @MainActor
     static func register(store: TaskStore) {
+        #if !targetEnvironment(macCatalyst)
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskIdentifier, using: .main) { task in
             guard let refreshTask = task as? BGAppRefreshTask else { task.setTaskCompleted(success: false); return }
             handle(refreshTask, store: store)
         }
+        #endif
+        // On Mac Catalyst there is no BGTaskScheduler: foreground refresh (GSDApp `.task`)
+        // and SyncCoordinator's cadence timer cover the same freshness need.
     }
 
     /// Submit the next refresh request (earliest ~15 minutes out — the OS decides actual timing).
     static func schedule() {
+        #if !targetEnvironment(macCatalyst)
         let request = BGAppRefreshTaskRequest(identifier: taskIdentifier)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
         try? BGTaskScheduler.shared.submit(request)
+        #endif
     }
 
+    #if !targetEnvironment(macCatalyst)
     @MainActor
     private static func handle(_ task: BGAppRefreshTask, store: TaskStore) {
         schedule()   // always queue the next one
@@ -50,4 +57,5 @@ enum BackgroundRefresh {
             task.setTaskCompleted(success: false)
         }
     }
+    #endif
 }

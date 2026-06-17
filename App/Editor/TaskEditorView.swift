@@ -117,6 +117,7 @@ struct TaskEditorView: View {
                 currentDependencies: dependencies,
                 onPick: { dependencies.append($0) }
             )
+            .environment(store)  // Catalyst: re-inject store across the (nested) sheet boundary
         }
     }
 

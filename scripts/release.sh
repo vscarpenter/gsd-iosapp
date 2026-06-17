@@ -15,6 +15,8 @@
 #   scripts/release.sh --no-bump        # release the current project.yml version unchanged
 #   scripts/release.sh --build-only     # archive + export the .ipa, but DO NOT upload
 #   scripts/release.sh patch --build-only   # combine a bump with build-only
+#   scripts/release.sh --mac                # Mac Catalyst: archive for macOS, export .pkg, upload to TestFlight
+#   scripts/release.sh --mac --build-only   # Catalyst build + export .pkg, but DO NOT upload
 #
 # Authentication (pick ONE; auto-detected from the environment — nothing secret lives in the repo):
 #
@@ -52,16 +54,17 @@ EXPORT_OPTIONS="$REPO_ROOT/ExportOptions.plist"
 BUILD_DIR="$REPO_ROOT/build"
 ARCHIVE_PATH="$BUILD_DIR/GSD.xcarchive"
 EXPORT_PATH="$BUILD_DIR/export"
-[[ -f "$EXPORT_OPTIONS" ]] || die "ExportOptions.plist not found at $EXPORT_OPTIONS"
 
 # --- parse args: an optional bump command + optional flags --------------------
 BUMP="build"          # default: increment the build number so the upload is always valid
 UPLOAD=1
+PLATFORM="ios"
 for arg in "$@"; do
   case "$arg" in
     -h|--help|help) usage; exit 0 ;;
     --no-bump)    BUMP="" ;;
     --build-only) UPLOAD=0 ;;
+    --mac)        PLATFORM="mac" ;;
     build|patch|minor|major) BUMP="$arg" ;;
     set) BUMP="set" ;;
     *) ;;  # trailing operands (e.g. the version+build for `set`) are forwarded below
@@ -90,6 +93,19 @@ if [[ "$AUTH_MODE" == "apikey" ]]; then
               -authenticationKeyIssuerID "$ASC_ISSUER_ID")
 fi
 
+# --- platform-specific knobs (iOS default; --mac switches to Catalyst) --------
+if [[ "$PLATFORM" == "mac" ]]; then
+  ARCHIVE_DEST='generic/platform=macOS,variant=Mac Catalyst'
+  EXPORT_OPTIONS="$REPO_ROOT/ExportOptions-Mac.plist"
+  ALTOOL_TYPE="macos"
+  ARTIFACT_GLOB='*.pkg'
+else
+  ARCHIVE_DEST='generic/platform=iOS'
+  ALTOOL_TYPE="ios"
+  ARTIFACT_GLOB='*.ipa'
+fi
+[[ -f "$EXPORT_OPTIONS" ]] || die "export options not found at $EXPORT_OPTIONS"
+
 # --- version bump (or just regenerate the project) ----------------------------
 if [[ -n "$BUMP" ]]; then
   note "Bumping version ($BUMP)"
@@ -111,19 +127,19 @@ rm -rf "$ARCHIVE_PATH" "$EXPORT_PATH"
 mkdir -p "$BUILD_DIR"
 
 # --- archive ------------------------------------------------------------------
-note "Archiving (Release, generic/platform=iOS)"
+note "Archiving (Release, $ARCHIVE_DEST)"
 xcodebuild \
   -project "$PROJECT" \
   -scheme "$SCHEME" \
   -configuration Release \
-  -destination 'generic/platform=iOS' \
+  -destination "$ARCHIVE_DEST" \
   -archivePath "$ARCHIVE_PATH" \
   -allowProvisioningUpdates \
   "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}" \
   archive
 
-# --- export the .ipa ----------------------------------------------------------
-note "Exporting .ipa"
+# --- export the artifact (.ipa or .pkg) ---------------------------------------
+note "Exporting artifact"
 xcodebuild \
   -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
@@ -132,23 +148,23 @@ xcodebuild \
   -allowProvisioningUpdates \
   "${AUTH_FLAGS[@]+"${AUTH_FLAGS[@]}"}"
 
-IPA="$(/usr/bin/find "$EXPORT_PATH" -maxdepth 1 -name '*.ipa' | head -1)"
-[[ -n "$IPA" ]] || die "no .ipa produced in $EXPORT_PATH"
-note "Exported: $IPA"
+ARTIFACT="$(/usr/bin/find "$EXPORT_PATH" -maxdepth 1 -name "$ARTIFACT_GLOB" | head -1)"
+[[ -n "$ARTIFACT" ]] || die "no $ARTIFACT_GLOB produced in $EXPORT_PATH"
+note "Exported: $ARTIFACT"
 
 # --- upload to TestFlight -----------------------------------------------------
 if [[ "$UPLOAD" -eq 0 ]]; then
   note "Build-only: skipping upload. Upload manually with Transporter, or re-run without --build-only."
-  printf '\nDone. .ipa ready at:\n  %s\n' "$IPA"
+  printf '\nDone. Artifact ready at:\n  %s\n' "$ARTIFACT"
   exit 0
 fi
 
 note "Uploading to App Store Connect / TestFlight ($AUTH_MODE)"
 if [[ "$AUTH_MODE" == "apikey" ]]; then
-  xcrun altool --upload-app -f "$IPA" --type ios \
+  xcrun altool --upload-app -f "$ARTIFACT" --type "$ALTOOL_TYPE" \
     --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
 else
-  xcrun altool --upload-app -f "$IPA" --type ios \
+  xcrun altool --upload-app -f "$ARTIFACT" --type "$ALTOOL_TYPE" \
     --username "$ASC_USERNAME" --password "@env:ASC_APP_PASSWORD"
 fi
 
