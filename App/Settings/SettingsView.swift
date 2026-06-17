@@ -355,6 +355,12 @@ struct SettingsView: View {
             Link(String(localized: "Contact Support"), destination: URL(string: "mailto:vscarpenter@gmail.com?subject=GSD%20Task%20Manager%20Support")!)
                 .foregroundStyle(Surface.ink)
             Button {
+                // ContentView owns the Help sheet (one host for Settings + the Mac Help menu).
+                NotificationCenter.default.post(name: .gsdShowHelp, object: nil)
+            } label: {
+                Label(String(localized: "How to use GSD"), systemImage: "questionmark.circle")
+            }
+            Button {
                 hasOnboarded = false       // App root re-presents onboarding on the flag change
             } label: {
                 Label(String(localized: "Show Onboarding Again"), systemImage: "sparkles")

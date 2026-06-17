@@ -26,6 +26,8 @@ struct ContentView: View {
     @State private var pendingEditor: EditorRequest?
     /// Mac "About GSD" panel (app menu), posted by GSDMenuCommands on Catalyst.
     @State private var showAbout = false
+    /// "Field Guide" help sheet, posted by Settings ▸ About (all platforms) and the Mac Help menu.
+    @State private var showHelp = false
 
     var body: some View {
         rootContent
@@ -42,6 +44,7 @@ struct ContentView: View {
             }
             .sheet(item: $paletteEditor) { TaskEditorView(request: $0).environment(store) }
             .sheet(isPresented: $showAbout) { AboutView().presentationSizing(.fitted) }
+            .sheet(isPresented: $showHelp) { HelpView() }
             .onOpenURL { handleDeepLink($0) }
             .onContinueUserActivity(CSSearchableItemActionType, perform: handleSpotlightActivity)
             .onReceive(NotificationCenter.default.publisher(for: .gsdOpenDeepLink)) { notification in
@@ -55,6 +58,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .gsdShowAbout)) { _ in
                 showAbout = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdShowHelp)) { _ in
+                showHelp = true
             }
             .task {
                 if let url = DeepLinkHandoff.consumePendingURL() {
