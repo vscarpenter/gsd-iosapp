@@ -91,6 +91,40 @@ final class SessionStore {
         coordinator?.signedOut()   // tear down + reset cursor; local tasks kept
     }
 
+    /// In-app account deletion (App Store 5.1.1(v)). Ordered + fail-safe: erase remote tasks →
+    /// delete the account record → ONLY THEN local teardown. A remote failure aborts and leaves
+    /// local data untouched (offline-first: never wipe local while the remote account survives).
+    func deleteAccount(eraseLocalData: Bool) async {
+        inProgress = true; lastError = nil
+        defer { inProgress = false }
+
+        // 1. Erase the user's server tasks first (while the token is still valid).
+        guard await coordinator?.eraseRemoteTasks() ?? true else {
+            lastError = String(localized: "Couldn't reach the server to delete your account. Check your connection and try again.")
+            return
+        }
+
+        // 2. Delete the account record.
+        do {
+            try await auth.deleteAccount()
+        } catch AuthError.notSignedIn {
+            lastError = String(localized: "Your session expired — sign in again to delete your account.")
+            signOut()   // clear the dead session so Settings offers sign-in again
+            return
+        } catch {
+            lastError = String(localized: "Couldn't delete your account right now. Check your connection and try again.")
+            return
+        }
+
+        // 3. Local teardown — only after the remote delete is confirmed.
+        if eraseLocalData {
+            // Best-effort: the remote account is already gone, so there's no safe fallback —
+            // wipe what we can. (Unlike `apply(.fresh)`, a throw here can't undo the deletion.)
+            try? await eraseLocal()
+        }
+        signOut()
+    }
+
     // MARK: Account switch (design 2026-06-10 Fix C)
 
     /// Same/first account → record owner + start sync (today's behavior). Different account
