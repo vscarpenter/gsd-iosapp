@@ -22,7 +22,9 @@ struct AuthServiceTests {
     final class FakeExecutor: RequestExecuting, @unchecked Sendable {
         var routes: [String: (Data, Int)] = [:]
         private(set) var lastBody: Data?
+        private(set) var lastRequest: URLRequest?
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            lastRequest = request
             if request.url!.path.hasSuffix("auth-with-oauth2") { lastBody = request.httpBody }
             let (data, status) = routes.first { request.url!.path.hasSuffix($0.key) }?.value ?? (Data(), 404)
             return (data, HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
@@ -81,6 +83,14 @@ struct AuthServiceTests {
         }
         let h = b64url(Data(#"{"alg":"HS256","typ":"JWT"}"#.utf8))
         return "\(h).\(b64url(Data("{\"exp\":\(exp)}".utf8))).sig"
+    }
+    private func makeJWT(id: String, exp: Int) -> String {
+        func b64url(_ d: Data) -> String {
+            d.base64EncodedString().replacingOccurrences(of: "+", with: "-")
+                .replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+        }
+        let h = b64url(Data(#"{"alg":"HS256","typ":"JWT"}"#.utf8))
+        return "\(h).\(b64url(Data("{\"id\":\"\(id)\",\"exp\":\(exp)}".utf8))).sig"
     }
     private func refreshService(store: TokenStore, exec: FakeExecutor, now: Date) -> AuthService {
         AuthService(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
@@ -174,5 +184,42 @@ struct AuthServiceTests {
         let service = refreshService(store: InMemoryTokenStore(), exec: FakeExecutor(),
                                      now: Date(timeIntervalSince1970: 0))
         #expect(service.currentUserId() == nil)
+    }
+
+    @Test func deleteAccountBuildsAuthedDeleteForTheUserRecord() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let token = makeJWT(id: "u1", exp: 1_893_456_000)
+        let store = InMemoryTokenStore(token); let exec = FakeExecutor()
+        exec.routes["records/u1"] = (Data(), 204)
+        try await refreshService(store: store, exec: exec, now: now).deleteAccount()
+        #expect(exec.lastRequest?.httpMethod == "DELETE")
+        #expect(exec.lastRequest?.url?.path.hasSuffix("/api/collections/users/records/u1") == true)
+        #expect(exec.lastRequest?.value(forHTTPHeaderField: "Authorization") == token)
+        #expect(store.token == nil)   // success ends the session
+    }
+
+    @Test func deleteAccountAuthRejectionClearsTokenAndThrows() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let store = InMemoryTokenStore(makeJWT(id: "u1", exp: 1_893_456_000)); let exec = FakeExecutor()
+        exec.routes["records/u1"] = (try fixture("pb_error"), 403)
+        let service = refreshService(store: store, exec: exec, now: now)
+        await #expect(throws: PocketBaseError.self) { try await service.deleteAccount() }
+        #expect(store.token == nil)   // dead session → cleared
+    }
+
+    @Test func deleteAccountTransientFailureKeepsTokenForRetry() async throws {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        let kept = makeJWT(id: "u1", exp: 1_893_456_000)
+        let store = InMemoryTokenStore(kept); let exec = FakeExecutor()
+        exec.routes["records/u1"] = (try fixture("pb_error"), 500)   // hiccup, not a rejection
+        let service = refreshService(store: store, exec: exec, now: now)
+        await #expect(throws: PocketBaseError.self) { try await service.deleteAccount() }
+        #expect(store.token == kept)  // retryable; NOT signed out
+    }
+
+    @Test func deleteAccountThrowsNotSignedInWhenNoToken() async throws {
+        let service = refreshService(store: InMemoryTokenStore(), exec: FakeExecutor(),
+                                     now: Date(timeIntervalSince1970: 1_000_000_000))
+        await #expect(throws: AuthError.notSignedIn) { try await service.deleteAccount() }
     }
 }

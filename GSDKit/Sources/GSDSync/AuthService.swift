@@ -60,6 +60,25 @@ public struct AuthService: Sendable {
         }
     }
 
+    /// Deletes the signed-in user's PocketBase account record (App Store 5.1.1(v)). Requires a live
+    /// token. On a confirmed delete — and on a 401/403, where the session is already dead — the
+    /// Keychain token is cleared; a transient/network failure leaves it so the user can retry.
+    /// The caller MUST erase the user's tasks (SyncEngine.eraseAllRemote) BEFORE this — once the
+    /// record is gone the token is invalid and tasks can no longer be removed.
+    public func deleteAccount() async throws {
+        guard let token = try await validToken() else { throw AuthError.notSignedIn }
+        guard let id = currentUserId() else { throw AuthError.notSignedIn }
+        let request = client.authedRequest(
+            path: "/api/collections/users/records/\(id)", method: "DELETE", token: token)
+        do {
+            try await client.sendNoContent(request)
+        } catch {
+            if Self.isAuthRejection(error) { tokenStore.clear() }
+            throw error
+        }
+        tokenStore.clear()
+    }
+
     /// Extend a still-valid JWT (no refresh-token). The Keychain is cleared ONLY when the server
     /// rejects the token itself (401/403) — a transient network/server failure must not sign the
     /// user out (offline-first: airplane mode during a refresh is routine, not a session loss).
