@@ -3,7 +3,7 @@ import UIKit
 import GSDModel
 
 /// The cross-platform "Field Guide" — a static reference sheet mirroring the web
-/// help drawer (gsd.vinny.dev). Shown from Settings ▸ About on every platform and
+/// help drawer (gsdtaskmanager.com). Shown from Settings ▸ About on every platform and
 /// from the Mac Help menu (⌘?). Reads no `@Observable` env (pure content), so —
 /// like `AboutView` — it needs no Catalyst re-injection. Presented as a sheet owned
 /// by `ContentView` via the `.gsdShowHelp` notification.
