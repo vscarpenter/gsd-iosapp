@@ -65,13 +65,19 @@ struct HelpView: View {
             Text(String(localized: "How to use GSD"))
                 .font(.serif(.largeTitle).weight(.semibold))
                 .foregroundStyle(Surface.ink)
+            // Hairline rule turns the masthead into a title bar so the body reads as help,
+            // not a continuation of the headline.
+            Rectangle()
+                .fill(Surface.hairline)
+                .frame(height: 1)
+                .padding(.top, 12)
         }
     }
 
     // MARK: §1 one board, one capture bar
 
     private var boardSection: some View {
-        section(String(localized: "ONE BOARD, ONE CAPTURE BAR")) {
+        section(String(localized: "ONE BOARD, ONE CAPTURE BAR"), icon: "square.grid.2x2") {
             ruledItem(
                 title: String(localized: "The matrix"),
                 body: String(localized: "The classic 2×2 Eisenhower board is your home view. Drag a task between quadrants to reclassify it.")
@@ -86,7 +92,7 @@ struct HelpView: View {
     // MARK: §2 the four quadrants
 
     private var quadrantsSection: some View {
-        section(String(localized: "THE FOUR QUADRANTS")) {
+        section(String(localized: "THE FOUR QUADRANTS"), icon: "circle.grid.2x2", carded: false) {
             ForEach(Quadrant.allCases, id: \.self) { q in
                 QuadrantGuideRow(quadrant: q, blurb: Self.quadrantBlurb(q))
             }
@@ -111,7 +117,7 @@ struct HelpView: View {
     // MARK: §3 quick-add smart syntax
 
     private var syntaxSection: some View {
-        section(String(localized: "QUICK-ADD SMART SYNTAX")) {
+        section(String(localized: "QUICK-ADD SMART SYNTAX"), icon: "text.cursor") {
             Text(String(localized: "Type into the capture bar. GSD parses priority markers from your text as you type, and the dot on the left previews which quadrant the task will land in."))
                 .font(.callout)
                 .foregroundStyle(Surface.ink2)
@@ -149,7 +155,7 @@ struct HelpView: View {
     // MARK: §4 keyboard shortcuts (Mac / iPad only)
 
     private var shortcutsSection: some View {
-        section(String(localized: "KEYBOARD SHORTCUTS")) {
+        section(String(localized: "KEYBOARD SHORTCUTS"), icon: "keyboard") {
             VStack(alignment: .leading, spacing: 10) {
                 ShortcutRow(keys: ["⌘", "K"], label: String(localized: "Open the command palette"))
                 ShortcutRow(keys: ["⌘", "F"], label: String(localized: "Open the command palette to search"))
@@ -169,7 +175,7 @@ struct HelpView: View {
     // MARK: §5 editing, completing, drag-drop (all platforms)
 
     private var gesturesSection: some View {
-        section(String(localized: "EDITING, COMPLETING & DRAG-DROP")) {
+        section(String(localized: "EDITING, COMPLETING & DRAG-DROP"), icon: "hand.draw") {
             ruledItem(
                 title: String(localized: "Complete"),
                 body: String(localized: "Tap the checkbox on any task card. Recurring tasks automatically spawn the next instance.")
@@ -188,7 +194,7 @@ struct HelpView: View {
     // MARK: §6 cloud sync (optional)
 
     private var syncSection: some View {
-        section(String(localized: "CLOUD SYNC (OPTIONAL)")) {
+        section(String(localized: "CLOUD SYNC (OPTIONAL)"), icon: "arrow.triangle.2.circlepath") {
             Text(String(localized: "Sync is off until you turn it on. In Settings, sign in with Google, Apple, or GitHub — once enabled, your tasks sync across your devices and the web app against a self-hosted backend."))
                 .font(.callout)
                 .foregroundStyle(Surface.ink2)
@@ -203,7 +209,7 @@ struct HelpView: View {
     // MARK: §7 privacy
 
     private var privacySection: some View {
-        section(String(localized: "PRIVACY")) {
+        section(String(localized: "PRIVACY"), icon: "lock.shield") {
             Text(String(localized: "Your tasks live on this device. Nothing is sent to a server unless you explicitly sign in and enable sync. The app works fully offline — no account required."))
                 .font(.callout)
                 .foregroundStyle(Surface.ink2)
@@ -224,14 +230,35 @@ struct HelpView: View {
 
     // MARK: building blocks
 
-    /// An uppercase section eyebrow + its content, in the editorial rhythm.
-    private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .tracking(1.1)
-                .foregroundStyle(Surface.ink3)
-            content()
+    /// An icon + uppercase eyebrow header above the section's content. `carded` wraps the
+    /// content in the app's raised card (`surfaceCard`) so each topic reads as a contained
+    /// panel — what turns a flowing article into a scannable help screen. The quadrant tiles
+    /// opt out: they carry their own pigment washes, so a card around them would double the
+    /// containment.
+    private func section<Content: View>(
+        _ title: String,
+        icon: String,
+        carded: Bool = true,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Surface.ink2)   // quiet glyph — tint stays reserved for actions
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .tracking(1.1)
+                    .foregroundStyle(Surface.ink3)
+            }
+            if carded {
+                VStack(alignment: .leading, spacing: 14) { content() }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .surfaceCard()
+            } else {
+                VStack(alignment: .leading, spacing: 10) { content() }
+            }
         }
     }
 

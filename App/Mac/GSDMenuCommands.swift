@@ -82,6 +82,14 @@ struct AboutView: View {
                 .font(.callout.weight(.medium))
                 .foregroundStyle(Surface.tint)   // the one genuine action in the panel → the interactive tint
                 .padding(.top, 4)
+            // Quiet maker's credit, a blank line below the web link. The literal parses as a
+            // LocalizedStringKey → inline Markdown, so "Vinny" is a tappable link; .tint colors
+            // just that run, .foregroundStyle the surrounding text.
+            Text("Crafted by [Vinny](https://vinny.dev/) Carpenter")
+                .font(.footnote)
+                .foregroundStyle(Surface.ink3)
+                .tint(Surface.tint)
+                .padding(.top, 4)
         }
         .multilineTextAlignment(.center)
         .padding(.horizontal, 40)
