@@ -99,10 +99,15 @@ if [[ "$PLATFORM" == "mac" ]]; then
   EXPORT_OPTIONS="$REPO_ROOT/ExportOptions-Mac.plist"
   ALTOOL_TYPE="macos"
   ARTIFACT_GLOB='*.pkg'
+  # altool can't infer the App Apple ID from bundle-id+MAC_OS until a Mac build exists for the
+  # app, so pass it explicitly (one universal app record — same id as iOS). Without it the
+  # upload dies: "Cannot determine the Apple ID from Bundle ID … and platform 'MAC_OS'".
+  APPLE_ID_FLAGS=(--apple-id 6776731612)
 else
   ARCHIVE_DEST='generic/platform=iOS'
   ALTOOL_TYPE="ios"
   ARTIFACT_GLOB='*.ipa'
+  APPLE_ID_FLAGS=()   # iOS auto-detects the Apple ID from the bundle id
 fi
 [[ -f "$EXPORT_OPTIONS" ]] || die "export options not found at $EXPORT_OPTIONS"
 
@@ -162,9 +167,11 @@ fi
 note "Uploading to App Store Connect / TestFlight ($AUTH_MODE)"
 if [[ "$AUTH_MODE" == "apikey" ]]; then
   xcrun altool --upload-app -f "$ARTIFACT" --type "$ALTOOL_TYPE" \
+    "${APPLE_ID_FLAGS[@]+"${APPLE_ID_FLAGS[@]}"}" \
     --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
 else
   xcrun altool --upload-app -f "$ARTIFACT" --type "$ALTOOL_TYPE" \
+    "${APPLE_ID_FLAGS[@]+"${APPLE_ID_FLAGS[@]}"}" \
     --username "$ASC_USERNAME" --password "@env:ASC_APP_PASSWORD"
 fi
 
