@@ -164,7 +164,8 @@ struct OnboardingView: View {
 // MARK: - Illustrations (SF-symbol-free, drawn from the design tokens)
 
 /// The 2×2 app mark: four pigment tiles with a single white check on the Do-First tile.
-private struct AppMark: View {
+/// Shared with the Mac "About GSD" panel (`GSDMenuCommands`).
+struct AppMark: View {
     var body: some View {
         GeometryReader { geo in
             let gap = geo.size.width * 0.07

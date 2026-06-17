@@ -24,6 +24,8 @@ struct ContentView: View {
     /// Stashed when the palette picks an editor result; acted on in the sheet's onDismiss
     /// so we don't dismiss + present in the same runloop (iOS drops the second present).
     @State private var pendingEditor: EditorRequest?
+    /// Mac "About GSD" panel (app menu), posted by GSDMenuCommands on Catalyst.
+    @State private var showAbout = false
 
     var body: some View {
         rootContent
@@ -39,6 +41,7 @@ struct ContentView: View {
                 CommandPaletteView(onSelect: handle).environment(store)
             }
             .sheet(item: $paletteEditor) { TaskEditorView(request: $0).environment(store) }
+            .sheet(isPresented: $showAbout) { AboutView().presentationSizing(.fitted) }
             .onOpenURL { handleDeepLink($0) }
             .onContinueUserActivity(CSSearchableItemActionType, perform: handleSpotlightActivity)
             .onReceive(NotificationCenter.default.publisher(for: .gsdOpenDeepLink)) { notification in
@@ -49,6 +52,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .gsdShowCommandPalette)) { _ in
                 palette.showPalette = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdShowAbout)) { _ in
+                showAbout = true
             }
             .task {
                 if let url = DeepLinkHandoff.consumePendingURL() {
