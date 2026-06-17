@@ -43,6 +43,9 @@ targets:
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         ITSAppUsesNonExemptEncryption: false
+        # Required by the Mac App Store (Catalyst) archive validation; ignored by iOS, which
+        # takes its category from App Store Connect. GSD is a task manager → productivity.
+        LSApplicationCategoryType: public.app-category.productivity
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
