@@ -13,6 +13,13 @@ struct GSDMenuCommands: Commands {
                 NotificationCenter.default.post(name: .gsdShowAbout, object: nil)
             }
         }
+        // Replace the empty stock Help menu with our Field Guide (ContentView shows the sheet).
+        CommandGroup(replacing: .help) {
+            Button(String(localized: "GSD Help")) {
+                NotificationCenter.default.post(name: .gsdShowHelp, object: nil)
+            }
+            .keyboardShortcut("?", modifiers: .command)
+        }
         // Replace the default File ▸ New with "New Task" (⌘N).
         CommandGroup(replacing: .newItem) {
             Button(String(localized: "New Task")) {

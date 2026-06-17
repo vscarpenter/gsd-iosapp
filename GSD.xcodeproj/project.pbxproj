@@ -37,6 +37,7 @@
 		511369ABE5B10E9AB12EEE51 /* ShareComposeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */; };
 		52058F06635130DE73D6A92D /* BackgroundRefresh.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */; };
 		52AD5212537B728E13851A19 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A706546D6BC547A4D13660DC /* ShareViewController.swift */; };
+		5588BCC2EC76EC2BB763FD0C /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FCA43224F505628B890F546 /* HelpView.swift */; };
 		58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */; };
 		59071E4849DBEB9BD62E330F /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90129986F7968EDDC63918F0 /* SyncCoordinator.swift */; };
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
@@ -143,6 +144,7 @@
 		45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDShareExtension.entitlements; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusEntry.swift; sourceTree = "<group>"; };
+		4FCA43224F505628B890F546 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
 		53A151034146B4714F731EE2 /* TaskActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskActions.swift; sourceTree = "<group>"; };
 		5786EAF6D1A1869947855193 /* GSD.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = GSD.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -253,6 +255,7 @@
 				0C2D45D930316312A499B9CB /* Demo */,
 				3CBE7AF1D884DE679CAEE64D /* Editor */,
 				CA9A551E91A1952A1BA0DAFB /* Effects */,
+				E89C0DDD86F19B33C6CA7726 /* Help */,
 				D3E7E0EFB2BB28BBEDE11E7C /* Intents */,
 				D9C6756FD18851BA4C3EE85C /* Mac */,
 				FA90F57386B51F3EB784FDB4 /* Matrix */,
@@ -501,6 +504,14 @@
 				6D97811D144C615B847BA217 /* SettingsView.swift */,
 			);
 			path = Settings;
+			sourceTree = "<group>";
+		};
+		E89C0DDD86F19B33C6CA7726 /* Help */ = {
+			isa = PBXGroup;
+			children = (
+				4FCA43224F505628B890F546 /* HelpView.swift */,
+			);
+			path = Help;
 			sourceTree = "<group>";
 		};
 		ED584D631F34AF06DA5C09A3 /* Auth */ = {
@@ -754,6 +765,7 @@
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
 				FF5DA971C1D7F0E459C85820 /* GSDAppIntents.swift in Sources */,
 				1F6721700983447468D664C1 /* GSDMenuCommands.swift in Sources */,
+				5588BCC2EC76EC2BB763FD0C /* HelpView.swift in Sources */,
 				CD46F261D6842C4865DDACB6 /* KeychainTokenStore.swift in Sources */,
 				34A8E574358FAB0570162302 /* LiveReminderScheduler.swift in Sources */,
 				83388C6EE74A09C1F6C7AC1E /* LiveWebAuthPresenter.swift in Sources */,
