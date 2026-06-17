@@ -123,6 +123,22 @@ final class SyncCoordinator {
         return true
     }
 
+    /// Account-deletion step 1: delete only the user's REMOTE tasks (no local wipe — the caller
+    /// decides the local fate). Mirrors `eraseEverywhere`'s remote half. Returns true if the remote
+    /// is now clear (or there was nothing/no session to erase).
+    func eraseRemoteTasks() async -> Bool {
+        var result = await engine.eraseAllRemote()
+        var tries = 0
+        while result.skipped && tries < 5 {
+            try? await _Concurrency.Task.sleep(for: .milliseconds(400))
+            result = await engine.eraseAllRemote()
+            tries += 1
+        }
+        let ok = result.notSignedIn || (result.error == nil && !result.skipped)
+        await refreshStatus()
+        return ok
+    }
+
     /// §3.4 after a destructive import-replace: drain the cleared-task deletes under the gate.
     func flushAfterReplace() async {
         _ = await engine.flushDeletes()
