@@ -23,6 +23,7 @@ struct MatrixGridView: View {
 private struct MatrixGridContent: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
+    @Environment(SyncCoordinator.self) private var sync
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @State private var editor: EditorRequest?
     @State private var actionFailure: TaskActionFailure?
@@ -59,6 +60,7 @@ private struct MatrixGridContent: View {
                     }
                     .padding(12)
                 }
+                .refreshable { await sync.syncNow() }
                 .onChange(of: palette.focusedQuadrant) { _, _ in consumeQuadrantFocus(proxy) }
                 .onAppear { consumeQuadrantFocus(proxy) }
             }
