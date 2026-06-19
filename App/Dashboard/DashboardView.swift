@@ -10,6 +10,11 @@ import GSDStore
 struct DashboardView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
+    @Environment(SyncCoordinator.self) private var sync
+    // Dashboard is shared: iPhone tab + iPad split-view detail. The chip is compact-only so
+    // iPad doesn't show a second chip (the sidebar already has one) and the tap (Settings tab)
+    // stays meaningful.
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var trendDays = 7
     @State private var editor: EditorRequest?
 
@@ -43,7 +48,10 @@ struct DashboardView: View {
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
             .navigationTitle(String(localized: "Dashboard"))
-            .toolbar { paletteButton(palette) }
+            .toolbar {
+                paletteButton(palette)
+                if sizeClass == .compact { syncStatusChip(sync, palette) }
+            }
             .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         }
     }

@@ -70,10 +70,7 @@ private struct MatrixListContent: View {
             paletteButton(palette)
             showCompletedToggle($showCompleted)
             ToolbarItem(placement: .topBarTrailing) { EditButton() }
-            ToolbarItem(placement: .topBarTrailing) {
-                SyncStatusChip(phase: sync.phase, pendingCount: sync.pendingCount,
-                               health: sync.health) { palette.compactTab = 3 }
-            }
+            syncStatusChip(sync, palette)
         }
         .safeAreaInset(edge: .top) {
             CaptureBar { parsed, ov in
@@ -117,5 +114,17 @@ func paletteButton(_ palette: PaletteController) -> some ToolbarContent {
         Button { palette.showPalette = true } label: {
             Label(String(localized: "Search"), systemImage: "magnifyingglass")
         }
+    }
+}
+
+/// The quiet sync-status chip for compact (iPhone) surfaces. Mirrors the iPad sidebar chip
+/// onto each iPhone content tab so sync state is visible from the current surface, not just
+/// Matrix. Tapping routes to the Settings tab. Hidden when idle/healthy (see SyncStatusChip),
+/// so it adds no chrome until sync is active, pending, or errored.
+@MainActor @ToolbarContentBuilder
+func syncStatusChip(_ sync: SyncCoordinator, _ palette: PaletteController) -> some ToolbarContent {
+    ToolbarItem(placement: .topBarTrailing) {
+        SyncStatusChip(phase: sync.phase, pendingCount: sync.pendingCount,
+                       health: sync.health) { palette.compactTab = 3 }
     }
 }

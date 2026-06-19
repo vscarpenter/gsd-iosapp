@@ -53,7 +53,7 @@ Legend: ✅ present · ⚠️ present but adapted · ❌ absent
 | **Pull-to-refresh → sync** | ✅ `MatrixView.swift:61` | ✅ `MatrixGridView.swift:63` _(closed 2026-06-18)_ | Was iPad-absent; grid now injects `SyncCoordinator` + `.refreshable`. See §4. |
 | Manual "Sync Now" (Settings) | ✅ | ✅ | Shared `SettingsView.swift:83-88` → `session.syncNow()`. iPad's only manual sync entry point. |
 | Automatic sync (timer, network, scenePhase, post-mutation) | ✅ | ✅ | Driven by `SyncCoordinator`, idiom-independent. iPad still syncs continuously. |
-| Sync status chip | ⚠️ Matrix tab only (`MatrixView.swift:74`) | ⚠️ persistent sidebar (`ContentView.swift:283`) | On iPhone the chip is visible only from the Matrix tab; on iPad it's always visible in the sidebar. Tapping → Settings on both. |
+| Sync status chip | ✅ Matrix + Browse + Dashboard tabs _(closed 2026-06-18)_ | ✅ persistent sidebar (`ContentView.swift:283`) | Shared `syncStatusChip` helper now on all three iPhone content tabs (Settings shows the full section). iPad keeps the single sidebar chip — the Dashboard chip is compact-gated. Tapping → Settings on both. |
 | Command palette (⌘K / search) | ✅ per-surface button (`paletteButton`) | ✅ sidebar button (`ContentView.swift:278`) | Hardware ⌘K works on both via hidden buttons (`ContentView.swift:104`); Mac uses the menu bar. |
 | Browse / Smart Views list | ✅ `SmartViewListView` (tab) | ⚠️ sidebar list | iPhone uses **swipe actions** (pin/edit/delete); iPad uses **context menus** (`ContentView.swift:332`). Same operations, different gesture. |
 | Smart View editor | ✅ | ✅ | Shared `SmartViewEditorView` sheet. |
@@ -89,12 +89,13 @@ These are correct platform behavior — closing them would be a regression, not 
 ### 3b. Genuine parity gaps
 
 1. ~~**Pull-to-refresh on the Matrix — iPad missing.**~~ **CLOSED 2026-06-18** (see §4).
-2. **Sync-status visibility asymmetry (minor — still open).** On iPhone the `SyncStatusChip` lives only on
-   the Matrix tab — switch to Browse/Dashboard/Settings and the live status disappears. On iPad
-   it's always visible in the sidebar. Not a missing feature, but an inconsistency worth a
-   decision: should the iPhone surface sync status more globally?
+2. ~~**Sync-status visibility asymmetry — iPhone Matrix-tab-only.**~~ **CLOSED 2026-06-18.**
+   The shared `syncStatusChip` helper (`MatrixView.swift`) now appears on the iPhone Matrix,
+   Browse, and Dashboard tabs, matching iPad's always-visible sidebar chip. The Dashboard chip
+   is gated to the compact size class so the shared `DashboardView` shows no second chip in the
+   iPad detail column. Design: `docs/superpowers/specs/2026-06-18-iphone-sync-chip-parity-design.md`.
 
-> Everything else in the matrix is either ✅/✅ or an intentional ⚠️ adaptation.
+> No known parity gaps remain — everything in the matrix is now ✅/✅ or an intentional ⚠️ adaptation.
 
 ---
 

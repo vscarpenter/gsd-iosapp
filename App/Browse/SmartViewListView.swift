@@ -7,6 +7,7 @@ import GSDStore
 struct SmartViewListView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
+    @Environment(SyncCoordinator.self) private var sync
     @State private var editorTarget: SmartViewEditorTarget?
     @State private var actionFailure: TaskActionFailure?
 
@@ -57,6 +58,7 @@ struct SmartViewListView: View {
             }
             .toolbar {
                 paletteButton(palette)
+                syncStatusChip(sync, palette)
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { editorTarget = .create } label: {
                         Label(String(localized: "New Smart View"), systemImage: "plus")
