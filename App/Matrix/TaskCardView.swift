@@ -88,10 +88,14 @@ struct TaskCardView: View {
 
     @ViewBuilder private var completionControl: some View {
         if let onToggle {
-            Button(action: onToggle) { completionDisc }
-                .buttonStyle(.plain)
+            // A nested Button wins hit-testing on iOS, but on Mac Catalyst the enclosing
+            // row's `.onTapGesture` (tap-to-edit) swallows it, opening the editor instead of
+            // toggling the disc. A high-priority tap outranks that ancestor gesture on both
+            // platforms, so the disc reliably completes the task everywhere (parity with web).
+            completionDisc
                 .frame(width: 44, height: 44)                  // ≥44pt hit target around the 28pt disc (§12.3)
                 .contentShape(Rectangle())
+                .highPriorityGesture(TapGesture().onEnded { onToggle() })
                 .accessibilityLabel(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"))
         } else {
             completionDisc.accessibilityHidden(true)
