@@ -18,6 +18,9 @@ UI change produces identical motion. Nothing is hand-tapped.
 - **Xcode 26** with iOS 26 simulators: `iPhone 17 Pro Max` (6.9″ App-Store class) and
   `iPad Pro 13-inch (M5)`. The recorder auto-falls back to other Pro Max / 13″ models.
 - **ffmpeg** (`brew install ffmpeg`) — stock build is fine; `encode.sh` uses no `drawtext`.
+- **rsvg-convert** (`brew install librsvg`) — *optional*, only for the hero's branded ending card.
+  ImageMagick (`magick`/`convert`) works as a fallback; if neither is installed the ending card is
+  skipped (with a NOTE) and a plain hero is produced.
 - For the **Mac** reel: grant **Screen Recording** permission to your terminal
   (System Settings ▸ Privacy & Security ▸ Screen Recording) and run it on a real Mac with a GUI
   session — `screencapture` can't run headless.
@@ -34,10 +37,17 @@ bash scripts/record-demos.sh mac    light      # real Mac only; see caveat
 bash scripts/record-demos.sh all    dark       # all three, dark appearance
 
 # 2) Encode the deliverables (build/demos/out/).
-bash scripts/encode.sh --hero iphone                       # marketing hero from the iPhone reel
-bash scripts/encode.sh --hero iphone --loop-xfade          # + seamless web loop
+bash scripts/encode.sh --hero iphone                       # marketing hero (+ branded ending card)
+bash scripts/encode.sh --hero iphone --no-outro            # hero without the ending card
+bash scripts/encode.sh --hero iphone --outro-dur 4         # hold the ending card 4s (default 3.5)
+bash scripts/encode.sh --hero iphone --loop-xfade          # seamless web loop (no ending card)
 bash scripts/encode.sh --music path/to/track.m4a           # + music on the App-Store previews
 ```
+
+The marketing hero **ends on a branded card** (logo · "GSD Task Manager" · gsdtaskmanager.com) by
+default — it's for the landing page. The App-Store previews are deliberately left card-free. Use
+`--no-outro` to drop it; `--outro` and `--loop-xfade` are mutually exclusive (a fixed ending vs. a
+seamless loop — `--outro` wins).
 
 Everything lands under **`build/demos/`**, which is gitignored — no video binaries are committed.
 
@@ -48,13 +58,14 @@ Everything lands under **`build/demos/`**, which is gitignored — no video bina
 
 ## Deliverables
 
-**Marketing hero** (muted; comprehension must not depend on audio):
+**Marketing hero** (muted; comprehension must not depend on audio; ends on the branded card by
+default — see *Ending card* below):
 
 | File | Format |
 | --- | --- |
 | `gsd-demo.mp4` | H.264, yuv420p, `+faststart`, ~1280px long edge |
 | `gsd-demo.webm` | VP9, ~1280px long edge |
-| `gsd-demo-poster.png` | first frame |
+| `gsd-demo-poster.png` | first frame (the matrix, not the ending card) |
 
 **App Store previews** (may carry `--music`):
 
@@ -67,6 +78,20 @@ Everything lands under **`build/demos/`**, which is gitignored — no video bina
 > Apple's accepted app-preview resolutions are strict and change with new device classes. Verify
 > against the current spec before submitting:
 > <https://developer.apple.com/help/app-store-connect/reference/app-preview-specifications/>
+
+## Ending card (marketing hero)
+
+The hero finishes on a branded card: the quadrant mark, **GSD Task Manager** (editorial serif), and
+**gsdtaskmanager.com** on the brand paper background — the demo crossfades into it, the card fades up,
+then holds. It's **hero-only**; the App-Store previews never get it.
+
+- Source: `scripts/assets/outro-card.svg.tmpl` (transparent, square; color tokens substituted per
+  light/dark from the app-icon palette). Text is real vector text — no font is committed.
+- Since this ffmpeg has no `drawtext`, `encode.sh` rasterizes the SVG with `rsvg-convert` (fallback
+  ImageMagick) and composites it with core filters (`color` + `overlay` + `xfade`).
+- Knobs: `--no-outro`, `--outro-dur S` (default 3.5), `--outro-xfade S` (default 0.6). The card auto-
+  sizes to `0.82 × min(W,H)` and centers on paper bands, so it fits any hero aspect.
+- Design notes: `docs/superpowers/specs/2026-06-20-demo-outro-screen-design.md`.
 
 ## The demo script (beats)
 

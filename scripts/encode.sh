@@ -5,6 +5,7 @@
 #
 #   scripts/encode.sh [--hero iphone|ipad] [--appearance light|dark] [--music FILE] [--loop-xfade]
 #                     [--hero-start S] [--hero-dur D] [--store-start S] [--store-dur D]
+#                     [--no-outro] [--outro-dur S] [--outro-xfade S]
 #
 # The raw reels include the simulator launch/seed lead-in (~10s) plus the full paced flow, so they
 # run ~50–60s. TRIM to the window you want with --hero-start/--hero-dur (and --store-start/-dur);
@@ -15,6 +16,12 @@
 # (autoplay requires it); only the App-Store previews carry --music. Apple's accepted preview
 # resolutions are picky and change with new device classes — verify against the current spec at
 # https://developer.apple.com/help/app-store-connect/reference/app-preview-specifications/
+#
+# The marketing hero ends on a branded card (logo + "GSD Task Manager" + gsdtaskmanager.com). Text
+# can't be drawn in ffmpeg (no libfreetype), so the card is a vector SVG rendered to PNG by
+# rsvg-convert (fallback: ImageMagick) and composited with core ffmpeg filters; if neither tool is
+# installed the outro is skipped with a NOTE. The App-Store previews are deliberately left card-free.
+# Disable with --no-outro. See docs/superpowers/specs/2026-06-20-demo-outro-screen-design.md.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -23,6 +30,7 @@ FF="${FF:-ffmpeg}"; FFPROBE="${FFPROBE:-ffprobe}"
 HERO="iphone"; APPEARANCE="light"; MUSIC=""; LOOP_XFADE=0
 HERO_START=13; HERO_DUR=26          # skip launch+splash → open on the matrix; capture → complete → scroll
 STORE_START=12; STORE_DUR=28        # previews start on the matrix; ≤30s for App Store (empty DUR = to end)
+OUTRO=1; OUTRO_DUR=3.5; OUTRO_XFADE=0.6   # branded ending card on the hero (web only); see header
 PAPER="0xF4F1E9"                     # brand cream, used to pad any letterboxing
 
 while [ $# -gt 0 ]; do case "$1" in
@@ -34,9 +42,23 @@ while [ $# -gt 0 ]; do case "$1" in
   --hero-dur) HERO_DUR="$2"; shift 2 ;;
   --store-start) STORE_START="$2"; shift 2 ;;
   --store-dur) STORE_DUR="$2"; shift 2 ;;
+  --outro) OUTRO=1; shift ;;
+  --no-outro) OUTRO=0; shift ;;
+  --outro-dur) OUTRO_DUR="$2"; shift 2 ;;
+  --outro-xfade) OUTRO_XFADE="$2"; shift 2 ;;
   *) echo "usage: $0 [--hero iphone|ipad] [--appearance light|dark] [--music FILE] [--loop-xfade]"
-     echo "          [--hero-start S] [--hero-dur D] [--store-start S] [--store-dur D]"; exit 1 ;;
+     echo "          [--hero-start S] [--hero-dur D] [--store-start S] [--store-dur D]"
+     echo "          [--no-outro] [--outro-dur S] [--outro-xfade S]"; exit 1 ;;
 esac; done
+
+# Brand paper + palette for the outro card, per appearance (verbatim from Design/icon/app-icon*.svg).
+if [ "$APPEARANCE" = dark ]; then
+  OUTRO_BG="0x17150F"; C_RUST="E0705F"; C_TEAL="6FAACB"; C_GOLD="CFB266"; C_GRAY="A9A096"
+  C_TITLE="F4F1E9";   C_URL="6FAACB"
+else
+  OUTRO_BG="0xF4F1E9"; C_RUST="B23A2E"; C_TEAL="2C6680"; C_GOLD="8A6A22"; C_GRAY="6F685F"
+  C_TITLE="3A211D";   C_URL="2C6680"
+fi
 
 calc() { awk "BEGIN{printf \"%.3f\", $1}"; }
 # Long edge → 1280, preserving aspect & even dims (works for portrait and landscape sources).
@@ -51,13 +73,75 @@ raw_for() {
   else echo ""; fi
 }
 
+# Hero output geometry: long edge → 1280 (preserving aspect, even dims) + the source frame rate.
+# Echoes "WIDTH HEIGHT FPS" so the outro segment matches the hero exactly (xfade needs identical
+# dims/sar/fps). Mirrors the LONG1280 filter math so the computed size equals what the hero is scaled to.
+hero_dims() {
+  local in="$1" iw ih fr
+  iw=$("$FFPROBE" -v error -select_streams v:0 -show_entries stream=width  -of csv=p=0 "$in")
+  ih=$("$FFPROBE" -v error -select_streams v:0 -show_entries stream=height -of csv=p=0 "$in")
+  fr=$("$FFPROBE" -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "$in")
+  awk -v iw="$iw" -v ih="$ih" -v fr="$fr" 'BEGIN{
+    if (iw>ih) { w=1280; h=int(ih*1280/iw + 0.5) } else { h=1280; w=int(iw*1280/ih + 0.5) }
+    w-=w%2; h-=h%2; printf "%d %d %s", w, h, fr
+  }'
+}
+
+# Render the branded outro card SVG (token-substituted for the current palette) to a PNG at <size>px.
+# Prefers rsvg-convert, falls back to ImageMagick. Returns non-zero (with a NOTE) if neither exists.
+render_outro_card() {
+  local size="$1" out="$2"
+  local tmpl="scripts/assets/outro-card.svg.tmpl" svg="$OUT/.outro-card.svg"
+  [ -f "$tmpl" ] || { echo "  NOTE: missing $tmpl — skipping outro."; return 1; }
+  sed -e "s/__RUST__/#$C_RUST/g"  -e "s/__TEAL__/#$C_TEAL/g" \
+      -e "s/__GOLD__/#$C_GOLD/g"  -e "s/__GRAY__/#$C_GRAY/g" \
+      -e "s/__TITLE__/#$C_TITLE/g" -e "s/__URL__/#$C_URL/g" "$tmpl" > "$svg"
+  if   command -v rsvg-convert >/dev/null 2>&1; then rsvg-convert -w "$size" -h "$size" "$svg" -o "$out"
+  elif command -v magick >/dev/null 2>&1;       then magick -background none "$svg" -resize "${size}x${size}" "$out"
+  elif command -v convert >/dev/null 2>&1;      then convert -background none "$svg" -resize "${size}x${size}" "$out"
+  else echo "  NOTE: no rsvg-convert/ImageMagick — skipping outro (install: brew install librsvg)."; rm -f "$svg"; return 1; fi
+  rm -f "$svg"
+}
+
+# Hero with the branded ending card: scale the trimmed reel, build the brand-paper outro (card
+# fading up over the paper), and xfade the reel into it. Falls back to a plain hero if the card
+# can't be rendered. Writes $OUT/gsd-demo.mp4.
+encode_hero_outro() {
+  local in="$1" w h fr; read -r w h fr < <(hero_dims "$in")
+  local size; size=$(awk "BEGIN{s=int(0.82*($w<$h?$w:$h)); s-=s%2; print s}")
+  local card="$OUT/.outro-card.png"
+  render_outro_card "$size" "$card" || return 1
+  [ -s "$card" ] || { echo "  NOTE: outro card did not render — skipping outro."; return 1; }
+  local off; off=$(calc "$HERO_DUR - $OUTRO_XFADE")   # crossfade starts XFADE before the reel ends
+  echo "   + ending card (${w}x${h} @ ${OUTRO_DUR}s, xfade ${OUTRO_XFADE}s)"
+  local rc=0
+  "$FF" -y -ss "$HERO_START" -t "$HERO_DUR" -i "$in" \
+        -loop 1 -t "$OUTRO_DUR" -i "$card" \
+        -f lavfi -t "$OUTRO_DUR" -i "color=c=$OUTRO_BG:s=${w}x${h}:r=$fr" \
+    -filter_complex \
+      "[0:v]scale=$w:$h:flags=bicubic,setsar=1,fps=$fr,format=yuv420p[hero];\
+       [1:v]format=yuva420p,fade=t=in:st=0:d=0.6:alpha=1[card];\
+       [2:v][card]overlay=(W-w)/2:(H-h)/2:format=auto,setsar=1,format=yuv420p[outro];\
+       [hero][outro]xfade=transition=fade:duration=$OUTRO_XFADE:offset=$off[outv]" \
+    -map "[outv]" -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$OUT/gsd-demo.mp4" || rc=$?
+  rm -f "$card"
+  return $rc
+}
+
 # ---------------------------------------------------------------------------
 # 1) Marketing hero — muted, ~1280px long edge, trimmed to a representative window, loops cleanly.
 # ---------------------------------------------------------------------------
 hero_in="$(raw_for "$HERO")"
+encode_hero_plain() {   # trimmed reel only, no ending card
+  "$FF" -y -ss "$HERO_START" -t "$HERO_DUR" -i "$hero_in" -vf "$LONG1280,setsar=1" \
+    -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$OUT/gsd-demo.mp4"
+}
 if [ -n "$hero_in" ]; then
   echo "=== marketing hero  ($hero_in  start=$HERO_START dur=$HERO_DUR) ==="
-  if [ "$LOOP_XFADE" = 1 ]; then
+  if [ "$OUTRO" = 1 ]; then
+    [ "$LOOP_XFADE" = 1 ] && echo "   (--outro overrides --loop-xfade: an ending card and a seamless loop are mutually exclusive)"
+    encode_hero_outro "$hero_in" || { echo "   outro unavailable — writing plain hero"; encode_hero_plain; }
+  elif [ "$LOOP_XFADE" = 1 ]; then
     # Seamless loop: crossfade the head back over the tail so the last frame melts into the first.
     X=0.6; START=$(calc "$HERO_DUR - $X")
     "$FF" -y -ss "$HERO_START" -t "$HERO_DUR" -i "$hero_in" -filter_complex \
@@ -67,8 +151,7 @@ if [ -n "$hero_in" ]; then
        [body][head]overlay[outv]" \
       -map "[outv]" -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$OUT/gsd-demo.mp4"
   else
-    "$FF" -y -ss "$HERO_START" -t "$HERO_DUR" -i "$hero_in" -vf "$LONG1280,setsar=1" \
-      -an -c:v libx264 -pix_fmt yuv420p -movflags +faststart "$OUT/gsd-demo.mp4"
+    encode_hero_plain
   fi
   # WebM (VP9) sibling, and a poster from the first frame.
   "$FF" -y -i "$OUT/gsd-demo.mp4" -an -c:v libvpx-vp9 -b:v 0 -crf 33 -row-mt 1 "$OUT/gsd-demo.webm"
