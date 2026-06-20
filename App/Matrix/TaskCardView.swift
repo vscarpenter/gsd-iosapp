@@ -60,6 +60,9 @@ struct TaskCardView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        // Stable handle for the demo-video XCUITest (and a useful UI-test anchor generally).
+        // `.combine` above merges the disc into this element, so the card is addressed as a whole.
+        .accessibilityIdentifier("task-card-\(task.id)")
     }
 
     /// A captured link surfaces its URL as the description — render it quietly.

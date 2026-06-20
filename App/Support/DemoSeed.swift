@@ -8,50 +8,56 @@ import GSDStore
 enum DemoSeed {
     static let launchArgument = "--demo-seed"
 
-    static func seedIfRequested(_ store: TaskStore) async {
+    static func seedIfRequested(_ store: TaskStore, now: Date = .now) async {
         guard ProcessInfo.processInfo.arguments.contains(launchArgument) else { return }
         UserDefaults(suiteName: AppGroup.id)?.set(true, forKey: "hasOnboarded")
         do {
             // Idempotent: clear any prior run so re-records are deterministic.
             for task in try await store.fetchAllTasks() { try await store.delete(task) }
-            for task in fixtures() { try await store.create(task) }
+            for task in fixtures(now: now) { try await store.create(task) }
         } catch {
             print("[DemoSeed] seeding failed: \(error)")   // best-effort; empty matrix is the worst case
         }
     }
 
-    private static func fixtures() -> [Task] {
+    private static func fixtures(now: Date) -> [Task] {
         let cal = Calendar.current
-        let now = Date()
         func daysAgo(_ d: Int) -> Date { cal.date(byAdding: .day, value: -d, to: now)! }
+        func daysFromNow(_ d: Int) -> Date { cal.date(byAdding: .day, value: d, to: now)! }
 
         // urgent/important → quadrant: (T,T) Do First · (F,T) Schedule · (T,F) Delegate · (F,F) Eliminate
         func t(_ id: String, _ title: String, u: Bool, i: Bool,
                tags: [String] = [], recurrence: RecurrenceType = .none,
                subtasks: [Subtask] = [], deps: [String] = [],
-               done: Date? = nil) -> Task {
+               due: Date? = nil, done: Date? = nil) -> Task {
             Task(id: id, title: title, urgent: u, important: i,
                  completed: done != nil, completedAt: done,
-                 createdAt: now, updatedAt: now,
+                 createdAt: now, updatedAt: now, dueDate: due,
                  recurrence: recurrence, tags: tags, subtasks: subtasks, dependencies: deps)
         }
 
         var out: [Task] = []
-        // ---- Active: Do First ----
-        out.append(t("demo-finance", "Get finance sign-off", u: true, i: true, tags: ["work"]))
+        // ---- Active: Do First ---- (varied due dates so the cards read realistically AND
+        // deterministically against the frozen demo clock: today / +2d / overdue)
+        out.append(t("demo-finance", "Get finance sign-off", u: true, i: true, tags: ["work"],
+                     due: cal.startOfDay(for: now)))
         out.append(t("demo-deck", "Finish the Q3 board deck", u: true, i: true, tags: ["work"],
                      subtasks: [Subtask(id: "sub1", title: "Pull revenue numbers", completed: true),
                                 Subtask(id: "sub2", title: "Draft the narrative"),
                                 Subtask(id: "sub3", title: "Design the key slides")],
-                     deps: ["demo-finance"]))
-        out.append(t("demo-investor", "Reply to the investor email", u: true, i: true, tags: ["work"]))
+                     deps: ["demo-finance"], due: daysFromNow(2)))
+        // Overdue, and kept free of subtasks/deps so it's the clean card we complete on camera.
+        out.append(t("demo-investor", "Reply to the investor email", u: true, i: true, tags: ["work"],
+                     due: daysAgo(1)))
         // ---- Active: Schedule ----
-        out.append(t("demo-vacation", "Plan the summer vacation", u: false, i: true, tags: ["family"]))
+        out.append(t("demo-vacation", "Plan the summer vacation", u: false, i: true, tags: ["family"],
+                     due: daysFromNow(7)))
         out.append(t("demo-physical", "Book the annual physical", u: false, i: true, tags: ["health"]))
-        out.append(t("demo-passport", "Renew passport", u: false, i: true, tags: ["family"]))
+        out.append(t("demo-passport", "Renew passport", u: false, i: true, tags: ["family"],
+                     due: daysFromNow(30)))
         // ---- Active: Delegate ----
         out.append(t("demo-newsletter", "Send the weekly newsletter", u: true, i: false,
-                     tags: ["work"], recurrence: .weekly))
+                     tags: ["work"], recurrence: .weekly, due: daysFromNow(1)))
         out.append(t("demo-supplies", "Order office supplies", u: true, i: false, tags: ["errands"]))
         // ---- Active: Eliminate ----
         out.append(t("demo-downloads", "Sort the downloads folder", u: false, i: false, tags: ["errands"]))

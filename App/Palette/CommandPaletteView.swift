@@ -142,6 +142,8 @@ struct CommandPaletteView: View {
         }
         .buttonStyle(.plain)
         .listRowBackground(Surface.surface)
+        // Stable handle for the Mac ⌘K demo beat (e.g. "palette-row-Today's Focus").
+        .accessibilityIdentifier("palette-row-\(title)")
     }
 
     private func pick(_ result: PaletteResult) {
