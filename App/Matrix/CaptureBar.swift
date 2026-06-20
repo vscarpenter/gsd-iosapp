@@ -26,6 +26,7 @@ struct CaptureBar: View {
                     .onSubmit(submit)
                     .onChange(of: draft) { _, _ in captureError = nil }
                     .foregroundStyle(Surface.ink)
+                    .accessibilityIdentifier("capture-field")
                 Button(action: cycleOverride) {
                     Label(previewQuadrant.title, systemImage: QuadrantStyle.symbol(previewQuadrant))
                         .font(.footnote.weight(.semibold))
@@ -36,6 +37,8 @@ struct CaptureBar: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityHint(String(localized: "Cycles the target quadrant"))
+                // The chip recolors live as shorthand is typed — the demo's opening beat.
+                .accessibilityIdentifier("capture-quadrant-chip")
             }
             .padding(.vertical, 12).padding(.leading, 18).padding(.trailing, 10)
             .background(Surface.surface, in: Capsule())
@@ -65,6 +68,7 @@ struct CaptureBar: View {
                     }
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(Surface.tint)
+                    .accessibilityIdentifier("capture-details")
                 }
                 .padding(.horizontal, 4)
             }

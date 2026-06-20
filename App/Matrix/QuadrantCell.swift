@@ -4,6 +4,7 @@ import GSDStore
 
 struct QuadrantCell: View {
     @Environment(TaskStore.self) private var store
+    @Environment(\.demoClock) private var demoClock
     let quadrant: Quadrant
     let showCompleted: Bool
     let actions: TaskActions
@@ -74,7 +75,7 @@ struct QuadrantCell: View {
                     TimelineView(.periodic(from: .now, by: 1)) { context in
                         TaskCardView(
                             task: task,
-                            now: context.date,
+                            now: demoClock ?? context.date,
                             blockedByCount: graph.uncompletedBlockers(of: task.id).count,
                             blockingCount: graph.blockedTasks(of: task.id).count
                         )
@@ -100,7 +101,7 @@ struct QuadrantCell: View {
                 TimelineView(.periodic(from: .now, by: 1)) { context in
                     TaskCardView(
                         task: task,
-                        now: context.date,
+                        now: demoClock ?? context.date,
                         blockedByCount: graph.uncompletedBlockers(of: task.id).count,
                         blockingCount: graph.blockedTasks(of: task.id).count,
                         onToggle: { actions.toggle(task) },

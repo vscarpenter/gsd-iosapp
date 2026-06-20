@@ -19,11 +19,18 @@ struct GSDApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
+    /// Frozen clock for the demo-video harness; `nil` in every normal launch.
+    private let demoClock: Date?
 
     init() {
         // Editorial chrome: serif nav titles + ink (not system-blue) bars. Must run before
         // any UINavigationBar/UITabBar is realized, so the App init is the right window.
         AppAppearance.configure()
+        // Demo-video harness: a fixed clock makes seeded data + relative dates deterministic
+        // across takes. `nil` in normal launches, so production keeps the live system clock.
+        let demoClock = DemoLaunch.clock
+        self.demoClock = demoClock
+        let now: @Sendable () -> Date = { demoClock ?? Date() }
         // The local store is the app's source of truth. An unopenable store (corruption,
         // failed migration) is moved aside — preserved as .corrupt — and recreated, instead
         // of crash-looping at launch. Only a second consecutive failure is unrecoverable.
@@ -35,13 +42,14 @@ struct GSDApp: App {
         })
         // Repos shared by the store and the sync engine (Phase 5c): pulled writes reach the store's
         // observer, and the store's enqueues reach the engine's drain — same GRDB instances.
-        let taskRepo = GRDBTaskRepository(database)
+        let taskRepo = GRDBTaskRepository(database, now: now)
         let queueRepo = GRDBSyncQueueRepository(database)
         let historyRepo = GRDBSyncHistoryRepository(database)
         let store = TaskStore(
             repository: taskRepo,
             smartViewRepository: GRDBSmartViewRepository(database),
-            archiveRepository: GRDBArchiveRepository(database),
+            archiveRepository: GRDBArchiveRepository(database, now: now),
+            clock: now,
             reminders: scheduler,
             syncQueue: queueRepo
         )
@@ -121,11 +129,12 @@ struct GSDApp: App {
                 .environment(store)
                 .environment(session)
                 .environment(coordinator)
-                .preferredColorScheme(AppTheme(rawValue: themeRaw)?.colorScheme ?? nil)
+                .demoClock(demoClock)   // freezes relative-date rendering in the demo harness; no-op otherwise
+                .preferredColorScheme(DemoLaunch.appearance ?? AppTheme(rawValue: themeRaw)?.colorScheme)
                 .tint(Surface.ink) // quiet graphite chrome; genuine actions opt into Surface.tint
                 .task {
                     store.start()
-                    await DemoSeed.seedIfRequested(store)
+                    await DemoSeed.seedIfRequested(store, now: demoClock ?? .now)
                     await shareInbox.drain { try await store.create($0) }
                     widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()

@@ -97,16 +97,19 @@ struct TaskEditorView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
+            .accessibilityIdentifier("task-editor")
             .tint(Surface.tint)   // baseline calm action tint (carets + true actions, never system blue); picker values → ink3 by role
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { EditButton() }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "Cancel")) { dismiss() }
+                        .accessibilityIdentifier("editor-cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "Save"), action: save)
                         .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .accessibilityIdentifier("editor-save")
                 }
             }
         }

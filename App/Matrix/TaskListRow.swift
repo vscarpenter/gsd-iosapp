@@ -12,12 +12,15 @@ struct TaskListRow: View {
     let actions: TaskActions
     var onEdit: (Task) -> Void
     @Environment(\.editMode) private var editMode
+    @Environment(\.demoClock) private var demoClock
 
     private var isSelecting: Bool { editMode?.wrappedValue.isEditing == true }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            TaskCardView(task: task, now: context.date,
+            // The demo harness pins `now` so relative due labels are identical on every take;
+            // production uses the live TimelineView date and ticks the running timer each second.
+            TaskCardView(task: task, now: demoClock ?? context.date,
                          blockedByCount: blockedByCount, blockingCount: blockingCount,
                          onToggle: isSelecting ? nil : { actions.toggle(task) },
                          menu: isSelecting ? nil : { AnyView(TaskRowMenu(task: task, actions: actions, onEdit: onEdit)) })
