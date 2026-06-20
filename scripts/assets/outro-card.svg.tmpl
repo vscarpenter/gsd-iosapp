@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+  <!-- Branded ending screen for the marketing demo hero (see
+       docs/superpowers/specs/2026-06-20-demo-outro-screen-design.md). Transparent background:
+       encode.sh overlays this, centered, on a solid brand-paper color sized to the video frame.
+       Color tokens (__RUST__ etc.) are substituted per light/dark appearance from the app-icon
+       palette. Text is real vector text — crisp at any scale, no font baked into the repo. -->
+  <defs>
+    <filter id="tileShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- Quadrant mark: four rounded tiles + white check on the Do-First (rust) tile. -->
+  <g filter="url(#tileShadow)">
+    <rect x="348" y="222" width="178" height="178" rx="40" ry="40" fill="__RUST__"/>
+    <rect x="554" y="222" width="178" height="178" rx="40" ry="40" fill="__TEAL__"/>
+    <rect x="348" y="428" width="178" height="178" rx="40" ry="40" fill="__GOLD__"/>
+    <rect x="554" y="428" width="178" height="178" rx="40" ry="40" fill="__GRAY__"/>
+  </g>
+  <path d="M 398 314 L 425 341 L 479 279" fill="none" stroke="#FFFFFF" stroke-width="26"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Wordmark (editorial serif) and landing-page URL (system sans). -->
+  <text x="540" y="762" text-anchor="middle"
+        font-family="New York, Georgia, 'Times New Roman', serif"
+        font-size="96" font-weight="600" fill="__TITLE__">GSD Task Manager</text>
+  <text x="540" y="844" text-anchor="middle"
+        font-family="-apple-system, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+        font-size="44" font-weight="500" letter-spacing="1.5" fill="__URL__">gsdtaskmanager.com</text>
+</svg>
