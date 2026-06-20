@@ -32,6 +32,7 @@ HERO="iphone"; APPEARANCE="light"; MUSIC=""; LOOP_XFADE=0
 HERO_START=13; HERO_DUR=26          # skip launch+splash → open on the matrix; capture → complete → scroll
 STORE_START=12; STORE_DUR=28        # previews start on the matrix; ≤30s for App Store (empty DUR = to end)
 OUTRO=1; OUTRO_DUR=3.5; OUTRO_XFADE=0.6   # branded ending card on the hero + per-device videos; see header
+MAC_CROP=""                          # optional ffmpeg crop "w:h:x:y" on the mac source before scaling (see header)
 
 while [ $# -gt 0 ]; do case "$1" in
   --hero) HERO="$2"; shift 2 ;;
@@ -46,9 +47,10 @@ while [ $# -gt 0 ]; do case "$1" in
   --no-outro) OUTRO=0; shift ;;
   --outro-dur) OUTRO_DUR="$2"; shift 2 ;;
   --outro-xfade) OUTRO_XFADE="$2"; shift 2 ;;
+  --mac-crop) MAC_CROP="$2"; shift 2 ;;
   *) echo "usage: $0 [--hero iphone|ipad] [--appearance light|dark] [--music FILE] [--loop-xfade]"
      echo "          [--hero-start S] [--hero-dur D] [--store-start S] [--store-dur D]"
-     echo "          [--no-outro] [--outro-dur S] [--outro-xfade S]"; exit 1 ;;
+     echo "          [--no-outro] [--outro-dur S] [--outro-xfade S] [--mac-crop w:h:x:y]"; exit 1 ;;
 esac; done
 
 # Brand paper + palette for the outro card, per appearance (verbatim from Design/icon/app-icon*.svg).
@@ -209,8 +211,12 @@ store_device() {   # <label> <out-name> [scale-filter]
 # iPhone 6.9" (1320×2868) and iPad 13" — native capture is already the accepted resolution.
 store_device iphone iphone-6_9
 store_device ipad   ipad-13
-# Mac: scale the full-screen capture into 1920×1080, padding with brand paper if needed.
-store_device mac    mac "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=$OUTRO_BG,setsar=1"
+# Mac: the reel-mac choreography puts the app full-screen, so the capture is GSD alone — scale it into
+# 1920×1080, padding with brand paper if the display aspect differs (e.g. ultrawide). --mac-crop
+# "w:h:x:y" first crops the source (e.g. to drop ultrawide letterbox or isolate a windowed app).
+MAC_FILT="scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=$OUTRO_BG,setsar=1"
+[ -n "$MAC_CROP" ] && MAC_FILT="crop=$MAC_CROP,$MAC_FILT"
+store_device mac    mac "$MAC_FILT"
 
 echo "---"
 echo "Outputs in $OUT/ :"

@@ -184,6 +184,11 @@ final class DemoChoreography: XCTestCase {
         XCTAssertTrue(app.textFields["capture-field"].waitForExistence(timeout: 25), "matrix never appeared")
         pause(1.0)
 
+        // Fill the display with GSD alone (⌃⌘F enter-full-screen) so the screen recording captures the
+        // app, not the whole desktop/other windows. Stays full-screen for the rest of the reel; the
+        // recording is trimmed/scaled in encode.sh. (Harmless if full-screen is unavailable.)
+        app.typeKey("f", modifierFlags: [.command, .control]); pause(2.0)
+
         captureBeat(app)
         dismissKeyboard(app)   // no-op on Mac (no software keyboard)
 

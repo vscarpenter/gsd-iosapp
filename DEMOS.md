@@ -114,8 +114,19 @@ bash scripts/record-demos.sh mac light        # → build/demos/raw/mac.mov
 bash scripts/encode.sh --hero iphone          # writes build/demos/out/mac.mp4 (+ hero, iphone, ipad)
 ```
 
-The full-screen capture is scaled into 1920×1080 (brand-paper letterbox if needed); tighten the crop
-in `encode.sh`'s `store_device mac` filter if you want a windowed frame.
+`screencapture` records the **whole display**, so the reel-mac choreography first puts GSD into macOS
+full-screen (⌃⌘F) — the capture is then the app alone, not your desktop/other windows. `encode.sh`
+scales that into 1920×1080 (brand-paper letterbox if the display aspect differs, e.g. an ultrawide).
+
+If the framing still isn't right (ultrawide letterbox too tall, or you recorded windowed), crop the
+mac source before scaling with `--mac-crop w:h:x:y` (ffmpeg `crop` syntax), e.g.:
+
+```bash
+bash scripts/encode.sh --mac-crop 3440:1440:0:0      # whole 21:9 frame (then letterboxed to 16:9)
+bash scripts/encode.sh --mac-crop 2560:1440:440:0    # center 16:9 region of a 3440-wide capture
+```
+
+Grab a frame to measure pixels first: `ffmpeg -ss 20 -i build/demos/raw/mac.mov -frames:v 1 mac.png`.
 
 ## The demo script (beats)
 
