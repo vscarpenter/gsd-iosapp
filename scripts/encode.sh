@@ -211,9 +211,10 @@ store_device() {   # <label> <out-name> [scale-filter]
 # iPhone 6.9" (1320×2868) and iPad 13" — native capture is already the accepted resolution.
 store_device iphone iphone-6_9
 store_device ipad   ipad-13
-# Mac: the reel-mac choreography puts the app full-screen, so the capture is GSD alone — scale it into
-# 1920×1080, padding with brand paper if the display aspect differs (e.g. ultrawide). --mac-crop
-# "w:h:x:y" first crops the source (e.g. to drop ultrawide letterbox or isolate a windowed app).
+# Mac: screencapture records the WHOLE display, so record with the GSD window maximized (its zoom
+# fills the screen; macOS remembers the size between runs) for a clean app-only capture. Scale into
+# 1920×1080, padding with brand paper for the display aspect (e.g. ultrawide). If the window wasn't
+# maximized (app small among other windows), --mac-crop "w:h:x:y" crops to it before scaling.
 MAC_FILT="scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=$OUTRO_BG,setsar=1"
 [ -n "$MAC_CROP" ] && MAC_FILT="crop=$MAC_CROP,$MAC_FILT"
 store_device mac    mac "$MAC_FILT"
