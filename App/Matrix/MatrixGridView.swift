@@ -67,15 +67,15 @@ private struct MatrixGridContent: View {
         }
         .background(Surface.paper)
         .navigationTitle("Matrix")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
         .toolbar {
+            brandedNavigationTitle(String(localized: "Matrix"))
             showCompletedToggle($showCompleted)
             ToolbarItem(placement: .topBarTrailing) { EditButton() }
         }
         .safeAreaInset(edge: .bottom) {
-            if !selection.isEmpty {
-                BulkActionBar(selection: $selection)
-                    .background(.bar)
-            }
+            BulkActionBar(selection: $selection)
         }
         .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)

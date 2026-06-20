@@ -42,7 +42,12 @@ struct SettingsView: View {
             .background(Surface.paper)
             .tint(Surface.tint)   // baseline calm action tint (never system blue); values → ink3 and navigation → ink are overridden by role below
             .navigationTitle(String(localized: "Settings"))
-            .toolbar { paletteButton(palette) }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
+            .toolbar {
+                brandedNavigationTitle(String(localized: "Settings"))
+                paletteButton(palette)
+            }
             .onAppear {
                 archiveSettings = store.archiveSettings
                 notificationSettings = store.notificationSettings

@@ -47,13 +47,24 @@ struct DashboardView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
-            .navigationTitle(String(localized: "Dashboard"))
+            .navigationTitle(dashboardNavigationTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .toolbar {
+                brandedNavigationTitle(String(localized: "Dashboard"))
                 paletteButton(palette)
                 if sizeClass == .compact { syncStatusChip(sync, palette) }
             }
             .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         }
+    }
+
+    private var dashboardNavigationTitle: String {
+        #if targetEnvironment(macCatalyst)
+        ""
+        #else
+        String(localized: "Dashboard")
+        #endif
     }
 
     // MARK: sections

@@ -46,6 +46,8 @@ struct SmartViewListView: View {
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
             .navigationTitle(String(localized: "Browse"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleDisplayMode(.inline)
             .navigationDestination(for: BrowseRoute.self) { route in
                 switch route {
                 case .view(let id):
@@ -57,6 +59,7 @@ struct SmartViewListView: View {
                 }
             }
             .toolbar {
+                brandedNavigationTitle(String(localized: "Browse"))
                 paletteButton(palette)
                 syncStatusChip(sync, palette)
                 ToolbarItem(placement: .topBarTrailing) {

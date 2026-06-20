@@ -76,6 +76,43 @@ extension View {
     }
 }
 
+struct BrandedNavigationTitle: View {
+    let screen: String
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image("LaunchMark")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
+
+            Text("GSD")
+                .font(.headline.weight(.bold))
+                .foregroundStyle(Surface.ink)
+
+            Text("-")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Surface.ink3)
+
+            Text(screen)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Surface.ink2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "GSD - \(screen)"))
+    }
+}
+
+@MainActor @ToolbarContentBuilder
+func brandedNavigationTitle(_ screen: String) -> some ToolbarContent {
+    ToolbarItem(placement: .principal) {
+        BrandedNavigationTitle(screen: screen)
+    }
+}
+
 /// One-time UIKit appearance setup so every `navigationTitle` renders in the
 /// editorial New York serif and chrome stays ink (not system blue). Called from
 /// `GSDApp.init()`. SwiftUI has no native hook to restyle large titles, so the

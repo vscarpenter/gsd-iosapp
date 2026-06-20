@@ -80,18 +80,18 @@ struct FilteredTaskListView: View {
             ConfettiView(trigger: confettiTrigger)
         }
         .navigationTitle(view.name)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: String(localized: "Search \(view.name)"))
         .toolbar {
+            brandedNavigationTitle(view.name)
             ToolbarItem(placement: .topBarTrailing) { EditButton() }
         }
         // Hosted via safeAreaInset (not a .bottomBar toolbar item) so the bar's
         // confirmation/alert/sheet present reliably on iPhone + iPad. Mirrors how
         // MatrixView hosts CaptureBar via .safeAreaInset.
         .safeAreaInset(edge: .bottom) {
-            if !selection.isEmpty {
-                BulkActionBar(selection: $selection)
-                    .background(.bar)
-            }
+            BulkActionBar(selection: $selection)
         }
         .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)

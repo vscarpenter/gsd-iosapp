@@ -61,8 +61,11 @@ struct ArchiveListView: View {
         }
         .background(Surface.paper)
         .navigationTitle(String(localized: "Archive"))
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: String(localized: "Search archive"))
         .toolbar {
+            brandedNavigationTitle(String(localized: "Archive"))
             ToolbarItem(placement: .topBarTrailing) { archiveSettingsMenu }
             ToolbarItem(placement: .topBarLeading) { EditButton() }
         }
