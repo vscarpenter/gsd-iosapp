@@ -17,6 +17,7 @@ APPEARANCE="${2:-light}"
 SCHEME="GSDScreenshots"
 ONLY="-only-testing:GSDScreenshotTests/DemoChoreography/testDemoScene"
 RAW="build/demos/raw"
+MAC_SECS="${MAC_SECS:-45}"   # mac screen-recording length; must exceed the choreography (~30s)
 mkdir -p "$RAW"
 
 # First available simulator whose name matches one of the candidates (most-preferred first).
@@ -63,16 +64,28 @@ record_mac() {
   echo "=== mac  (reel-mac, $APPEARANCE) ==="
   xcodebuild build-for-testing -project GSD.xcodeproj -scheme "$SCHEME" \
     -destination 'platform=macOS,variant=Mac Catalyst' >/dev/null
-  local out="$RAW/mac.mov"
-  # -v video, -V max seconds (safety stop if the test hangs). Needs Screen Recording permission.
-  screencapture -v -V 45 "$out" &
+  local out="$RAW/mac.mov"; rm -f "$out"
+  # Roll a FIXED-LENGTH recording: `-v` records video, `-V<secs>` (attached form) stops and FINALIZES
+  # the .mov when the timer elapses. We deliberately do NOT kill it — interrupting a -v capture can
+  # abort it without saving, which is what previously left no mac.mov. The choreography runs inside the
+  # window; encode.sh trims the tail. Needs Screen Recording permission for THIS terminal + a GUI
+  # session (no headless/CI).
+  screencapture -v -V"$MAC_SECS" -x "$out" &
   local rec=$!
   sleep 1
   TEST_RUNNER_DEMO=1 TEST_RUNNER_DEMO_SCENE=reel-mac TEST_RUNNER_DEMO_APPEARANCE="$APPEARANCE" \
     xcodebuild test-without-building -project GSD.xcodeproj -scheme "$SCHEME" \
     -destination 'platform=macOS,variant=Mac Catalyst' $ONLY || true
-  kill -INT "$rec" 2>/dev/null || true; wait "$rec" 2>/dev/null || true
-  echo "   wrote $out (full screen — cropped/scaled in encode.sh)"
+  wait "$rec" 2>/dev/null || true     # let -V elapse so the .mov is finalized
+  if [ -s "$out" ]; then
+    echo "   wrote $out (full screen — cropped/scaled in encode.sh)"
+  else
+    echo "   ERROR: screencapture produced no $out."
+    echo "   This almost always means Screen Recording permission is missing. Grant it to THIS"
+    echo "   terminal app, fully quit & reopen the terminal, then re-run:"
+    echo "     System Settings ▸ Privacy & Security ▸ Screen Recording ▸ enable your terminal."
+    return 1
+  fi
 }
 
 IPHONE_SIMS=("iPhone 16 Pro Max" "iPhone 17 Pro Max" "iPhone 15 Pro Max")   # 6.9" App-Store class

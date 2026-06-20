@@ -67,31 +67,68 @@ default — see *Ending card* below):
 | `gsd-demo.webm` | VP9, ~1280px long edge |
 | `gsd-demo-poster.png` | first frame (the matrix, not the ending card) |
 
-**App Store previews** (may carry `--music`):
+**Per-device videos** (one per device; for the landing page — each **ends on the branded card** by
+default, and may carry `--music`):
 
 | File | Source device | Notes |
 | --- | --- | --- |
-| `iphone-6_9.mp4` | iPhone 17 Pro Max | native 1320×2868 = Apple's 6.9″ class |
-| `ipad-13.mp4` | iPad Pro 13″ (portrait) | native 2064×2752 = Apple's 13″ class |
+| `iphone-6_9.mp4` | iPhone 17 Pro Max | native 1320×2868 (= Apple's 6.9″ class) |
+| `ipad-13.mp4` | iPad Pro 13″ (portrait) | native 2064×2752 (= Apple's 13″ class) |
 | `mac.mp4` | Mac Catalyst (screen capture) | scaled into 1920×1080 |
 
-> Apple's accepted app-preview resolutions are strict and change with new device classes. Verify
-> against the current spec before submitting:
+> **`mac.mp4` only exists once you record a Mac reel.** The simulator can't capture Mac Catalyst, so
+> it must be recorded on a real Mac — see *The Mac video* below. With only iPhone/iPad reels present,
+> `encode.sh` skips `mac.mp4` (with a NOTE) and produces the other two.
+
+> **Reusing these as App-Store previews?** Re-run with `--no-outro` (Apple discourages end-cards on
+> previews) and keep length ≤30s. Apple's accepted resolutions are strict and change with new device
+> classes — verify before submitting:
 > <https://developer.apple.com/help/app-store-connect/reference/app-preview-specifications/>
 
-## Ending card (marketing hero)
+## Ending card (hero + every per-device video)
 
-The hero finishes on a branded card: the quadrant mark, **GSD Task Manager** (editorial serif), and
-**gsdtaskmanager.com** on the brand paper background — the demo crossfades into it, the card fades up,
-then holds. It's **hero-only**; the App-Store previews never get it.
+The hero **and each per-device video** finish on a branded card: the quadrant mark, **GSD Task
+Manager** (editorial serif), and **gsdtaskmanager.com** on the brand paper background — the demo
+crossfades into it, the card fades up, then holds. The card auto-sizes to `0.82 × min(W,H)` and
+centers on paper bands, so it fits every aspect (portrait phone, portrait iPad, landscape Mac).
+Use `--no-outro` to drop it everywhere (e.g. for App-Store previews).
 
 - Source: `scripts/assets/outro-card.svg.tmpl` (transparent, square; color tokens substituted per
   light/dark from the app-icon palette). Text is real vector text — no font is committed.
 - Since this ffmpeg has no `drawtext`, `encode.sh` rasterizes the SVG with `rsvg-convert` (fallback
   ImageMagick) and composites it with core filters (`color` + `overlay` + `xfade`).
-- Knobs: `--no-outro`, `--outro-dur S` (default 3.5), `--outro-xfade S` (default 0.6). The card auto-
-  sizes to `0.82 × min(W,H)` and centers on paper bands, so it fits any hero aspect.
+- Knobs: `--no-outro`, `--outro-dur S` (default 3.5), `--outro-xfade S` (default 0.6).
 - Design notes: `docs/superpowers/specs/2026-06-20-demo-outro-screen-design.md`.
+
+## The Mac video
+
+`mac.mp4` isn't produced by the iPhone/iPad runs — **Mac Catalyst is a native macOS app, so the iOS
+simulator (`simctl`) can't capture it.** It must be recorded on a real Mac with `screencapture`,
+which needs a GUI session and Screen Recording permission (won't run headless/CI). On your Mac:
+
+```bash
+# 1) Grant Screen Recording to your terminal: System Settings ▸ Privacy & Security ▸ Screen Recording.
+# 2) Record the Mac reel (drives the reel-mac choreography while capturing the screen):
+bash scripts/record-demos.sh mac light        # → build/demos/raw/mac.mov
+# 3) Re-encode — mac.mp4 now gets the same branded ending card as the others:
+bash scripts/encode.sh --hero iphone          # writes build/demos/out/mac.mp4 (+ hero, iphone, ipad)
+```
+
+`screencapture` records the **whole display** — there is no scriptable "capture just this app" mode
+(and synthesizing ⌃⌘F into a Catalyst app from XCUITest does not reliably full-screen it). So for a
+clean, app-only capture, **maximize the GSD window before recording**: click the green zoom button (or
+double-click its title bar) so it fills the screen. macOS remembers the window size, so once maximized
+it stays that way for later runs. `encode.sh` then scales the capture into 1920×1080, padding with
+brand paper for the display aspect (e.g. cream bands above/below on a 21:9 ultrawide — they blend with
+the app's paper background).
+
+If the window wasn't maximized (GSD recorded small among your other windows), crop to it before
+scaling with `--mac-crop w:h:x:y` (ffmpeg `crop` syntax). Grab a frame to measure pixels first:
+
+```bash
+ffmpeg -ss 20 -i build/demos/raw/mac.mov -frames:v 1 mac.png    # then read the window's x/y/w/h
+bash scripts/encode.sh --mac-crop 2560:1440:440:0               # crop to that region, then scale
+```
 
 ## The demo script (beats)
 

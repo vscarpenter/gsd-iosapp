@@ -8,10 +8,17 @@ and the landing-page URL **gsdtaskmanager.com**, then the clip ends (or loops ba
 
 ## Scope
 
-- **Marketing hero only** (`build/demos/out/gsd-demo.mp4` · `gsd-demo.webm`). This footage is for the
-  landing page at <https://gsdtaskmanager.com>, **not** the App Store / Mac App Store previews.
-- App-Store previews (`iphone-6_9.mp4` · `ipad-13.mp4` · `mac.mp4`) are **left unchanged** — Apple's
-  preview rules discourage end-cards/marketing overlays, and these go straight to the stores.
+- **All landing-page videos** (`gsdtaskmanager.com`): the marketing hero (`gsd-demo.mp4` ·
+  `gsd-demo.webm`) **and** every per-device video (`iphone-6_9.mp4` · `ipad-13.mp4` · `mac.mp4`) end
+  on the card. The per-device videos are landing-page footage here, not App-Store submissions.
+- The same `append_outro` step is shared by the hero and the per-device encodes, so all outputs get an
+  identical ending; the card auto-sizes per frame so it fits portrait phone, portrait iPad, and the
+  landscape Mac capture.
+- **`--no-outro`** drops the card everywhere — the right choice if these are ever repurposed as
+  App-Store previews, where Apple discourages end-cards/marketing overlays.
+
+> History: the first cut scoped the card to the hero only (treating the per-device files as App-Store
+> previews). That was corrected — the per-device videos are for the landing page and now get the card.
 
 ## What it looks like
 
