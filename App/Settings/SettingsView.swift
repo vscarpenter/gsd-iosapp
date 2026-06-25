@@ -15,6 +15,7 @@ struct SettingsView: View {
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
+    @AppStorage(AppGroupDefaults.Key.fetchShareTitles, store: .shared) private var fetchShareTitles = true
 
     /// Local mirror of the store's archive settings (UserDefaults-backed); writes flush back.
     @State private var archiveSettings: ArchiveSettings = .init()
@@ -32,6 +33,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 appearanceSection
+                sharingSection
                 accountSection
                 archiveSection
                 notificationSection
@@ -64,6 +66,17 @@ struct SettingsView: View {
             .tint(Surface.ink3)   // value is information, not an action — read it graphite
             Toggle(String(localized: "Show Completed Tasks"), isOn: $showCompleted)
                 .tint(Surface.success)
+        }
+    }
+
+    private var sharingSection: some View {
+        Section {
+            Toggle(String(localized: "Fetch titles for shared links"), isOn: $fetchShareTitles)
+                .tint(Surface.success)
+        } header: {
+            Text(String(localized: "Sharing"))
+        } footer: {
+            Text(String(localized: "When you share a link to GSD, fetch the page title for a readable task name. Only links you share are fetched."))
         }
     }
 
