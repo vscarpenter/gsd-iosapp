@@ -114,6 +114,32 @@ struct SyncEnginePushTests {
         #expect(all.count == 1 && all[0].status == .failed)
     }
 
+    @Test func foregroundSyncRevivesFailedItems() async throws {   // reopening the app retries failed edits
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let t = Task(id: "a", title: "x", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
+                                              retryCount: 5, payload: t, status: .failed,
+                                              lastAttemptAt: 1, failedAt: 1))
+        let engine = makeSyncEngine(tasks: tasks, queue: queue, exec: CRUDExecutor())   // remote healthy again
+        let result = await engine.sync(trigger: .foreground)
+        #expect(result.pushed == 1)                  // revived + drained on app reopen
+        #expect(try await queue.all().isEmpty)
+    }
+
+    @Test func launchSyncRevivesFailedItems() async throws {   // cold start retries failed edits from a prior session
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let t = Task(id: "a", title: "x", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
+                                              retryCount: 5, payload: t, status: .failed,
+                                              lastAttemptAt: 1, failedAt: 1))
+        let engine = makeSyncEngine(tasks: tasks, queue: queue, exec: CRUDExecutor())
+        let result = await engine.sync(trigger: .launch)
+        #expect(result.pushed == 1)
+        #expect(try await queue.all().isEmpty)
+    }
+
     @Test func pushFailureBumpsRetryCountAndKeepsPending() async throws {
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         let exec = CRUDExecutor(); exec.writeStatus = 500   // server error
