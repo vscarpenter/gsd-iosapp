@@ -21,7 +21,12 @@ public enum SharedCaptureBuilder {
     private static func clampedTitle(_ raw: String) -> String {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return String(localized: "Review link below") }
-        return String(trimmed.prefix(FieldLimits.titleRange.upperBound))   // clamp to 80
+        // A share that carried only a URL (e.g. Mac Catalyst, where Safari provides no page
+        // title) arrives with the URL as the title — derive a readable title from it. iOS keeps
+        // its real page title, which is not a URL and so passes through untouched.
+        let derived = URLSanitizer.sanitize(trimmed) != nil ? URLTitle.derive(from: trimmed) : ""
+        let title = derived.isEmpty ? trimmed : derived
+        return String(title.prefix(FieldLimits.titleRange.upperBound))   // clamp to 80
     }
 
     private static func description(from urls: [String]) -> String {

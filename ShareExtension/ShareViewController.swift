@@ -34,7 +34,9 @@ final class ShareViewController: UIViewController {
             $0.hasItemConformingToTypeIdentifier(UTType.url.identifier)
         }) {
             let urlString = await loadObject(URL.self, from: urlProvider)?.absoluteString ?? ""
-            let title = pageTitle.isEmpty ? urlString : pageTitle
+            // No page title (e.g. macOS Safari only provides the URL) → derive a readable one
+            // so the compose sheet shows it too, not just the materialized task.
+            let title = pageTitle.isEmpty ? URLTitle.derive(from: urlString) : pageTitle
             return (title, urlString.isEmpty ? [] : [urlString])
         } else if let textProvider = providers.first(where: {
             $0.hasItemConformingToTypeIdentifier(UTType.plainText.identifier)

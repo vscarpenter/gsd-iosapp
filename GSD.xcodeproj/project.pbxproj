@@ -55,7 +55,7 @@
 		897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92D91657DBB6423E6BBE725 /* DataStorageView.swift */; };
 		8C598D4A09D89CC736EB8DD5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */; };
 		8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */; };
-		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
 		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
@@ -65,7 +65,9 @@
 		A92FC63E75447B51AB504FE8 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 10C5831BD27556073CD6CD9F /* GSDModel */; };
 		AD6837183E00E04042A56ED0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 249F029B40FD9FDAA6A68A25 /* Assets.xcassets */; };
 		B17361EAF4ABA6F4940F94B8 /* SmartViewListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FB17173BD410FDE2B3AD58 /* SmartViewListView.swift */; };
+		B5E7D6CD79E14CB160F046B4 /* ShareTitleEnricher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E938DCA2D038B4703954CF7 /* ShareTitleEnricher.swift */; };
 		B6AF4EA8BD5D386DBF3D1310 /* TodaysFocusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FECB334B943916706D8E944 /* TodaysFocusWidget.swift */; };
+		BF410002859DB95FE0BFA2D1 /* PageTitleFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */; };
 		BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 834FF1E8BA076E31BA383962 /* GSDApp.swift */; };
 		C54C617DEC7531732CFC2822 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */; };
 		C8EFB5F817DADDA1C48B0356 /* ScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87C46CC1405702B23330578 /* ScreenshotTests.swift */; };
@@ -126,9 +128,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageTitleFetcher.swift; sourceTree = "<group>"; };
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
 		085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		0E938DCA2D038B4703954CF7 /* ShareTitleEnricher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTitleEnricher.swift; sourceTree = "<group>"; };
 		18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		1E44544249232FE202E59EB0 /* GSD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSD.entitlements; sourceTree = "<group>"; };
 		1FA0D2F82C759037F6A2DD38 /* GSDWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWidgetBundle.swift; sourceTree = "<group>"; };
@@ -177,6 +181,7 @@
 		9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusChip.swift; sourceTree = "<group>"; };
 		9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredTaskListView.swift; sourceTree = "<group>"; };
 		A2C9EE64F35A42788D229B1E /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
+		A39B990BF91EC1589069C726 /* GSDShareExtension-Catalyst.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GSDShareExtension-Catalyst.entitlements"; sourceTree = "<group>"; };
 		A706546D6BC547A4D13660DC /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A92D91657DBB6423E6BBE725 /* DataStorageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStorageView.swift; sourceTree = "<group>"; };
 		ABCFD2CB1A7F53B54E6E1725 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -266,6 +271,7 @@
 				34B0C6FC1C9DB00999F2B90A /* Palette */,
 				CE95500FED3DD67B1AF87D0C /* Routing */,
 				E3E7A9EE8C0A43B83CCADEC0 /* Settings */,
+				095A9CA7341CB2291875A578 /* Sharing */,
 				B04168E073460512D3FB1A61 /* Store */,
 				CAB18B8FF69C32795537F4B3 /* Support */,
 				9A48F62AB639CAC93A507E7F /* Sync */,
@@ -273,6 +279,15 @@
 				52DDCB447C1EA39D55F1D7FD /* Widgets */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		095A9CA7341CB2291875A578 /* Sharing */ = {
+			isa = PBXGroup;
+			children = (
+				02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */,
+				0E938DCA2D038B4703954CF7 /* ShareTitleEnricher.swift */,
+			);
+			path = Sharing;
 			sourceTree = "<group>";
 		};
 		0C2D45D930316312A499B9CB /* Demo */ = {
@@ -353,6 +368,7 @@
 		7A441FD94D17954A83BEB281 /* ShareExtension */ = {
 			isa = PBXGroup;
 			children = (
+				A39B990BF91EC1589069C726 /* GSDShareExtension-Catalyst.entitlements */,
 				45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */,
 				2429471CF154E2FD234BA738 /* Info.plist */,
 				C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */,
@@ -776,6 +792,7 @@
 				359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */,
 				8004840C42749CB157F55F18 /* MatrixView.swift in Sources */,
 				3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */,
+				BF410002859DB95FE0BFA2D1 /* PageTitleFetcher.swift in Sources */,
 				3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */,
 				FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */,
 				226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */,
@@ -784,6 +801,7 @@
 				4CA5862BAD963FCB53AE3285 /* ReminderResyncer.swift in Sources */,
 				863728DE9F16D23835B6548A /* SessionStore.swift in Sources */,
 				A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */,
+				B5E7D6CD79E14CB160F046B4 /* ShareTitleEnricher.swift in Sources */,
 				73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */,
 				B17361EAF4ABA6F4940F94B8 /* SmartViewListView.swift in Sources */,
 				305B1E2FEF9947D20EDC16CE /* SpotlightIndexer.swift in Sources */,
@@ -819,7 +837,6 @@
 /* Begin PBXTargetDependency section */
 		23293F0D3E5D5FC728EE1818 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			platformFilter = ios;
 			target = 3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */;
 			targetProxy = F84A37D89CDEAAC02B1DA7F2 /* PBXContainerItemProxy */;
 		};
@@ -987,7 +1004,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/GSDShareExtension.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "ShareExtension/GSDShareExtension-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
+				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -997,6 +1016,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.share;
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1006,7 +1026,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShareExtension/GSDShareExtension.entitlements;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = "ShareExtension/GSDShareExtension-Catalyst.entitlements";
 				CODE_SIGN_STYLE = Automatic;
+				DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShareExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1016,6 +1038,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.share;
 				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

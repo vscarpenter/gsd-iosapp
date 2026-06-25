@@ -90,9 +90,10 @@ targets:
       - target: GSDWidgets
         embed: true
         platformFilter: iOS
+      # No platformFilter — the Share Extension is built for Mac Catalyst too, so GSD
+      # appears in the macOS Share menu (Widgets stay iOS-only above).
       - target: GSDShareExtension
         embed: true
-        platformFilter: iOS
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd
@@ -156,6 +157,12 @@ targets:
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: ShareExtension/GSDShareExtension.entitlements
         CODE_SIGN_STYLE: Automatic
+        # --- Mac Catalyst --- so GSD is a share target on macOS too.
+        SUPPORTS_MACCATALYST: "YES"
+        # Keep dev.vinny.gsd.share on both platforms (one App Store Connect record).
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: "NO"
+        # macOS-SDK (Catalyst) build needs sandbox entitlements; iOS keeps its own file.
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": ShareExtension/GSDShareExtension-Catalyst.entitlements
     dependencies:
       - package: GSDKit
         product: GSDModel

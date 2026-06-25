@@ -31,6 +31,19 @@ struct SharedCaptureBuilderTests {
         #expect(task.title == "Review link below")
     }
 
+    // A Mac Catalyst share carries only the URL (Safari provides no page title), so the title
+    // arrives as the URL — derive a readable title from it.
+    @Test func urlOnlyTitleBecomesReadable() {
+        let url = "https://fortune.com/2026/06/24/exclusive-seltz-a-startup/"
+        let task = SharedCaptureBuilder.task(from: capture(title: url, urls: [url]), id: "i", now: now)
+        #expect(task.title == "Exclusive Seltz A Startup")
+    }
+
+    @Test func realPageTitleIsLeftAlone() {
+        let task = SharedCaptureBuilder.task(from: capture(title: "My real page title"), id: "i", now: now)
+        #expect(task.title == "My real page title")
+    }
+
     @Test func quadrantFlagsPassThrough() {
         let task = SharedCaptureBuilder.task(
             from: capture(urgent: true, important: true), id: "i", now: now)
