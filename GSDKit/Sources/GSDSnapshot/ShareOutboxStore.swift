@@ -29,6 +29,8 @@ public struct ShareOutboxStore: Sendable {
         let url = dir.appendingPathComponent("\(id).json")
         let data = try JSONEncoder().encode(capture)
         try data.write(to: url, options: .atomic)
+        // Wake a running app to drain now (esp. Mac Catalyst, where scenePhase won't).
+        ShareOutboxSignal.post()
     }
 
     /// All captures, sorted by `capturedAt`. Unreadable/corrupt files are skipped AND deleted

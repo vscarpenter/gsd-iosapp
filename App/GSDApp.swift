@@ -136,6 +136,12 @@ struct GSDApp: App {
                     store.start()
                     await DemoSeed.seedIfRequested(store, now: demoClock ?? .now)
                     await shareInbox.drain { try await store.create($0) }
+                    // Drain the instant a share lands while the app is already running. On Mac
+                    // Catalyst the extension never foregrounds the app and scenePhase `.active`
+                    // is unreliable, so the launch/foreground drains alone leave captures stranded.
+                    ShareOutboxSignal.observe {
+                        _Concurrency.Task { await shareInbox.drain { try await store.create($0) } }
+                    }
                     widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()
                     await store.refreshBadge()
