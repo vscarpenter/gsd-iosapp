@@ -17,6 +17,9 @@ struct GSDApp: App {
     @State private var spotlightIndexer: SpotlightIndexer
     @State private var shareInbox: ShareInbox
     @State private var titleEnricher: ShareTitleEnricher
+    /// True when the local database couldn't be opened even after recovery — the app shows a
+    /// recovery screen instead of the main UI (so no edits hit a throwaway store).
+    @State private var databaseUnavailable: Bool
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -32,10 +35,23 @@ struct GSDApp: App {
         let demoClock = DemoLaunch.clock
         self.demoClock = demoClock
         let now: @Sendable () -> Date = { demoClock ?? Date() }
-        // The local store is the app's source of truth. An unopenable store (corruption,
-        // failed migration) is moved aside — preserved as .corrupt — and recreated, instead
-        // of crash-looping at launch. Only a second consecutive failure is unrecoverable.
-        let database = try! AppDatabase.liveWithRecovery()
+        // The local store is the app's source of truth. `liveWithRecovery` moves aside an
+        // unopenable store (corruption, failed migration) — preserved as .corrupt, never deleted —
+        // and recreates it, instead of crash-looping at launch. If recovery ITSELF fails (an
+        // unwritable/full container, a busy-lock at launch), fall back to a throwaway in-memory
+        // store so the app launches into a recovery screen rather than crashing; the on-disk data
+        // is untouched and a relaunch retries. (A fresh in-memory open has no file I/O; only a
+        // broken migration could fail it, which the test suite catches before shipping.)
+        let database: AppDatabase
+        let databaseUnavailable: Bool
+        do {
+            database = try AppDatabase.liveWithRecovery()
+            databaseUnavailable = false
+        } catch {
+            database = try! AppDatabase.inMemory()
+            databaseUnavailable = true
+        }
+        _databaseUnavailable = State(initialValue: databaseUnavailable)
         // The live scheduler reads NotificationSettings straight from App-Group defaults
         // (the same suite the store persists to) — avoids a store-construction cycle.
         let scheduler = LiveReminderScheduler(settingsProvider: {
@@ -123,9 +139,13 @@ struct GSDApp: App {
 
     var body: some Scene {
         WindowGroup {
+            // The local store couldn't be opened even after recovery — show a calm recovery screen
+            // instead of the main UI (and never start sync/observation against the fallback store).
+            if databaseUnavailable {
+                DatabaseUnavailableView()
             // Demo-only: the marketing-video choreography launches with --demo-home to record the
             // faux Home Screen widget beat. The app itself never passes it, so this stays unreachable.
-            if ProcessInfo.processInfo.arguments.contains(DemoHomeScreen.launchArgument) {
+            } else if ProcessInfo.processInfo.arguments.contains(DemoHomeScreen.launchArgument) {
                 DemoHomeScreen()
             } else {
             ContentView()
