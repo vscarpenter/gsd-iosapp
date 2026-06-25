@@ -20,9 +20,13 @@ xcodegen generate                          # project.yml -> GSD.xcodeproj (also 
 xcodebuild -project GSD.xcodeproj -scheme GSD \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 # iPad: -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)'
+# Mac Catalyst (the app also ships on Mac); CODE_SIGNING_ALLOWED=NO avoids minting a
+# provisioning profile just to verify a local build compiles + embeds extensions:
+xcodebuild -project GSD.xcodeproj -scheme GSD \
+  -destination 'platform=macOS,variant=Mac Catalyst' CODE_SIGNING_ALLOWED=NO build
 ```
 
-iPhone and iPad are co-equal targets — build both before considering UI work done. Per-phase verification has historically been a `simctl` install-launch-screenshot smoke test (the App target has no unit-test target; app-layer glue is verified by build + smoke, the logic it calls is verified by `swift test`).
+iPhone and iPad are co-equal targets — build both before considering UI work done. A local Catalyst build verifies compilation + `.appex` embedding; share-extension *runtime* behavior (Share-menu registration, what Safari hands the extension) is owner-verified with a signed build in /Applications — Catalyst does NOT honor `WebPage` activation / JS preprocessing, and `scenePhase .active` is unreliable there (see project memory). Per-phase verification has historically been a `simctl` install-launch-screenshot smoke test (the App target has no unit-test target; app-layer glue is verified by build + smoke, the logic it calls is verified by `swift test`).
 
 **Lint:** no linter is configured in-repo (no `.swiftlint.yml` / `.swiftformat`); `swift test` plus a clean `xcodebuild` are the gates.
 
