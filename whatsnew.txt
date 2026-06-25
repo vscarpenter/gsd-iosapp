@@ -1,0 +1,19 @@
+iOS — recommended
+
+▎ This update focuses on reliability and a smoother reminder experience.
+▎
+▎ • Tap a reminder to jump straight to that task — notifications now take you exactly where you meant to go.
+▎ • Steadier sync: deleted tasks stay deleted, and any change that doesn't sync on the first try is retried automatically the next time you open the app.
+▎ • A handful of stability fixes for rare cases at launch and sign-in.
+▎
+▎ As always, GSD works fully offline — syncing is optional and only happens when you're signed in.
+
+macOS — recommended
+
+▎ This update focuses on reliability and a smoother reminder experience.
+▎
+▎ • Tap a reminder to jump straight to that task.
+▎ • The View ▸ "Today's Focus" menu now opens your Today's Focus list, matching the widget and Siri.
+▎ • Steadier sync: deleted tasks stay deleted, and changes that don't sync on the first try are retried automatically when you reopen the app.
+▎ • A handful of stability fixes for rare cases at launch and sign-in.
+

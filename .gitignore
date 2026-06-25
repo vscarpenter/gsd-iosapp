@@ -21,3 +21,6 @@ xcuserdata/
 *.ipa
 *.dSYM.zip
 *.dSYM
+
+# /brag generated launch video (Hyperframes composition + render)
+brag-output/
