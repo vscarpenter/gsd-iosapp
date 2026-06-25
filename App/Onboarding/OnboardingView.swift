@@ -12,7 +12,6 @@ struct OnboardingView: View {
 
     @State private var page = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var colorScheme
 
     private let pageCount = 4
 
@@ -75,17 +74,11 @@ struct OnboardingView: View {
 
     @ViewBuilder private var syncSignInButtons: some View {
         if let onAppleSignIn {
-            // Apple HIG-styled button driving the same web-redirect flow as Google (Option A).
-            // `SignInWithAppleButton` can't be reused — it always triggers the retired native sheet —
-            // so the appearance rules (black-on-light / white-on-dark, Apple glyph, wording, corner
-            // radius) are hand-rendered to satisfy App Review Guideline 4.8 (same as SettingsView).
+            // Hand-rendered "Sign in with Apple" (see `AppleSignInButtonLabel`) — shared with
+            // SettingsView so the two renditions stay identical. Drives the same web-redirect
+            // flow as Google (Guideline 4.8), so the native button can't be used.
             Button(action: onAppleSignIn) {
-                Label(String(localized: "Sign in with Apple"), systemImage: "applelogo")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .foregroundStyle(colorScheme == .dark ? .black : .white)
-                    .background(colorScheme == .dark ? Color.white : Color.black)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                AppleSignInButtonLabel()
             }
             .buttonStyle(.plain)
         }

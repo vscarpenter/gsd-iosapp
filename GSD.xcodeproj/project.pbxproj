@@ -84,6 +84,7 @@
 		EA9DA80415D88FF601FCBF70 /* GSDWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E77900FA416C5BD27D556B5F /* GSDWidgets.appex */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		EEED564CCDE3349B5B966A0C /* SyncHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */; };
 		F1B330A8B3AF352E918AA98B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8908894C46A7A691FFED08F0 /* PrivacyInfo.xcprivacy */; };
+		F615EB4B72D895C0FBBA61CE /* AppleSignInButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */; };
 		F6BD77CCE7D8D5B7A4953F00 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
 		FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */; };
 		FE0F884C571B70DC1021DC4F /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A151034146B4714F731EE2 /* TaskActions.swift */; };
@@ -132,6 +133,7 @@
 /* Begin PBXFileReference section */
 		02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageTitleFetcher.swift; sourceTree = "<group>"; };
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
+		05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButtonLabel.swift; sourceTree = "<group>"; };
 		085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		0E938DCA2D038B4703954CF7 /* ShareTitleEnricher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTitleEnricher.swift; sourceTree = "<group>"; };
@@ -541,6 +543,7 @@
 		ED584D631F34AF06DA5C09A3 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
+				05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */,
 				DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */,
 				BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */,
 				454069942C9F75AFFB235E5C /* SessionStore.swift */,
@@ -771,6 +774,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				85FC74F90BC144FB514B2924 /* AppPreferences.swift in Sources */,
+				F615EB4B72D895C0FBBA61CE /* AppleSignInButtonLabel.swift in Sources */,
 				1995E0D8DB3D1CD07A579638 /* ArchiveListView.swift in Sources */,
 				52058F06635130DE73D6A92D /* BackgroundRefresh.swift in Sources */,
 				E63F93C1AFC3CD88D00DE943 /* BulkActionBar.swift in Sources */,

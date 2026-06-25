@@ -1,9 +1,11 @@
 import SwiftUI
 import GSDSync
+import GSDModel
 
 /// Quiet toolbar status indicator (§7.7): hidden when idle/healthy; a spinner while syncing;
-/// "↻N" when items are pending; an amber warning glyph on error/health-warning. Tapping invokes
-/// `onTap` (the host routes to Settings → Account). Respects Reduce Motion (static glyph, no spin).
+/// "↻N" when items are pending; the `Surface.alert` glyph on a sync error and the ochre
+/// quadrant accent on a softer health warning. Tapping invokes `onTap` (the host routes to
+/// Settings → Account). Respects Reduce Motion (static glyph, no spin).
 struct SyncStatusChip: View {
     let phase: SyncCoordinator.Phase
     let pendingCount: Int
@@ -35,10 +37,13 @@ struct SyncStatusChip: View {
                 ProgressView().controlSize(.small)
             }
         case .error:
-            Image(systemName: "exclamationmark.icloud").foregroundStyle(.orange)
+            Image(systemName: "exclamationmark.icloud").foregroundStyle(Surface.alert)
         case .idle:
             if health.level == .warning {
-                Image(systemName: "exclamationmark.icloud").foregroundStyle(.orange)
+                // Ochre = "attention, not alarm" — keeps a soft health warning visually
+                // distinct from the hard `Surface.alert` error above.
+                Image(systemName: "exclamationmark.icloud")
+                    .foregroundStyle(QuadrantStyle.accent(.urgentNotImportant))
             } else if pendingCount > 0 {
                 Label("\(pendingCount)", systemImage: "arrow.triangle.2.circlepath")
                     .labelStyle(.titleAndIcon).font(.footnote)

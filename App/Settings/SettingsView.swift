@@ -11,7 +11,6 @@ struct SettingsView: View {
     @Environment(SessionStore.self) private var session
     @Environment(SyncCoordinator.self) private var sync
     @Environment(PaletteController.self) private var palette
-    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -136,19 +135,13 @@ struct SettingsView: View {
                 }
                 .disabled(session.inProgress)
 
-                // Apple HIG-styled button driving the same web-redirect flow as Google (Option A).
-                // `SignInWithAppleButton` can't be reused — it always triggers the retired native sheet —
-                // so the appearance rules (black-on-light / white-on-dark, Apple glyph, wording, corner
-                // radius) are hand-rendered to satisfy App Review Guideline 4.8.
+                // Hand-rendered "Sign in with Apple" (see `AppleSignInButtonLabel`): drives the
+                // same web-redirect flow as Google (Guideline 4.8), so the native button can't be
+                // used. Appearance lives in one shared view to stay identical to Onboarding's.
                 Button {
                     _Concurrency.Task { await session.signIn(provider: "apple") }
                 } label: {
-                    Label(String(localized: "Sign in with Apple"), systemImage: "applelogo")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                        .foregroundStyle(colorScheme == .dark ? .black : .white)
-                        .background(colorScheme == .dark ? Color.white : Color.black)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    AppleSignInButtonLabel()
                 }
                 .buttonStyle(.plain)
                 .disabled(session.inProgress)

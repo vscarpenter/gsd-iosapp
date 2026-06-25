@@ -5,6 +5,12 @@ import GSDModel
 /// These four pigments are the *only* strong color in the app (the editorial
 /// design language) — chrome stays graphite/ink via `Surface`. Values are the
 /// refined, harmonized set from the design handoff (rust/tide/ochre/slate).
+///
+/// Contrast — verified 2026-06-25 (was: a standing "re-verify" note): as text on a
+/// white card all four accents pass WCAG AA — tide 6.3:1, rust 5.9:1, slate 5.5:1,
+/// ochre 5.0:1 (tightest); the footnote `#tag` chip on its wash is ~4.8:1 (AA). None
+/// reach AAA (7:1) as small colored text — an accepted trade for the rationed palette —
+/// but the large `serif(.title3)` quadrant headings clear AAA-large.
 enum QuadrantStyle {
     static func accent(_ q: Quadrant) -> Color {
         switch q {

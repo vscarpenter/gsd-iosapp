@@ -78,9 +78,9 @@ struct TaskCardView: View {
             if let menu {
                 Menu { menu() } label: {
                     Image(systemName: "ellipsis")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.title3.weight(.semibold))        // text-style base: scales with the .headline title at AX sizes
                         .foregroundStyle(Surface.ink3)
-                        .frame(width: 30, height: 30)          // glyph target; row's 44pt height supplies the rest
+                        .frame(minWidth: 30, minHeight: 30)     // ≥30pt glyph target; grows (not clips) at AX sizes; row's 44pt supplies the rest
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel(String(localized: "More actions"))

@@ -158,11 +158,8 @@ struct TaskEditorView: View {
     private var tagField: some View {
         VStack(alignment: .leading, spacing: 8) {
             if !tags.isEmpty {
-                HStack {
-                    ForEach(tags, id: \.self) { tag in
-                        Button { tags.removeAll { $0 == tag } } label: { Text("#\(tag)  ✕").font(.caption2) }
-                            .buttonStyle(.bordered)
-                    }
+                HStack(spacing: 8) {
+                    ForEach(tags, id: \.self) { tag in tagChip(tag) }
                 }
             }
             HStack {
@@ -174,6 +171,28 @@ struct TaskEditorView: View {
                               || tags.count >= FieldLimits.maxTags)
             }
         }
+    }
+
+    /// An editable tag chip: the app's canonical wash capsule (matching `TaskCardView.tagRow`
+    /// and `CaptureBar`, tinted by the editor's current `quadrant`) plus a distinct, comfortably-
+    /// tappable remove control — replacing the old sub-44pt inline "✕" glyph glued to the label.
+    private func tagChip(_ tag: String) -> some View {
+        HStack(spacing: 4) {
+            Text("#\(tag)").font(.footnote)
+            Button {
+                tags.removeAll { $0 == tag }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.footnote)
+                    .frame(width: 28, height: 28)   // comfortable hit target, not a 10pt glyph
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "Remove tag \(tag)"))
+        }
+        .foregroundStyle(QuadrantStyle.accent(quadrant))
+        .padding(.leading, 10).padding(.trailing, 2)
+        .background(QuadrantStyle.wash(quadrant), in: Capsule())
     }
 
     /// Read-only, tappable links detected in the description (design-spec 2026-06-24).
