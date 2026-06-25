@@ -2,14 +2,33 @@ import SwiftUI
 import GSDModel
 import GSDStore
 
-/// Bottom action bar shown while multi-selecting active tasks. Six ops; Delete confirms.
+/// Adds the multi-select bulk action bar to a task list. Six ops; Delete confirms.
 /// Move/tags/due open lightweight prompts. Each op calls the store's bulk method then
-/// clears only the IDs the store reports as resolved. Hosted via `.safeAreaInset` (not a toolbar item) so its
-/// `.confirmationDialog`/`.alert`/`.sheet` modifiers stay in the main view hierarchy and
-/// actually present.
-struct BulkActionBar: View {
+/// clears only the IDs the store reports as resolved.
+///
+/// The *visual* bar is hosted via `.safeAreaInset(edge: .bottom)` (so it reserves space and
+/// never covers the last row), but every `.confirmationDialog`/`.alert`/`.sheet` prompt is
+/// attached to the **main content**, not the inset. This split is the whole point:
+/// presenting a modal from inside a `.safeAreaInset` is owned by a secondary
+/// `UIHostingController` that UIKit reparents — it logs
+/// "Adding '_UIReparentingView' as a subview of UIHostingController.view is not supported"
+/// and the prompt silently fails to present. `ArchiveListView`'s working bulk-delete uses the
+/// same split (bar in the inset, dialog on the content); this modifier generalizes it.
+extension View {
+    /// Attach the bulk action bar + its prompts to a task list.
+    /// - Parameters:
+    ///   - selection: the list's multi-select set; the bar clears resolved IDs from it.
+    ///   - failure: the parent's failure surface, reused so there's one alert host.
+    func bulkActionBar(selection: Binding<Set<String>>,
+                       failure: Binding<TaskActionFailure?>) -> some View {
+        modifier(BulkActionBarModifier(selection: selection, failure: failure))
+    }
+}
+
+private struct BulkActionBarModifier: ViewModifier {
     @Environment(TaskStore.self) private var store
     @Binding var selection: Set<String>
+    @Binding var failure: TaskActionFailure?
 
     private enum DeferredPrompt: Sendable {
         case delete
@@ -27,7 +46,6 @@ struct BulkActionBar: View {
     @State private var promptSelection = Set<String>()
     @State private var tagDraft = ""
     @State private var dueDraft = Date.now
-    @State private var actionFailure: TaskActionFailure?
 
     private var count: Int { selection.count }
     private var isPresentingPrompt: Bool {
@@ -36,107 +54,112 @@ struct BulkActionBar: View {
     private var shouldShowBar: Bool { !selection.isEmpty || isPresentingPrompt || !promptSelection.isEmpty }
     private var displayCount: Int { promptSelection.isEmpty ? count : promptSelection.count }
 
-    var body: some View {
-        Group {
-            if shouldShowBar {
-                HStack(spacing: 16) {
-                    Button { run { try await store.bulkComplete(ids: $0) } } label: {
-                        Label(String(localized: "Complete"), systemImage: "checkmark.circle")
-                    }
-                    Menu {
-                        Button(String(localized: "Move to quadrant…")) { presentPrompt(.move) }
-                        Button(String(localized: "Add tags…")) { presentPrompt(.addTags) }
-                        Button(String(localized: "Remove tags…")) { presentPrompt(.removeTags) }
-                        Button(String(localized: "Set due date…")) { presentPrompt(.setDue) }
-                    } label: { Label(String(localized: "Edit"), systemImage: "slider.horizontal.3") }
-                    Spacer()
-                    Text(String(localized: "\(displayCount) selected"))
-                        .font(.subheadline)
-                        .foregroundStyle(Surface.ink2)
-                    Spacer()
-                    Button(role: .destructive) { presentPrompt(.delete) } label: {
-                        Label(String(localized: "Delete"), systemImage: "trash")
+    func body(content: Content) -> some View {
+        content
+            // The bar's visual lives in the inset…
+            .safeAreaInset(edge: .bottom) { bar }
+            // …but its prompts are attached to the main content so they actually present.
+            .confirmationDialog(String(localized: "Delete \(displayCount) tasks?"),
+                                isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button(String(localized: "Delete"), role: .destructive) {
+                    run(ids: promptSelection) { try await store.bulkDelete(ids: $0) }
+                }
+                Button(String(localized: "Cancel"), role: .cancel) {}
+            }
+            .confirmationDialog(String(localized: "Move to…"), isPresented: $showMove, titleVisibility: .visible) {
+                ForEach(Quadrant.allCases, id: \.self) { q in
+                    Button(q.title) {
+                        run(ids: promptSelection) { try await store.bulkMove(ids: $0, to: q) }
                     }
                 }
-                .disabled(selection.isEmpty && promptSelection.isEmpty)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity)
-                .background(.bar)
-                .accessibilityLabel(String(localized: "\(displayCount) selected"))
+                Button(String(localized: "Cancel"), role: .cancel) {}
             }
-        }
-        .confirmationDialog(String(localized: "Delete \(displayCount) tasks?"),
-                            isPresented: $showDeleteConfirm, titleVisibility: .visible) {
-            Button(String(localized: "Delete"), role: .destructive) {
-                run(ids: promptSelection) { try await store.bulkDelete(ids: $0) }
-            }
-            Button(String(localized: "Cancel"), role: .cancel) {}
-        }
-        .confirmationDialog(String(localized: "Move to…"), isPresented: $showMove, titleVisibility: .visible) {
-            ForEach(Quadrant.allCases, id: \.self) { q in
-                Button(q.title) {
-                    run(ids: promptSelection) { try await store.bulkMove(ids: $0, to: q) }
+            .alert(String(localized: "Add tags"), isPresented: $showAddTags) {
+                TextField(String(localized: "comma,separated"), text: $tagDraft)
+                Button(String(localized: "Add")) {
+                    let tags = parseTags(tagDraft)
+                    let ids = promptSelection
+                    tagDraft = ""
+                    run(ids: ids) { try await store.bulkAddTags(ids: $0, tags: tags) }
                 }
+                Button(String(localized: "Cancel"), role: .cancel) { tagDraft = "" }
             }
-            Button(String(localized: "Cancel"), role: .cancel) {}
-        }
-        .alert(String(localized: "Add tags"), isPresented: $showAddTags) {
-            TextField(String(localized: "comma,separated"), text: $tagDraft)
-            Button(String(localized: "Add")) {
-                let tags = parseTags(tagDraft)
-                let ids = promptSelection
-                tagDraft = ""
-                run(ids: ids) { try await store.bulkAddTags(ids: $0, tags: tags) }
+            .alert(String(localized: "Remove tags"), isPresented: $showRemoveTags) {
+                TextField(String(localized: "comma,separated"), text: $tagDraft)
+                Button(String(localized: "Remove")) {
+                    let tags = parseTags(tagDraft)
+                    let ids = promptSelection
+                    tagDraft = ""
+                    run(ids: ids) { try await store.bulkRemoveTags(ids: $0, tags: tags) }
+                }
+                Button(String(localized: "Cancel"), role: .cancel) { tagDraft = "" }
             }
-            Button(String(localized: "Cancel"), role: .cancel) { tagDraft = "" }
-        }
-        .alert(String(localized: "Remove tags"), isPresented: $showRemoveTags) {
-            TextField(String(localized: "comma,separated"), text: $tagDraft)
-            Button(String(localized: "Remove")) {
-                let tags = parseTags(tagDraft)
-                let ids = promptSelection
-                tagDraft = ""
-                run(ids: ids) { try await store.bulkRemoveTags(ids: $0, tags: tags) }
-            }
-            Button(String(localized: "Cancel"), role: .cancel) { tagDraft = "" }
-        }
-        .sheet(isPresented: $showSetDue) {
-            NavigationStack {
-                DatePicker(String(localized: "Due"), selection: $dueDraft, displayedComponents: .date)
-                    .datePickerStyle(.graphical).padding()
-                    .navigationTitle(String(localized: "Set due date"))
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button(String(localized: "Set")) {
-                                let ids = promptSelection
-                                showSetDue = false
-                                run(ids: ids) { try await store.bulkSetDue(ids: $0, to: dueDraft) }
+            .sheet(isPresented: $showSetDue) {
+                NavigationStack {
+                    DatePicker(String(localized: "Due"), selection: $dueDraft, displayedComponents: .date)
+                        .datePickerStyle(.graphical).padding()
+                        .navigationTitle(String(localized: "Set due date"))
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button(String(localized: "Set")) {
+                                    let ids = promptSelection
+                                    showSetDue = false
+                                    run(ids: ids) { try await store.bulkSetDue(ids: $0, to: dueDraft) }
+                                }
+                            }
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(String(localized: "Cancel")) { showSetDue = false }
                             }
                         }
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button(String(localized: "Cancel")) { showSetDue = false }
-                        }
-                    }
+                }
+                .presentationDetents([.medium])
             }
-            .presentationDetents([.medium])
-        }
-        .onChange(of: showDeleteConfirm) { _, showing in if !showing { clearPromptIfIdle() } }
-        .onChange(of: showMove) { _, showing in if !showing { clearPromptIfIdle() } }
-        .onChange(of: showAddTags) { _, showing in
-            if !showing {
-                tagDraft = ""
-                clearPromptIfIdle()
+            .onChange(of: showDeleteConfirm) { _, showing in if !showing { clearPromptIfIdle() } }
+            .onChange(of: showMove) { _, showing in if !showing { clearPromptIfIdle() } }
+            .onChange(of: showAddTags) { _, showing in
+                if !showing {
+                    tagDraft = ""
+                    clearPromptIfIdle()
+                }
             }
-        }
-        .onChange(of: showRemoveTags) { _, showing in
-            if !showing {
-                tagDraft = ""
-                clearPromptIfIdle()
+            .onChange(of: showRemoveTags) { _, showing in
+                if !showing {
+                    tagDraft = ""
+                    clearPromptIfIdle()
+                }
             }
+            .onChange(of: showSetDue) { _, showing in if !showing { clearPromptIfIdle() } }
+    }
+
+    /// Bottom action bar shown while multi-selecting active tasks.
+    @ViewBuilder private var bar: some View {
+        if shouldShowBar {
+            HStack(spacing: 16) {
+                Button { run { try await store.bulkComplete(ids: $0) } } label: {
+                    Label(String(localized: "Complete"), systemImage: "checkmark.circle")
+                }
+                Menu {
+                    Button(String(localized: "Move to quadrant…")) { presentPrompt(.move) }
+                    Button(String(localized: "Add tags…")) { presentPrompt(.addTags) }
+                    Button(String(localized: "Remove tags…")) { presentPrompt(.removeTags) }
+                    Button(String(localized: "Set due date…")) { presentPrompt(.setDue) }
+                } label: { Label(String(localized: "Edit"), systemImage: "slider.horizontal.3") }
+                Spacer()
+                Text(String(localized: "\(displayCount) selected"))
+                    .font(.subheadline)
+                    .foregroundStyle(Surface.ink2)
+                Spacer()
+                Button(role: .destructive) { presentPrompt(.delete) } label: {
+                    Label(String(localized: "Delete"), systemImage: "trash")
+                }
+            }
+            .disabled(selection.isEmpty && promptSelection.isEmpty)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity)
+            .background(.bar)
+            .accessibilityLabel(String(localized: "\(displayCount) selected"))
         }
-        .onChange(of: showSetDue) { _, showing in if !showing { clearPromptIfIdle() } }
-        .taskActionFailureAlert($actionFailure)
     }
 
     private func parseTags(_ raw: String) -> [String] {
@@ -185,10 +208,10 @@ struct BulkActionBar: View {
                     selection.subtract(result.completedIDs)
                 }
                 if result.hasFailures {
-                    actionFailure = TaskActionFailure(partialFailureMessage(result: result, total: ids.count))
+                    failure = TaskActionFailure(partialFailureMessage(result: result, total: ids.count))
                 }
             } catch {
-                actionFailure = TaskActionFailure(String(localized: "Couldn’t update selected tasks: \(error.localizedDescription)"))
+                failure = TaskActionFailure(String(localized: "Couldn’t update selected tasks: \(error.localizedDescription)"))
             }
         }
     }

@@ -81,6 +81,7 @@ struct TaskEditorView: View {
                         TextField(String(localized: "Description"), text: $description, axis: .vertical)
                             .lineLimit(3...8)
                     }
+                    linksSection
                     dueDateSection
                     recurrenceSection
                 }
@@ -171,6 +172,33 @@ struct TaskEditorView: View {
                 Button(String(localized: "Add"), action: addTag)
                     .disabled(tagDraft.trimmingCharacters(in: CharacterSet(charactersIn: " ,#")).isEmpty
                               || tags.count >= FieldLimits.maxTags)
+            }
+        }
+    }
+
+    /// Read-only, tappable links detected in the description (design-spec 2026-06-24).
+    /// Each label *is* its own URL (no spoofing), and `Link` opens the system browser
+    /// via the environment `openURL`. Validation happens in `LinkDetector`/`URLSanitizer`
+    /// (http/https only) — this view never hands an unvetted URL to the OS. Renders
+    /// nothing when the description holds no safe URL.
+    @ViewBuilder private var linksSection: some View {
+        let links = LinkDetector.detect(in: description)
+        if !links.isEmpty {
+            Section(String(localized: "Links")) {
+                ForEach(links, id: \.self) { url in
+                    Link(destination: url) {
+                        Label {
+                            Text(verbatim: url.absoluteString)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        } icon: {
+                            Image(systemName: "link")
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(Surface.tint)
+                    }
+                    .accessibilityHint(String(localized: "Opens in your browser"))
+                }
             }
         }
     }

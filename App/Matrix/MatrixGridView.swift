@@ -74,9 +74,9 @@ private struct MatrixGridContent: View {
             showCompletedToggle($showCompleted)
             ToolbarItem(placement: .topBarTrailing) { EditButton() }
         }
-        .safeAreaInset(edge: .bottom) {
-            BulkActionBar(selection: $selection)
-        }
+        // Bar visual sits in a bottom safeAreaInset; its prompts present from the main
+        // content (see BulkActionBar) so they don't get reparented out of existence.
+        .bulkActionBar(selection: $selection, failure: $actionFailure)
         .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)
         .onChange(of: editMode?.wrappedValue) { _, mode in
