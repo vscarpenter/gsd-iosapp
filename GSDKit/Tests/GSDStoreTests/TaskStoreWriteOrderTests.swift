@@ -31,8 +31,13 @@ struct TaskStoreWriteOrderTests {
     final class LoggingQueue: SyncQueueRepository, @unchecked Sendable {
         let log: EventLog
         var items: [SyncQueueItem] = []
+        var failEnqueue = false
+        struct Boom: Error {}
         init(log: EventLog) { self.log = log }
-        func enqueue(_ item: SyncQueueItem) async throws { log.events.append("enqueue"); items.append(item) }
+        func enqueue(_ item: SyncQueueItem) async throws {
+            if failEnqueue { throw Boom() }
+            log.events.append("enqueue"); items.append(item)
+        }
         func pending() async throws -> [SyncQueueItem] { items }
         func update(_ item: SyncQueueItem) async throws {}
         func remove(id: String) async throws { log.events.append("remove"); items.removeAll { $0.id == id } }
@@ -66,6 +71,20 @@ struct TaskStoreWriteOrderTests {
         let store = try makeStore(repo: LoggingRepository(log: log), queue: LoggingQueue(log: log))
         try await store.delete(task("a"))
         #expect(log.events == ["enqueue", "delete"])
+    }
+
+    /// A delete whose enqueue fails must NOT delete the local row: unlike an upsert (whose row
+    /// survives and is re-enqueued by the next sync's seed), a deleted row is gone — seed cannot
+    /// re-enqueue it, so a lost delete-enqueue lets the next pull resurrect the task. The delete
+    /// must abort and keep the row so the user can retry.
+    @Test func deleteAbortsAndKeepsRowWhenEnqueueFails() async throws {
+        let log = EventLog()
+        let repo = LoggingRepository(log: log)
+        let queue = LoggingQueue(log: log); queue.failEnqueue = true
+        let store = try makeStore(repo: repo, queue: queue)
+        await #expect(throws: (any Error).self) { try await store.delete(self.task("a")) }
+        #expect(!log.events.contains("delete"))   // local row NOT deleted → cannot resurrect
+        #expect(queue.items.isEmpty)
     }
 
     @Test func failedUpsertRemovesTheOrphanedQueueItem() async throws {
