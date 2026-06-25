@@ -60,6 +60,9 @@ final class LiveWebAuthPresenter: NSObject, WebAuthPresenting, @unchecked Sendab
 extension LiveWebAuthPresenter: ASWebAuthenticationPresentationContextProviding {
     @MainActor
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        anchor ?? Self.currentPresentationAnchor()!
+        // `anchor` is assigned before `session.start()` and the system only calls this during an
+        // active session, so the fallbacks are purely defensive. Avoid a force-unwrap: even in the
+        // theoretical no-window case a bare anchor returns cleanly rather than crashing sign-in.
+        anchor ?? Self.currentPresentationAnchor() ?? ASPresentationAnchor()
     }
 }
