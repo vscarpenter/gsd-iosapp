@@ -34,6 +34,15 @@ struct URLTitleTests {
         #expect(URLTitle.derive(from: "https://example.com/12345") == "example.com")
     }
 
+    @Test func fallsBackToHostForUuidSlug() {
+        let url = "https://www.ft.com/content/b6ef5e8a-4288-4223-a017-c97b89cac2fa"
+        #expect(URLTitle.derive(from: url) == "ft.com")
+    }
+
+    @Test func fallsBackToHostForOpaqueHexSlug() {
+        #expect(URLTitle.derive(from: "https://example.com/a1b2c3d4e5f6") == "example.com")
+    }
+
     @Test func emptyForUnparseableInput() {
         #expect(URLTitle.derive(from: "") == "")
     }

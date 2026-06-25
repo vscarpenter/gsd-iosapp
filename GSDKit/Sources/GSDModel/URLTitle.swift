@@ -13,19 +13,31 @@ public enum URLTitle {
 
         let segments = url.pathComponents.filter { $0 != "/" && !$0.isEmpty }
         if let slug = segments.last {
-            let title = stripExtension(slug)
+            let tokens = stripExtension(slug)
                 .replacingOccurrences(of: "_", with: "-")
                 .split(separator: "-")
-                .map { capitalizeFirst(String($0)) }
-                .joined(separator: " ")
-            // A real title has letters; a bare id/number slug (e.g. "12345") falls to the host.
-            if title.contains(where: \.isLetter) { return title }
+                .map(String.init)
+                .filter { !$0.isEmpty }
+            // Use the slug only when most tokens read like words — so an article slug becomes a
+            // title, but an opaque id (UUID like "b6ef5e8a-4288-…", a number, or a hex blob) falls
+            // back to the host. The check is the gate; once it passes, every token is kept.
+            let wordLike = tokens.filter(isWordLike)
+            if !wordLike.isEmpty, wordLike.count * 2 >= tokens.count {
+                return tokens.map(capitalizeFirst).joined(separator: " ")
+            }
         }
 
         if let host = url.host {
             return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
         }
         return ""
+    }
+
+    /// A token reads like a word (vs. an opaque id): all letters and containing a vowel. IDs are
+    /// excluded because they mix in digits ("a017", "4288") or lack vowels.
+    private static func isWordLike(_ token: String) -> Bool {
+        let vowels: Set<Character> = ["a", "e", "i", "o", "u", "y"]
+        return token.allSatisfy(\.isLetter) && token.lowercased().contains(where: vowels.contains)
     }
 
     private static func stripExtension(_ segment: String) -> String {
