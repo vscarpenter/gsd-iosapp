@@ -53,6 +53,16 @@ struct SmartViewListView: View {
                 case .view(let id):
                     if let view = store.allViews.first(where: { $0.id == id }) {
                         FilteredTaskListView(view: view)
+                    } else {
+                        // A stale deep link (e.g. a deleted custom view) used to push a blank
+                        // screen here. Show an explicit message instead. A valid-but-not-yet-loaded
+                        // view self-heals when the smart-view observer fires (allViews is observed).
+                        ContentUnavailableView(
+                            String(localized: "Smart view unavailable"),
+                            systemImage: "tray",
+                            description: Text(String(localized: "This smart view no longer exists. It may have been deleted."))
+                        )
+                        .background(Surface.paper)
                     }
                 case .archive:
                     ArchiveListView()
