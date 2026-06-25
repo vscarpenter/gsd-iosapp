@@ -34,7 +34,10 @@ struct GSDMenuCommands: Commands {
             }
             .keyboardShortcut("k", modifiers: .command)
             Divider()
-            Button(String(localized: "Today's Focus")) { DeepLinkHandoff.open(.focus) }
+            // Route to the same Today's Focus smart view as the widget, quick action, and Siri
+            // intent — `.focus` opens the full Matrix grid (a different surface), so it was the
+            // odd one out under the identical "Today's Focus" label.
+            Button(String(localized: "Today's Focus")) { DeepLinkHandoff.open(.smartView("today-focus")) }
             Divider()
             Button(Quadrant.urgentImportant.title) { DeepLinkHandoff.open(.quadrant(.urgentImportant)) }
                 .keyboardShortcut("1", modifiers: .command)

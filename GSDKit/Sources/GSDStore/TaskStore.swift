@@ -46,6 +46,21 @@ public struct BulkActionResult: Equatable, Sendable {
     public var hasFailures: Bool { !failures.isEmpty }
 }
 
+public enum TaskStoreError: Error, LocalizedError {
+    /// A delete could not be recorded for sync (the queue write failed), so the local row was
+    /// KEPT rather than deleted. Deleting it would let the next pull resurrect the task (a deleted
+    /// row is gone, so the next sync's seed cannot re-enqueue the lost delete). Surfaced so the
+    /// user can retry, instead of a silent delete-then-resurrect.
+    case deleteNotRecorded
+
+    public var errorDescription: String? {
+        switch self {
+        case .deleteNotRecorded:
+            String(localized: "Couldn't delete the task right now. Please try again.")
+        }
+    }
+}
+
 /// The single mutation path and observable task snapshot for the UI. Bridges
 /// `TaskRepository.observeAll()` into `tasks`, and stamps `updatedAt` (via an
 /// injected clock) on every PRIMARY mutation — satisfying the §3.3 invariant at
@@ -291,11 +306,17 @@ public final class TaskStore {
     }
 
     public func delete(_ task: Task) async throws {
-        let queueItemId = await enqueue(task.id, .delete, payload: nil)
+        // Require the delete to be recorded for sync BEFORE removing the local row. Unlike an
+        // upsert — whose row survives a failed enqueue and is re-enqueued by the next sync's seed
+        // — a deleted row is gone, so seed can't re-enqueue a lost delete and the next pull would
+        // resurrect the task. If the enqueue fails, abort and keep the row (the user can retry).
+        guard let queueItemId = await enqueue(task.id, .delete, payload: nil) else {
+            throw TaskStoreError.deleteNotRecorded
+        }
         do {
             try await repository.delete(id: task.id)
         } catch {
-            if let queueItemId { try? await syncQueue.remove(id: queueItemId) }
+            try? await syncQueue.remove(id: queueItemId)
             throw error
         }
         await reminders.cancel(taskID: task.id)

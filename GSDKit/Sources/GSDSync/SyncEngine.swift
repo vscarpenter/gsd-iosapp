@@ -190,9 +190,16 @@ public actor SyncEngine {
         let start = now()
         do {
             if cursor.load() == nil { try await seedExistingTasks() }      // first-sync seed BEFORE pull/reconcile
-            // §7.7 promises "tap Sync Now to retry" — an explicit user retry (or the network
-            // coming back) revives `.failed` items so the push loop drains them again.
-            if trigger == .manual || trigger == .networkRegained { try await requeueFailed() }
+            // Revive `.failed` items so the push loop drains them again. Done on any user-app-open
+            // event (manual Sync Now, cold launch, return-to-foreground) and when the network
+            // returns — but NOT on the in-session `.periodic` timer or `.mutation`, which would
+            // hammer a persistently-rejecting server every cycle. §7.7 promises a retry on
+            // explicit/contextual user action, not a background loop; a poison item stays `.failed`
+            // (kept, never dropped) and re-surfaces in the sync-health warning between attempts.
+            switch trigger {
+            case .manual, .networkRegained, .launch, .foreground: try await requeueFailed()
+            case .signIn, .periodic, .mutation: break
+            }
             let since = cursor.load() ?? "1970-01-01 00:00:00.000Z"
             let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since)
             result.pulled = pulled
