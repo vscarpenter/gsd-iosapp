@@ -66,6 +66,7 @@
 		AD6837183E00E04042A56ED0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 249F029B40FD9FDAA6A68A25 /* Assets.xcassets */; };
 		B17361EAF4ABA6F4940F94B8 /* SmartViewListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FB17173BD410FDE2B3AD58 /* SmartViewListView.swift */; };
 		B6AF4EA8BD5D386DBF3D1310 /* TodaysFocusWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FECB334B943916706D8E944 /* TodaysFocusWidget.swift */; };
+		BF410002859DB95FE0BFA2D1 /* PageTitleFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */; };
 		BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 834FF1E8BA076E31BA383962 /* GSDApp.swift */; };
 		C54C617DEC7531732CFC2822 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */; };
 		C8EFB5F817DADDA1C48B0356 /* ScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87C46CC1405702B23330578 /* ScreenshotTests.swift */; };
@@ -126,6 +127,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageTitleFetcher.swift; sourceTree = "<group>"; };
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
 		085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 				34B0C6FC1C9DB00999F2B90A /* Palette */,
 				CE95500FED3DD67B1AF87D0C /* Routing */,
 				E3E7A9EE8C0A43B83CCADEC0 /* Settings */,
+				095A9CA7341CB2291875A578 /* Sharing */,
 				B04168E073460512D3FB1A61 /* Store */,
 				CAB18B8FF69C32795537F4B3 /* Support */,
 				9A48F62AB639CAC93A507E7F /* Sync */,
@@ -274,6 +277,14 @@
 				52DDCB447C1EA39D55F1D7FD /* Widgets */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		095A9CA7341CB2291875A578 /* Sharing */ = {
+			isa = PBXGroup;
+			children = (
+				02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */,
+			);
+			path = Sharing;
 			sourceTree = "<group>";
 		};
 		0C2D45D930316312A499B9CB /* Demo */ = {
@@ -778,6 +789,7 @@
 				359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */,
 				8004840C42749CB157F55F18 /* MatrixView.swift in Sources */,
 				3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */,
+				BF410002859DB95FE0BFA2D1 /* PageTitleFetcher.swift in Sources */,
 				3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */,
 				FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */,
 				226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */,
