@@ -16,6 +16,7 @@ struct GSDApp: App {
     @State private var reminderResyncer: ReminderResyncer
     @State private var spotlightIndexer: SpotlightIndexer
     @State private var shareInbox: ShareInbox
+    @State private var titleEnricher: ShareTitleEnricher
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
@@ -101,6 +102,8 @@ struct GSDApp: App {
         // create() path on launch + foreground. Trivial glue; the logic is the tested ShareInbox.
         let shareInbox = ShareInbox(store: ShareOutboxStore())
         _shareInbox = State(initialValue: shareInbox)
+        let fetcher = PageTitleFetcher()
+        _titleEnricher = State(initialValue: ShareTitleEnricher(store: store, fetch: fetcher.title))
         _session = State(initialValue: SessionStore(
             auth: authService, tokenStore: tokenStore, coordinator: coordinator,
             hasLocalActiveTasks: { !store.tasks.isEmpty },
@@ -135,12 +138,20 @@ struct GSDApp: App {
                 .task {
                     store.start()
                     await DemoSeed.seedIfRequested(store, now: demoClock ?? .now)
-                    await shareInbox.drain { try await store.create($0) }
+                    await shareInbox.drain { task in
+                        try await store.create(task)
+                        titleEnricher.schedule(for: task)   // background: upgrade a URL-derived title
+                    }
                     // Drain the instant a share lands while the app is already running. On Mac
                     // Catalyst the extension never foregrounds the app and scenePhase `.active`
                     // is unreliable, so the launch/foreground drains alone leave captures stranded.
                     ShareOutboxSignal.observe {
-                        _Concurrency.Task { await shareInbox.drain { try await store.create($0) } }
+                        _Concurrency.Task {
+                            await shareInbox.drain { task in
+                                try await store.create(task)
+                                titleEnricher.schedule(for: task)
+                            }
+                        }
                     }
                     widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()
@@ -153,7 +164,12 @@ struct GSDApp: App {
                         AppDatabase.resume()   // restore writes before any foreground sync runs
                         coordinator.enteredForeground()
                         _Concurrency.Task { await store.refreshBadge() }
-                        _Concurrency.Task { await shareInbox.drain { try await store.create($0) } }
+                        _Concurrency.Task {
+                            await shareInbox.drain { task in
+                                try await store.create(task)
+                                titleEnricher.schedule(for: task)
+                            }
+                        }
                     case .background:
                         coordinator.enteredBackground()
                         BackgroundRefresh.schedule()
