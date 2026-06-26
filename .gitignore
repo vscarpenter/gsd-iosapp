@@ -15,6 +15,18 @@ xcuserdata/
 **/.swiftpm/
 # Note: Package.resolved IS committed to pin dependency versions.
 
+# Secrets / signing material — never commit (defensive: credentials live outside the repo)
+*.p8
+*.p12
+*.pem
+*.pfx
+*.cer
+*.key
+*.mobileprovision
+*.provisionprofile
+.env
+.env.*
+
 # Misc
 *.moved-aside
 *.hmap
