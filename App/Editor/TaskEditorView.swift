@@ -229,7 +229,7 @@ struct TaskEditorView: View {
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.footnote)
-                    .frame(width: 28, height: 28)   // comfortable hit target, not a 10pt glyph
+                    .frame(width: 44, height: 44)   // HIG-minimum hit target (§12.3)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

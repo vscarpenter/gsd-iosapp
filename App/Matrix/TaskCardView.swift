@@ -8,6 +8,8 @@ import GSDModel
 struct TaskCardView: View {
     let task: Task
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
     /// Injected for the live-ticking timer + deterministic previews.
     var now: Date = .now
     /// Counts for dependency badges, supplied by the enclosing section from the
@@ -35,6 +37,11 @@ struct TaskCardView: View {
                     .font(.headline)
                     .strikethrough(task.completed)
                     .foregroundStyle(task.completed ? Surface.ink3 : Surface.ink)
+                    // fixedSize keeps the title WRAPPING when an enclosing stack proposes
+                    // less height (iPad grid cells truncated mid-word at one line);
+                    // two lines before ellipsis at standard sizes, unlimited at AX.
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 if !task.description.isEmpty {
                     Text(task.description)
@@ -79,7 +86,7 @@ struct TaskCardView: View {
                     Image(systemName: "ellipsis")
                         .font(.title3.weight(.semibold))        // text-style base: scales with the .headline title at AX sizes
                         .foregroundStyle(Surface.ink3)
-                        .frame(minWidth: 30, minHeight: 30)     // ≥30pt glyph target; grows (not clips) at AX sizes; row's 44pt supplies the rest
+                        .frame(minWidth: 44, minHeight: 44)     // HIG-minimum hit target (§12.3); grows (not clips) at AX sizes
                         .contentShape(Rectangle())
                 }
                 .accessibilityLabel(String(localized: "More actions"))
@@ -156,9 +163,12 @@ struct TaskCardView: View {
             if blockedByCount > 0 {
                 // The lock badge alone carries the blocked state: the old whole-card
                 // opacity dim stacked onto ink3 and pushed metadata below 2:1 contrast.
-                Label(String(localized: "Blocked by \(blockedByCount)"), systemImage: "lock")
+                // Compact count (matching the blocking badge) — the spelled-out
+                // "Blocked by N" truncated to "Blocked b…" beside a due date.
+                Label("\(blockedByCount)", systemImage: "lock")
                     .fontWeight(.semibold)
                     .foregroundStyle(Surface.ink2)
+                    .accessibilityLabel(String(localized: "Blocked by \(blockedByCount)"))
             }
             if blockingCount > 0 {
                 Label("\(blockingCount)", systemImage: "arrow.right.circle")
