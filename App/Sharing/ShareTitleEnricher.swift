@@ -19,7 +19,7 @@ final class ShareTitleEnricher {
     }
 
     func schedule(for task: GSDModel.Task) {
-        guard AppGroupDefaults.shared.object(forKey: AppGroupDefaults.Key.fetchShareTitles) as? Bool ?? true,
+        guard AppGroupDefaults.shared.object(forKey: AppGroupDefaults.Key.fetchShareTitles) as? Bool ?? false,
               let url = sharedURL(in: task),
               task.title == derivedTitle(for: url) else { return }   // not URL-derived (incl. iOS) → skip
         _Concurrency.Task { [weak self] in

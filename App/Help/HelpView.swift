@@ -210,7 +210,7 @@ struct HelpView: View {
 
     private var privacySection: some View {
         section(String(localized: "PRIVACY"), icon: "lock.shield") {
-            Text(String(localized: "Your tasks live on this device. Nothing is sent to a server unless you explicitly sign in and enable sync. The app works fully offline — no account required."))
+            Text(String(localized: "Your tasks live on this device. The app works fully offline — no account required. Sync is opt-in, and shared-link title fetching is a separate opt-in setting that requests only links you share."))
                 .font(.callout)
                 .foregroundStyle(Surface.ink2)
                 .fixedSize(horizontal: false, vertical: true)

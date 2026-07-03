@@ -133,7 +133,7 @@ struct OnboardingView: View {
 
     private var privacyScreen: some View {
         screen(title: String(localized: "Yours, and only yours."),
-               lead: String(localized: "No account required. Your tasks stay on this device unless you choose to sign in and sync.")) {
+               lead: String(localized: "No account required. Your task database stays on this device unless you choose to sign in and sync.")) {
             ZStack {
                 Circle().fill(Surface.sunken).frame(width: 92, height: 92)
                 Image(systemName: "lock.fill").font(.system(size: 38)).foregroundStyle(Surface.ink2)

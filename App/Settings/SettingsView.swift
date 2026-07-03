@@ -14,7 +14,7 @@ struct SettingsView: View {
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
-    @AppStorage(AppGroupDefaults.Key.fetchShareTitles, store: .shared) private var fetchShareTitles = true
+    @AppStorage(AppGroupDefaults.Key.fetchShareTitles, store: .shared) private var fetchShareTitles = false
 
     /// Local mirror of the store's archive settings (UserDefaults-backed); writes flush back.
     @State private var archiveSettings: ArchiveSettings = .init()
@@ -75,7 +75,7 @@ struct SettingsView: View {
         } header: {
             Text(String(localized: "Sharing"))
         } footer: {
-            Text(String(localized: "When you share a link to GSD, fetch the page title for a readable task name. Only links you share are fetched."))
+            Text(String(localized: "Off by default. When enabled, GSD contacts the shared page to fetch a readable title. Only links you share are requested."))
         }
     }
 
@@ -362,7 +362,7 @@ struct SettingsView: View {
     private var aboutSection: some View {
         Section(String(localized: "About")) {
             LabeledContent(String(localized: "Version"), value: appVersion)
-            Text(String(localized: "GSD stores your data locally on your device. When you sign in, your tasks sync with your account; signed out, nothing leaves your device."))
+            Text(String(localized: "GSD stores your task data locally on your device. Signing in syncs tasks with your account; shared-link title fetching is separate and off by default."))
                 .font(.footnote).foregroundStyle(Surface.ink3)
             Link(String(localized: "Privacy Policy"), destination: URL(string: "https://gsdtaskmanager.com/privacy/")!)
                 .foregroundStyle(Surface.ink)   // reference link reads ink, not tide

@@ -60,13 +60,11 @@ final class LiveWebAuthPresenter: NSObject, WebAuthPresenting, @unchecked Sendab
 extension LiveWebAuthPresenter: ASWebAuthenticationPresentationContextProviding {
     @MainActor
     func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        // `anchor` is assigned before `session.start()` and the system only calls this during an
-        // active session, so the fallbacks are purely defensive. Avoid a force-unwrap: even in the
-        // theoretical no-window case a bare anchor returns cleanly rather than crashing sign-in.
-        // (`currentPresentationAnchor()` already covers every connected-scene case; only the
-        // zero-scenes case remains, where ASPresentationAnchor() is deprecated on the iOS 26 SDK
-        // and scenes can't be constructed — a scene-less zero-frame window is the one anchor
-        // that can still be built and returned cleanly.)
-        anchor ?? Self.currentPresentationAnchor() ?? UIWindow(frame: .zero)
+        if let anchor { return anchor }
+        if let current = Self.currentPresentationAnchor() { return current }
+        // `present(...)` refuses to start without an anchor, and `anchor` is retained until the
+        // completion handler runs. Reaching this means AuthenticationServices asked for an anchor
+        // outside an active presentation session.
+        preconditionFailure("Missing ASWebAuthenticationSession presentation anchor")
     }
 }
