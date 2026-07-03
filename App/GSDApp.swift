@@ -130,6 +130,10 @@ struct GSDApp: App {
         // mid-write risks SQLITE_BUSY. Registered in init(): background intent launches
         // run App.init before any perform().
         AppDependencyManager.shared.add(dependency: store)
+        // Re-register the App Shortcut phrases with Siri on every launch. Install-time
+        // extraction alone has proven unreliable on Mac Catalyst (Siri: "I don't see an
+        // app for that"), and Apple's guidance is to call this whenever phrases change.
+        GSDShortcuts.updateAppShortcutParameters()
         // BGTaskScheduler handlers MUST be registered before the app finishes launching —
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
         // and would trip "all launch handlers must be registered before application finishes
