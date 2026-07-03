@@ -1,10 +1,19 @@
 import SwiftUI
+import UIKit
 import GSDModel
 import GSDStore
 
 struct TaskEditorView: View {
     @Environment(TaskStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+
+    /// iPhone-only: which detent the sheet is at. Drives the "Show all details"
+    /// affordance — 10 of the editor's 12 sections live below the medium fold.
+    @State private var detent: PresentationDetent = .medium
+    /// Scoped replacement for the old toolbar `EditButton()` (which rendered a
+    /// confusing "Edit" inside a sheet already titled "Edit Task"): the Subtasks
+    /// section header toggles edit mode only while the user is actually reordering.
+    @State private var subtaskEditMode: EditMode = .inactive
 
     @State private var title: String
     @State private var description: String
@@ -68,6 +77,16 @@ struct TaskEditorView: View {
     }
 
     var body: some View {
+        // iPhone: half-height quick edit stays, with an explicit path to the full form.
+        // iPad/Mac: a page-sized sheet — the medium detent cut the quadrant picker mid-tile.
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            editorStack.presentationDetents([.medium, .large], selection: $detent)
+        } else {
+            editorStack.presentationSizing(.page)
+        }
+    }
+
+    private var editorStack: some View {
         NavigationStack {
             Form {
                 Group {
@@ -100,9 +119,14 @@ struct TaskEditorView: View {
             .background(Surface.paper)
             .accessibilityIdentifier("task-editor")
             .tint(Surface.tint)   // baseline calm action tint (carets + true actions, never system blue); picker values → ink3 by role
+            .environment(\.editMode, $subtaskEditMode)
+            .safeAreaInset(edge: .bottom) {
+                if UIDevice.current.userInterfaceIdiom == .phone && detent == .medium {
+                    showAllDetailsButton
+                }
+            }
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { EditButton() }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "Cancel")) { dismiss() }
                         .accessibilityIdentifier("editor-cancel")
@@ -114,7 +138,6 @@ struct TaskEditorView: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
         .sheet(isPresented: $showingDependencyPicker) {
             DependencyPickerView(
                 editingTaskID: editingTaskID,
@@ -123,6 +146,28 @@ struct TaskEditorView: View {
             )
             .environment(store)  // Catalyst: re-inject store across the (nested) sheet boundary
         }
+    }
+
+    /// Visible only at the iPhone medium detent: due date, subtasks, dependencies and
+    /// more live below the fold, and the grabber alone doesn't say so.
+    private var showAllDetailsButton: some View {
+        Button {
+            withAnimation { detent = .large }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "chevron.up")
+                Text(String(localized: "Show all details"))
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(Surface.tint)
+            .padding(.horizontal, 16).padding(.vertical, 9)
+            .background(Surface.surface, in: Capsule())
+            .overlay(Capsule().strokeBorder(Surface.hairline, lineWidth: 1))
+            .shadow(color: Surface.shadow.opacity(0.10), radius: 8, x: 0, y: 3)
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 6)
+        .accessibilityHint(String(localized: "Expands the editor to show every section"))
     }
 
     /// 2×2 picker mirroring the matrix. Each cell shows its quadrant icon + name in
@@ -264,7 +309,7 @@ struct TaskEditorView: View {
     }
 
     private var subtasksSection: some View {
-        Section(String(localized: "Subtasks")) {
+        Section {
             ForEach($subtasks) { $subtask in
                 HStack {
                     Button {
@@ -287,6 +332,20 @@ struct TaskEditorView: View {
                 Button(String(localized: "Add"), action: addSubtask)
                     .disabled(subtaskDraft.trimmingCharacters(in: .whitespaces).isEmpty
                               || subtasks.count >= FieldLimits.maxSubtasks)
+            }
+        } header: {
+            HStack {
+                Text(String(localized: "Subtasks"))
+                Spacer()
+                if subtasks.count > 1 {
+                    Button(subtaskEditMode.isEditing
+                           ? String(localized: "Done")
+                           : String(localized: "Reorder")) {
+                        withAnimation { subtaskEditMode = subtaskEditMode.isEditing ? .inactive : .active }
+                    }
+                    .font(.footnote)
+                    .textCase(nil)
+                }
             }
         }
     }
