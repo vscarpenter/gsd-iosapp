@@ -38,6 +38,22 @@ struct TaskStoreTests {
         #expect(try await repo.fetch(id: "fixed-id")?.quadrant == .urgentImportant)
     }
 
+    @Test func addPersistsDueDate() async throws {
+        // The Siri Create Task intent passes an optional due date through add(); the
+        // capture-bar path omits it and must stay due-date-free.
+        let (store, repo) = try makeStoreAndRepo()
+        let due = Date(timeIntervalSince1970: 5000)
+        try await store.add(ParsedCapture(title: "Dated", urgent: false, important: false, tags: [], descriptionAdditions: []),
+                            dueDate: due)
+        #expect(try await repo.fetch(id: "fixed-id")?.dueDate == due)
+    }
+
+    @Test func addWithoutDueDateLeavesDueDateNil() async throws {
+        let (store, repo) = try makeStoreAndRepo()
+        try await store.add(ParsedCapture(title: "Undated", urgent: false, important: false, tags: [], descriptionAdditions: []))
+        #expect(try await repo.fetch(id: "fixed-id")?.dueDate == nil)
+    }
+
     @Test func toggleCompleteSetsCompletedAtAndBumpsUpdatedAt() async throws {
         let (store, repo) = try makeStoreAndRepo()
         try await store.add(ParsedCapture(title: "X", urgent: false, important: false, tags: [], descriptionAdditions: []))
