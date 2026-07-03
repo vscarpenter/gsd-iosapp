@@ -117,7 +117,7 @@ struct CommandPaletteView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
-            .navigationTitle(String(localized: "Commands"))
+            .navigationTitle(String(localized: "Search"))   // matches the magnifier button that opens it; searching is the primary job
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always),
                         prompt: String(localized: "Search tasks, views, actions"))
             .toolbar {

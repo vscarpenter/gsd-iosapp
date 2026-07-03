@@ -92,7 +92,7 @@ struct BrandedNavigationTitle: View {
                 .font(.headline.weight(.bold))
                 .foregroundStyle(Surface.ink)
 
-            Text("-")
+            Text(verbatim: "·")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Surface.ink3)
 
@@ -103,7 +103,7 @@ struct BrandedNavigationTitle: View {
                 .minimumScaleFactor(0.82)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(String(localized: "GSD - \(screen)"))
+        .accessibilityLabel(String(localized: "GSD, \(screen)"))
     }
 }
 

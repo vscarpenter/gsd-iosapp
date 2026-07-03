@@ -30,6 +30,12 @@ struct BuiltInSmartViewsTests {
                 ["today-focus", "this-week", "overdue", "no-deadline", "recently-added",
                  "weeks-wins", "all-completed", "recurring", "ready-to-work"])
     }
+    @Test func weeksWinsIconIsNotGamified() {
+        // Owner decision 2026-07-02: no trophy/flame iconography (PRODUCT.md anti-references
+        // gamification); the wins view keeps its data but wears a neutral seal.
+        let wins = BuiltInSmartViews.all.first { $0.id == "weeks-wins" }
+        #expect(wins?.icon == "checkmark.seal")
+    }
     @Test func todaysFocusIsActiveQ1() {
         let ts = [t("q1", urgent: true, important: true), t("q2", important: true),
                   t("done", urgent: true, important: true, completed: true)]

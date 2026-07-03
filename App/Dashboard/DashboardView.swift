@@ -101,11 +101,19 @@ struct DashboardView: View {
             statCard(String(localized: "Active"), "\(s.activeCount)", "tray.full")
             statCard(String(localized: "Completed"), "\(s.completedCount)", "checkmark.circle")
             statCard(String(localized: "Completion"), "\(Int((s.completionRate * 100).rounded()))%", "percent")
-            statCard(String(localized: "Tracked"), TimeTracking.format(minutes: s.totalTrackedMinutes), "clock")
+            if s.totalTrackedMinutes == 0 {
+                // Zero-state: "< 1m" read as cryptic data; an em-dash + spoken
+                // "nothing tracked yet" is honest about the empty state.
+                statCard(String(localized: "Tracked"), "—", "clock",
+                         accessibilityValue: String(localized: "nothing tracked yet"))
+            } else {
+                statCard(String(localized: "Tracked"), TimeTracking.format(minutes: s.totalTrackedMinutes), "clock")
+            }
         }
     }
 
-    private func statCard(_ title: String, _ value: String, _ icon: String) -> some View {
+    private func statCard(_ title: String, _ value: String, _ icon: String,
+                          accessibilityValue: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 Image(systemName: icon).font(.footnote).foregroundStyle(Surface.ink3)
@@ -118,7 +126,7 @@ struct DashboardView: View {
         .padding(16)
         .surfaceCard(Radius.input)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(String(localized: "\(title): \(value)"))
+        .accessibilityLabel(String(localized: "\(title): \(accessibilityValue ?? value)"))
     }
 
     private func trendSection(_ s: AnalyticsSummary) -> some View {
@@ -151,7 +159,7 @@ struct DashboardView: View {
                              y: .value(created, point.created),
                              series: .value(String(localized: "Series"), created))
                         .foregroundStyle(Surface.ink3)
-                        .lineStyle(StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [2, 5]))
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, dash: [2, 5]))   // 1.5pt dashes rendered near-invisible
                 }
             }
             .chartForegroundStyleScale([completed: Surface.success, created: Surface.ink3])

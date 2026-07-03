@@ -27,7 +27,7 @@ public enum BuiltInSmartViews {
                   criteria: FilterCriteria(status: .active, noDueDate: true)),
         SmartView(id: "recently-added", name: String(localized: "Recently Added"), icon: "sparkles",
                   criteria: FilterCriteria(status: .active, recentlyAdded: true)),
-        SmartView(id: "weeks-wins", name: String(localized: "This Week's Wins"), icon: "trophy",
+        SmartView(id: "weeks-wins", name: String(localized: "This Week's Wins"), icon: "checkmark.seal",
                   criteria: FilterCriteria(status: .completed, recentlyCompleted: true)),
         SmartView(id: "all-completed", name: String(localized: "All Completed"), icon: "checkmark.circle",
                   criteria: FilterCriteria(status: .completed)),
