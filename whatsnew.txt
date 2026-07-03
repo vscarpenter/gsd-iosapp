@@ -1,19 +1,24 @@
 iOS — recommended
 
-▎ This update focuses on reliability and a smoother reminder experience.
+▎ This update is a focused polish pass: better contrast, calmer dashboard, and safer editing.
 ▎
-▎ • Tap a reminder to jump straight to that task — notifications now take you exactly where you meant to go.
-▎ • Steadier sync: deleted tasks stay deleted, and any change that doesn't sync on the first try is retried automatically the next time you open the app.
-▎ • A handful of stability fixes for rare cases at launch and sign-in.
+▎ • Undo for deleted tasks. Delete a task by accident? An Undo option appears right after — restore it exactly as it was, online or off.
+▎ • Easier to read. Sharper contrast on due dates, counts, and chart labels throughout the app, plus larger tap targets on card menus and tag removal.
+▎ • iPad editor no longer clips. The task editor now opens at full size on iPad; on iPhone, a "Show all details" button reveals every section.
+▎ • Calmer dashboard. The overdue reminder is now a normal card instead of a red alert banner, and the streak tiles are gone for good.
+▎ • More private by default. Fetching a page title when you share a link is now off unless you turn it on — and only ever touches links you explicitly share.
+▎ • A round of smaller polish: consistent sign-in buttons, one toggle color throughout Settings, and clearer onboarding copy.
 ▎
 ▎ As always, GSD works fully offline — syncing is optional and only happens when you're signed in.
 
 macOS — recommended
 
-▎ This update focuses on reliability and a smoother reminder experience.
+▎ This update is a focused polish pass: better contrast, calmer dashboard, and safer editing.
 ▎
-▎ • Tap a reminder to jump straight to that task.
-▎ • The View ▸ "Today's Focus" menu now opens your Today's Focus list, matching the widget and Siri.
-▎ • Steadier sync: deleted tasks stay deleted, and changes that don't sync on the first try are retried automatically when you reopen the app.
-▎ • A handful of stability fixes for rare cases at launch and sign-in.
+▎ • Undo for deleted tasks, restorable exactly as they were.
+▎ • Easier to read, with sharper contrast on due dates, counts, and chart labels.
+▎ • Task editor opens at full size instead of clipping content.
+▎ • Calmer dashboard — the overdue reminder is a normal card, not a red alert banner, and the streak tiles are gone.
+▎ • More private by default — link-title fetching for shared links is now off unless you enable it.
+▎ • Sign-in and Settings polish throughout.
 

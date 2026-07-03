@@ -1,0 +1,32 @@
+GSD 2.1.0 — X (Twitter) launch posts
+@gsdtaskmanager
+
+1 — Announcement
+GSD 2.1.0 is live on the App Store. Sharper contrast, a calmer dashboard, and Undo for deleted tasks — a focused round of polish, no fireworks. https://gsdtaskmanager.com/
+
+2 — Undo
+Deleted a task by accident? 2.1.0 adds Undo. It appears right after you delete, restores the task exactly as it was, and works whether you're online or off. https://gsdtaskmanager.com/
+
+3 — Accessibility
+2.1.0 pushes text contrast on due dates, counts, and chart labels up to the WCAG AA floor, and grows tap targets on card menus and tag removal to Apple's full 44pt. https://gsdtaskmanager.com/
+
+4 — Anti-gamification
+We removed the streak tiles from the GSD dashboard. A streak measures how long you kept a habit alive, not whether the work that mattered got done. 2.1.0 ships a calmer dashboard instead. https://gsdtaskmanager.com/
+
+5 — Overdue banner
+The overdue reminder on your dashboard used to be a solid red banner — the loudest thing in the app. In 2.1.0 it's a normal card. Same information, none of the alarm. https://gsdtaskmanager.com/
+
+6 — iPad editor
+On iPad, the task editor used to clip the quadrant picker mid-tile. In 2.1.0 it opens full size — every section visible, nothing sliced off. https://gsdtaskmanager.com/
+
+7 — Privacy default
+When you share a link into GSD, fetching its page title for a readable task name is now off by default in 2.1.0. Turn it on if you want it — until then, nothing leaves the device. https://gsdtaskmanager.com/
+
+8 — Small polish
+The rest of 2.1.0: consistent sign-in buttons, one toggle color throughout Settings, honest onboarding copy, and a quieter capture bar. Small things, but they add up. https://gsdtaskmanager.com/
+
+9 — CTA / close
+GSD 2.1.0 is out now for iPhone, iPad, and Mac. No account required, works fully offline. https://gsdtaskmanager.com/
+
+10 — Product intro (lead with this for cold/new-follower reach)
+GSD is a privacy-first Eisenhower-matrix task manager: capture a task, it sorts into do first / schedule / delegate / eliminate, and nothing leaves your device unless you choose to sync. 2.1.0 sharpens the edges. https://gsdtaskmanager.com/
