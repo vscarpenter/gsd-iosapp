@@ -54,7 +54,6 @@ struct TaskCardView: View {
 
             trailingControls
         }
-        .opacity(isBlocked && !task.completed ? 0.62 : 1)
         .padding(.vertical, 12)               // in-card vertical air (4-pt grid)
         .frame(minHeight: 44)                 // ≥44pt hit target (§12.3)
         .contentShape(Rectangle())
@@ -113,7 +112,9 @@ struct TaskCardView: View {
                     .font(.system(size: 13, weight: .bold))
                     .foregroundStyle(Surface.inkOnAccent)
             } else {
-                Circle().stroke(Surface.hairlineStrong, lineWidth: 2)
+                // ink3, not hairlineStrong: a control boundary needs ≥3:1 (WCAG 1.4.11);
+                // the hairline ramp is for decorative borders only.
+                Circle().stroke(Surface.ink3, lineWidth: 2)
             }
         }
         .frame(width: 28, height: 28)
@@ -153,7 +154,11 @@ struct TaskCardView: View {
                 Image(systemName: "repeat").accessibilityLabel(String(localized: "Repeats"))
             }
             if blockedByCount > 0 {
+                // The lock badge alone carries the blocked state: the old whole-card
+                // opacity dim stacked onto ink3 and pushed metadata below 2:1 contrast.
                 Label(String(localized: "Blocked by \(blockedByCount)"), systemImage: "lock")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Surface.ink2)
             }
             if blockingCount > 0 {
                 Label("\(blockingCount)", systemImage: "arrow.right.circle")

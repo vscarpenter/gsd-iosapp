@@ -39,7 +39,7 @@ enum Surface {
     static let hairlineStrong = Color(light: 0xD8D1C1, dark: 0x423B2F) // stronger borders, unselected toggles/rings
     static let ink            = Color(light: 0x211E1A, dark: 0xF1ECE2) // primary text
     static let ink2           = Color(light: 0x6E6760, dark: 0xA79F92) // secondary text
-    static let ink3           = Color(light: 0xA49B8D, dark: 0x6F685B) // tertiary text, quiet icons
+    static let ink3           = Color(light: 0x797368, dark: 0x948A79) // tertiary text, quiet icons — AA (≥4.5:1) on surface/white and dark card; on light paper it's 4.2:1, so body-size counts there use ink2
     static let inkOnAccent    = Color(light: 0xFFFFFF, dark: 0x17150F) // glyph drawn on a filled accent (e.g. completed check)
 
     static let success = Color(light: 0x3E7D52, dark: 0x6FB07F) // completion, "completed" series, 100% progress

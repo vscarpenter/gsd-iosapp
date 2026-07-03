@@ -20,7 +20,12 @@ struct CaptureBar: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 10) {
-                TextField(String(localized: "Capture a task…  (try !!  *  #tag)"), text: $draft)
+                TextField(String(localized: "Capture a task…  (try !!  *  #tag)"), text: $draft,
+                          // Explicit prompt ink: the system placeholder gray measures ~1.7:1 on the
+                          // white capsule, and this placeholder is the app's only always-visible
+                          // teacher of the capture shorthand — it has to be legible.
+                          prompt: Text(String(localized: "Capture a task…  (try !!  *  #tag)"))
+                              .foregroundStyle(Surface.ink3))
                     .focused($focused)
                     .submitLabel(.done)
                     .onSubmit(submit)

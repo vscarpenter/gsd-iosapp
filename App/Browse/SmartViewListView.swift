@@ -146,7 +146,8 @@ struct SmartViewRow: View {
                 .frame(width: 28)
             Text(view.name).foregroundStyle(onAccent(or: Surface.ink))
             Spacer()
-            Text("\(count)").font(.callout).monospacedDigit().foregroundStyle(onAccent(or: Surface.ink3))
+            Text("\(count)").font(.callout).monospacedDigit()
+                .foregroundStyle(onAccent(or: Surface.ink2))   // sidebar rows sit on paper, where ink3 is below AA
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(String(localized: "\(view.name), \(count) tasks"))

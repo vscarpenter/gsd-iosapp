@@ -50,7 +50,7 @@ struct QuadrantSection: View {
                 Text("\(activeCount)")
                     .font(.callout).monospacedDigit()
                     .contentTransition(.numericText())   // counts roll when tasks move between quadrants
-                    .foregroundStyle(Surface.ink3)
+                    .foregroundStyle(Surface.ink2)       // header sits on paper, where ink3 is below AA
                     .accessibilityLabel(String(localized: "\(activeCount) active"))
             }
             .textCase(nil) // keep the serif title cased, not the default uppercased label
