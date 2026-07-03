@@ -57,6 +57,12 @@ struct AnalyticsEngineTests {
         #expect(abs(q1.completionRate - 0.5) < 1e-9)
         #expect(s.quadrantStats[1].total == 0 && s.quadrantStats[1].completionRate == 0)
     }
+    @Test func quadrantStatActiveIsTotalMinusCompleted() {
+        let stat = AnalyticsSummary.QuadrantStat(quadrant: .urgentImportant, total: 7, completed: 3)
+        #expect(stat.active == 4)
+        let empty = AnalyticsSummary.QuadrantStat(quadrant: .notUrgentNotImportant, total: 0, completed: 0)
+        #expect(empty.active == 0)
+    }
     @Test func activeStreakLenientTodayZero() {
         // today (6/15) has 0; yesterday 6/14 + 6/13 have completions → lenient active = 2.
         let ts = [task("a", completed: true, completedAt: day(2026, 6, 14)),

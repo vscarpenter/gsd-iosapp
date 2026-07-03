@@ -20,6 +20,8 @@ public struct AnalyticsSummary: Equatable, Sendable {
         public let total: Int
         public let completed: Int
         public var id: Quadrant { quadrant }
+        /// Tasks still open in the quadrant (`total` minus `completed`).
+        public var active: Int { total - completed }
         /// 0...1; 0 when the quadrant is empty.
         public var completionRate: Double { total == 0 ? 0 : Double(completed) / Double(total) }
         public init(quadrant: Quadrant, total: Int, completed: Int) {

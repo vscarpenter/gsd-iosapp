@@ -2,6 +2,7 @@ import SwiftUI
 import Charts
 import GSDModel
 import GSDStore
+import GSDSnapshot
 
 /// Analytics dashboard (product spec §6.15). A pure render of `store.analytics(trendDays:)`
 /// — no computation here. The 7/30/90 segmented control only changes `trendDays`.
@@ -69,33 +70,45 @@ struct DashboardView: View {
 
     // MARK: sections
 
+    /// Alert-wash card, not a filled block: the filled red banner was the loudest element
+    /// in the app — off-brand for "the opposite of urgency-bait". Tapping it routes to the
+    /// built-in Overdue Backlog smart view so the number is actionable, not just alarming.
     private func overdueBanner(_ count: Int) -> some View {
-        Label(String(localized: "\(count) overdue"), systemImage: "exclamationmark.triangle.fill")
-            .font(.headline)
-            .foregroundStyle(Surface.inkOnAccent)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        Button {
+            DeepLinkHandoff.open(.smartView("overdue"))
+        } label: {
+            HStack(spacing: 8) {
+                Label(String(localized: "\(count) overdue"), systemImage: "exclamationmark.triangle")
+                    .font(.headline)
+                Spacer()
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold))
+            }
+            .foregroundStyle(Surface.alert)
             .padding()
-            .background(Surface.alert, in: RoundedRectangle(cornerRadius: Radius.input, style: .continuous))
-            .accessibilityLabel(String(localized: "\(count) overdue tasks"))
+            .background(Surface.alertWash, in: RoundedRectangle(cornerRadius: Radius.input, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "\(count) overdue tasks"))
+        .accessibilityHint(String(localized: "Shows the overdue backlog"))
     }
 
+    /// Four honest workload stats. The Streak (flame) and Best-streak (trophy) tiles were
+    /// removed by owner decision 2026-07-02: PRODUCT.md anti-references streaks/badges, and
+    /// GSD measures progress without manufacturing reward.
     private func statGrid(_ s: AnalyticsSummary) -> some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 11) {
             statCard(String(localized: "Active"), "\(s.activeCount)", "tray.full")
             statCard(String(localized: "Completed"), "\(s.completedCount)", "checkmark.circle")
             statCard(String(localized: "Completion"), "\(Int((s.completionRate * 100).rounded()))%", "percent")
-            statCard(String(localized: "Streak"), String(localized: "\(s.activeStreak) days"), "flame",
-                     iconColor: QuadrantStyle.accent(.urgentImportant))   // q1 flame
-            statCard(String(localized: "Best streak"), String(localized: "\(s.longestStreak) days"), "trophy")
             statCard(String(localized: "Tracked"), TimeTracking.format(minutes: s.totalTrackedMinutes), "clock")
         }
     }
 
-    private func statCard(_ title: String, _ value: String, _ icon: String,
-                          iconColor: Color = Surface.ink3) -> some View {
+    private func statCard(_ title: String, _ value: String, _ icon: String) -> some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
-                Image(systemName: icon).font(.footnote).foregroundStyle(iconColor)
+                Image(systemName: icon).font(.footnote).foregroundStyle(Surface.ink3)
                 Text(title).font(.footnote).foregroundStyle(Surface.ink3)
             }
             Text(value).font(.serif(.title).weight(.semibold)).monospacedDigit()
@@ -151,13 +164,16 @@ struct DashboardView: View {
         .surfaceCard()
     }
 
+    /// Active tasks only: the donut's center KPI counts active tasks, so the slices (and
+    /// legend) must chart the same population — mixing in completed tasks made the center
+    /// read "10" over slices summing 24.
     private func quadrantDonut(_ s: AnalyticsSummary) -> some View {
-        let stats = s.quadrantStats.filter { $0.total > 0 }
+        let stats = s.quadrantStats.filter { $0.active > 0 }
         return VStack(alignment: .leading, spacing: 14) {
-            Text(String(localized: "By Quadrant"))
+            Text(String(localized: "Active by Quadrant"))
                 .font(.serif(.title3).weight(.semibold)).foregroundStyle(Surface.ink)
             Chart(stats) { stat in
-                SectorMark(angle: .value(String(localized: "Tasks"), stat.total), innerRadius: .ratio(0.62))
+                SectorMark(angle: .value(String(localized: "Tasks"), stat.active), innerRadius: .ratio(0.62))
                     .foregroundStyle(by: .value(String(localized: "Quadrant"), stat.quadrant.title))
             }
             .chartForegroundStyleScale(domain: quadrantDomain, range: quadrantRange)
@@ -171,7 +187,7 @@ struct DashboardView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(height: 220)
-            .accessibilityLabel(String(localized: "Task distribution across the four quadrants"))
+            .accessibilityLabel(String(localized: "Active task distribution across the four quadrants"))
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(stats) { stat in
@@ -180,7 +196,7 @@ struct DashboardView: View {
                             .fill(QuadrantStyle.accent(stat.quadrant)).frame(width: 11, height: 11)
                         Text(stat.quadrant.title).font(.subheadline).foregroundStyle(Surface.ink2)
                         Spacer()
-                        Text("\(stat.total)").font(.subheadline.weight(.semibold)).monospacedDigit()
+                        Text("\(stat.active)").font(.subheadline.weight(.semibold)).monospacedDigit()
                             .foregroundStyle(Surface.ink)
                     }
                 }

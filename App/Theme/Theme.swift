@@ -44,6 +44,7 @@ enum Surface {
 
     static let success = Color(light: 0x3E7D52, dark: 0x6FB07F) // completion, "completed" series, 100% progress
     static let alert   = Color(light: 0xB23A2E, dark: 0xE0705F) // overdue, delete, destructive
+    static let alertWash = Color(light: 0xF4E4E0, dark: 0x3A211D) // soft field behind alert-colored text (red-family wash; alert passes AA on it)
     static let tint    = Color(light: 0x2C6680, dark: 0x6FAACB) // the single interactive tint — genuine actions only
 }
 
