@@ -63,6 +63,10 @@ extension LiveWebAuthPresenter: ASWebAuthenticationPresentationContextProviding 
         // `anchor` is assigned before `session.start()` and the system only calls this during an
         // active session, so the fallbacks are purely defensive. Avoid a force-unwrap: even in the
         // theoretical no-window case a bare anchor returns cleanly rather than crashing sign-in.
-        anchor ?? Self.currentPresentationAnchor() ?? ASPresentationAnchor()
+        // (`currentPresentationAnchor()` already covers every connected-scene case; only the
+        // zero-scenes case remains, where ASPresentationAnchor() is deprecated on the iOS 26 SDK
+        // and scenes can't be constructed — a scene-less zero-frame window is the one anchor
+        // that can still be built and returned cleanly.)
+        anchor ?? Self.currentPresentationAnchor() ?? UIWindow(frame: .zero)
     }
 }
