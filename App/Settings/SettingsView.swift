@@ -64,14 +64,14 @@ struct SettingsView: View {
             }
             .tint(Surface.ink3)   // value is information, not an action — read it graphite
             Toggle(String(localized: "Show Completed Tasks"), isOn: $showCompleted)
-                .tint(Surface.success)
+                .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
         }
     }
 
     private var sharingSection: some View {
         Section {
             Toggle(String(localized: "Fetch titles for shared links"), isOn: $fetchShareTitles)
-                .tint(Surface.success)
+                .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
         } header: {
             Text(String(localized: "Sharing"))
         } footer: {
@@ -128,11 +128,13 @@ struct SettingsView: View {
                     _Concurrency.Task { await session.signIn(provider: "google") }
                 } label: {
                     if session.inProgress {
-                        ProgressView()
+                        ProgressView().frame(maxWidth: .infinity, minHeight: 44)
                     } else {
-                        Label(String(localized: "Sign in with Google"), systemImage: "person.crop.circle")
+                        ProviderSignInButtonLabel(title: String(localized: "Sign in with Google"),
+                                                  systemImage: "person.crop.circle")
                     }
                 }
+                .buttonStyle(.plain)
                 .disabled(session.inProgress)
 
                 // Hand-rendered "Sign in with Apple" (see `AppleSignInButtonLabel`): drives the
@@ -149,9 +151,10 @@ struct SettingsView: View {
                 Button {
                     _Concurrency.Task { await session.signIn(provider: "github") }
                 } label: {
-                    Label(String(localized: "Sign in with GitHub"),
-                          systemImage: "chevron.left.forwardslash.chevron.right")
+                    ProviderSignInButtonLabel(title: String(localized: "Sign in with GitHub"),
+                                              systemImage: "chevron.left.forwardslash.chevron.right")
                 }
+                .buttonStyle(.plain)
                 .disabled(session.inProgress)
 
                 Text(String(localized: "To sync with the web app and your other devices, sign in with the same email you use there."))
@@ -185,7 +188,7 @@ struct SettingsView: View {
                 get: { archiveSettings.autoEnabled },
                 set: { archiveSettings.autoEnabled = $0; store.archiveSettings = archiveSettings }
             ))
-            .tint(Surface.success)
+            .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
             if archiveSettings.autoEnabled {
                 Picker(String(localized: "Archive after"), selection: Binding(
                     get: { archiveSettings.afterDays },
@@ -226,7 +229,7 @@ struct SettingsView: View {
                 get: { notificationSettings.enabled },
                 set: { notificationSettings.enabled = $0; flushNotificationSettings() }
             ))
-            .tint(Surface.success)
+            .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
             if notificationSettings.enabled {
                 Picker(String(localized: "Default Reminder"), selection: Binding(
                     get: { notificationSettings.defaultReminder },
@@ -242,7 +245,7 @@ struct SettingsView: View {
                     get: { notificationSettings.soundEnabled },
                     set: { notificationSettings.soundEnabled = $0; flushNotificationSettings() }
                 ))
-                .tint(Surface.success)
+                .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
                 quietHoursControls
                 authStatusRow
             }
@@ -264,7 +267,7 @@ struct SettingsView: View {
                 flushNotificationSettings()
             }
         ))
-        .tint(Surface.success)
+        .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
         if notificationSettings.quietHoursStart != nil {
             DatePicker(String(localized: "From"), selection: quietBinding(\.quietHoursStart, default: "22:00"),
                        displayedComponents: .hourAndMinute)

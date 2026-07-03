@@ -85,11 +85,8 @@ struct OnboardingView: View {
 
         if let onGoogleSignIn {
             Button(action: onGoogleSignIn) {
-                Text(String(localized: "Sign in with Google"))
-                    .font(.callout.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 11)
-                    .foregroundStyle(Surface.tint)
+                ProviderSignInButtonLabel(title: String(localized: "Sign in with Google"),
+                                          systemImage: "person.crop.circle")
             }
             .buttonStyle(.plain)
         }

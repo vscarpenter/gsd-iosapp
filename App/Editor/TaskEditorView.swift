@@ -273,7 +273,7 @@ struct TaskEditorView: View {
                 get: { dueDate != nil },
                 set: { dueDate = $0 ? (dueDate ?? Calendar.current.startOfDay(for: .now)) : nil }
             ))
-            .tint(Surface.success)
+            .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
             if dueDate != nil {
                 DatePicker(String(localized: "Due"),
                            selection: Binding(get: { dueDate ?? .now }, set: { dueDate = $0 }),

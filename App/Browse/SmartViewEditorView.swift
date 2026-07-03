@@ -174,7 +174,7 @@ struct SmartViewEditorView: View {
             Toggle(String(localized: "Due this week"), isOn: $criteria.dueThisWeek)
             Toggle(String(localized: "No due date"), isOn: $criteria.noDueDate)
         }
-        .tint(Surface.success)
+        .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
     }
 
     private var dueRangePickers: some View {
@@ -196,7 +196,7 @@ struct SmartViewEditorView: View {
         }
         .onChange(of: hasStart) { _, on in if !on { setRange(start: nil) } else { setRange(start: criteria.dueDateRange?.start ?? .now) } }
         .onChange(of: hasEnd) { _, on in if !on { setRange(end: nil) } else { setRange(end: criteria.dueDateRange?.end ?? .now) } }
-        .tint(Surface.success)
+        .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
     }
 
     private var recurrenceChips: some View {
@@ -219,7 +219,7 @@ struct SmartViewEditorView: View {
 
     private var readyToggle: some View {
         Toggle(String(localized: "Ready to work (no incomplete blockers)"), isOn: $criteria.readyToWork)
-            .tint(Surface.success)
+            .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
     }
 
     // MARK: Helpers
