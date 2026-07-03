@@ -36,6 +36,10 @@ struct OnboardingView: View {
             dots.padding(.vertical, 14)
             footer.padding(.horizontal, 28).padding(.bottom, 24)
         }
+        // Cap the column on iPad — uncapped, the hero floats tiny in the 13" canvas
+        // and the primary pill stretches to an unbuttonlike full width.
+        .frame(maxWidth: 560)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Surface.paper)
     }
 
@@ -54,7 +58,9 @@ struct OnboardingView: View {
 
     @ViewBuilder private var footer: some View {
         if page < pageCount - 1 {
-            primaryButton(page == 0 ? String(localized: "Get started") : String(localized: "Next")) {
+            // Every intermediate page advances, so every intermediate page says "Next" —
+            // page 1's old "Get started" promised more than a page turn.
+            primaryButton(String(localized: "Next")) {
                 withAnimation(reduceMotion ? nil : .easeInOut) { page += 1 }
             }
         } else {
