@@ -5,6 +5,7 @@ import GSDStore
 /// Capture field with a live parse preview and a cycling quadrant override.
 struct CaptureBar: View {
     @Environment(TaskStore.self) private var store
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var draft = ""
     @State private var override: Quadrant?
     @State private var captureError: String?
@@ -16,15 +17,35 @@ struct CaptureBar: View {
     private var previewQuadrant: Quadrant {
         override ?? Quadrant(urgent: parsed.urgent, important: parsed.important)
     }
+    /// Nothing typed and no manual override: the chip shows a neutral "Auto" state.
+    /// The old resting state rendered the parser's default quadrant — a trash can and
+    /// the word "Eliminate" beside an empty field, which read as "this input goes to
+    /// the trash" (design critique P2, 2026-07-02).
+    private var isResting: Bool { draft.isEmpty && override == nil }
+
+    /// Chip content: "Auto" + matrix glyph at rest, else the live quadrant. At
+    /// accessibility type sizes the title drops (icon-only) so the chip doesn't
+    /// hyphenate ("Elimi-nate") and swallow half the field.
+    @ViewBuilder private var chipLabel: some View {
+        let label = Label(
+            isResting ? String(localized: "Auto") : previewQuadrant.title,
+            systemImage: isResting ? "circle.grid.2x2" : QuadrantStyle.symbol(previewQuadrant))
+        if typeSize.isAccessibilitySize {
+            label.labelStyle(.iconOnly)
+        } else {
+            label.labelStyle(.titleAndIcon)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 10) {
-                TextField(String(localized: "Capture a task…  (try !!  *  #tag)"), text: $draft,
+                TextField(String(localized: "Capture a task"), text: $draft,
                           // Explicit prompt ink: the system placeholder gray measures ~1.7:1 on the
                           // white capsule, and this placeholder is the app's only always-visible
-                          // teacher of the capture shorthand — it has to be legible.
-                          prompt: Text(String(localized: "Capture a task…  (try !!  *  #tag)"))
+                          // teacher of the capture shorthand — it has to be legible. Kept short so
+                          // it doesn't truncate beside the chip on iPhone.
+                          prompt: Text(String(localized: "Capture a task…  (!!  *  #tag)"))
                               .foregroundStyle(Surface.ink3))
                     .focused($focused)
                     .submitLabel(.done)
@@ -33,14 +54,17 @@ struct CaptureBar: View {
                     .foregroundStyle(Surface.ink)
                     .accessibilityIdentifier("capture-field")
                 Button(action: cycleOverride) {
-                    Label(previewQuadrant.title, systemImage: QuadrantStyle.symbol(previewQuadrant))
+                    chipLabel
                         .font(.footnote.weight(.semibold))
-                        .labelStyle(.titleAndIcon)
-                        .foregroundStyle(QuadrantStyle.accent(previewQuadrant))
+                        .foregroundStyle(isResting ? Surface.ink2 : QuadrantStyle.accent(previewQuadrant))
                         .padding(.horizontal, 10).padding(.vertical, 6)
-                        .background(QuadrantStyle.wash(previewQuadrant), in: Capsule())
+                        .background(isResting ? Surface.sunken : QuadrantStyle.wash(previewQuadrant),
+                                    in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(isResting
+                                    ? String(localized: "Quadrant: automatic")
+                                    : previewQuadrant.title)
                 .accessibilityHint(String(localized: "Cycles the target quadrant"))
                 // The chip recolors live as shorthand is typed — the demo's opening beat.
                 .accessibilityIdentifier("capture-quadrant-chip")
