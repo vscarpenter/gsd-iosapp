@@ -46,6 +46,7 @@
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
 		753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
 		7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ED783FE5C2324C295B0273 /* RelativeDate.swift */; };
+		7AAD033800ECFE97F9C42811 /* UndoDeleteToast.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98BEADA3FFDB72CADDFBCBB1 /* UndoDeleteToast.swift */; };
 		8004840C42749CB157F55F18 /* MatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */; };
 		8036F79C226CB3A58EAD44E4 /* GSDSync in Frameworks */ = {isa = PBXBuildFile; productRef = 4D69B433643C83344AA85FF9 /* GSDSync */; };
 		83388C6EE74A09C1F6C7AC1E /* LiveWebAuthPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */; };
@@ -61,6 +62,7 @@
 		9E43F4121A7768B6C7A89119 /* DatabaseUnavailableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A78E38615C8196A51B466F /* DatabaseUnavailableView.swift */; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
 		A004032986C5ACEB406BB2C5 /* DemoHomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7B229DAFAC4E845FCCC5C5 /* DemoHomeScreen.swift */; };
+		A13BB9B4DF7C7E96D8ABF2A9 /* ProviderSignInButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46017093D034FF7774FAD6CD /* ProviderSignInButtonLabel.swift */; };
 		A6BD5A7B14A9BEC633DE1C66 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
 		A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D97811D144C615B847BA217 /* SettingsView.swift */; };
 		A92FC63E75447B51AB504FE8 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 10C5831BD27556073CD6CD9F /* GSDModel */; };
@@ -152,6 +154,7 @@
 		4461CA37B177CF2071DEE24E /* NotificationResponder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationResponder.swift; sourceTree = "<group>"; };
 		454069942C9F75AFFB235E5C /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDShareExtension.entitlements; sourceTree = "<group>"; };
+		46017093D034FF7774FAD6CD /* ProviderSignInButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSignInButtonLabel.swift; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
 		4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusEntry.swift; sourceTree = "<group>"; };
 		4FCA43224F505628B890F546 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
@@ -185,6 +188,7 @@
 		923FB39E62F676CE76DDE26A /* ArchiveListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveListView.swift; sourceTree = "<group>"; };
 		94ED783FE5C2324C295B0273 /* RelativeDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeDate.swift; sourceTree = "<group>"; };
 		9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusChip.swift; sourceTree = "<group>"; };
+		98BEADA3FFDB72CADDFBCBB1 /* UndoDeleteToast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UndoDeleteToast.swift; sourceTree = "<group>"; };
 		9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredTaskListView.swift; sourceTree = "<group>"; };
 		A2C9EE64F35A42788D229B1E /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
 		A39B990BF91EC1589069C726 /* GSDShareExtension-Catalyst.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GSDShareExtension-Catalyst.entitlements"; sourceTree = "<group>"; };
@@ -475,6 +479,7 @@
 				52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */,
 				94ED783FE5C2324C295B0273 /* RelativeDate.swift */,
 				BD40180D8547F48338624F7D /* TaskShareText.swift */,
+				98BEADA3FFDB72CADDFBCBB1 /* UndoDeleteToast.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -546,6 +551,7 @@
 				05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */,
 				DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */,
 				BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */,
+				46017093D034FF7774FAD6CD /* ProviderSignInButtonLabel.swift */,
 				454069942C9F75AFFB235E5C /* SessionStore.swift */,
 			);
 			path = Auth;
@@ -805,6 +811,7 @@
 				C7854CD1ECE9945875A2F9F6 /* NotificationResponder.swift in Sources */,
 				3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */,
 				BF410002859DB95FE0BFA2D1 /* PageTitleFetcher.swift in Sources */,
+				A13BB9B4DF7C7E96D8ABF2A9 /* ProviderSignInButtonLabel.swift in Sources */,
 				3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */,
 				FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */,
 				226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */,
@@ -830,6 +837,7 @@
 				1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */,
 				753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */,
 				F6BD77CCE7D8D5B7A4953F00 /* TodaysFocusView.swift in Sources */,
+				7AAD033800ECFE97F9C42811 /* UndoDeleteToast.swift in Sources */,
 				1F2495DBB050390A9BDCFE81 /* WidgetSnapshotRefresher.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

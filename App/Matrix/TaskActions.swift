@@ -32,6 +32,10 @@ struct TaskActions {
     func delete(_ t: Task) {
         run(String(localized: "Couldn’t delete that task")) {
             try await store.delete(t)
+        } onSuccess: {
+            // The root UndoDeleteToast listens and offers a recovery window; delete
+            // itself commits immediately (tombstone-safe), so this is fire-and-forget.
+            NotificationCenter.default.post(name: .gsdTaskDeleted, object: t)
         }
     }
 

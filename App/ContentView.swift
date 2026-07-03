@@ -35,6 +35,12 @@ struct ContentView: View {
             // Hidden ⌘K trigger — a zero-size button carrying the keyboard shortcut so the
             // hardware ⌘K opens the palette anywhere in the app.
             .background { keyboardShortcuts }
+            // Root-hosted so a delete from ANY surface gets the same Undo window; padded
+            // clear of the compact floating tab bar.
+            .overlay(alignment: .bottom) {
+                UndoDeleteToast()
+                    .padding(.bottom, sizeClass == .compact ? 72 : 24)
+            }
             // Catalyst re-inject: its sheet hosting controller evaluates the presentation's
             // preferences before it inherits the presenter's environment, so @Observable stores
             // must be re-applied on the presented content (a no-op on iOS). Without it, the sheet's
