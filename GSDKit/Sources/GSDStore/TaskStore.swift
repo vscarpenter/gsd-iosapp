@@ -205,17 +205,18 @@ public final class TaskStore {
 
     // MARK: Mutations (all stamp updatedAt via the injected clock)
 
-    public func add(_ parsed: ParsedCapture, override: Quadrant? = nil) async throws {
+    public func add(_ parsed: ParsedCapture, override: Quadrant? = nil, dueDate: Date? = nil) async throws {
         let now = clock()
         let task = Task(
             id: newID(), title: parsed.title,
             description: parsed.descriptionAdditions.joined(separator: "\n"),
             urgent: override?.isUrgent ?? parsed.urgent,
             important: override?.isImportant ?? parsed.important,
-            createdAt: now, updatedAt: now, tags: parsed.tags
+            createdAt: now, updatedAt: now, dueDate: dueDate, tags: parsed.tags
         )
         try TaskValidator.validate(task)
         try await upsertEnqueued(task, op: .create)   // capture-bar quick-add is a creation path → must enqueue (else reconcile deletes it)
+        if dueDate != nil { await reminders.schedule(task) }   // dated captures (Siri due date) get a reminder like create()
     }
 
     /// Tags are canonically lowercase and deduped (matching `CaptureParser` and the web app).

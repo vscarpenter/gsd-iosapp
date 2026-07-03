@@ -130,12 +130,22 @@ extension GSDTaskEntity {
 /// that touches the store must resume it for its work window — then restore the prior state,
 /// exactly as `BackgroundRefresh` does for BG refresh. Foreground runs (`applicationState ==
 /// .active`) are already resumed; re-suspending one would wrongly lock out the live UI, so gate on it.
+///
+/// Mac Catalyst never suspends: `0xDEAD10CC` is an iOS jetsam kill that doesn't exist on macOS,
+/// and a Mac app is routinely `.inactive` with its window open and live (it merely isn't key —
+/// which is exactly the state Siri puts it in). The iOS gate would misread that as "backgrounded"
+/// and suspend the database out from under the visible UI after the intent finished. `GSDApp`'s
+/// scenePhase handler is gated the same way, so on the Mac the database is simply always live.
 @MainActor
 private func withDatabaseResumedForIntent<R>(_ body: () async throws -> R) async throws -> R {
+    #if targetEnvironment(macCatalyst)
+    return try await body()
+    #else
     let wasSuspended = UIApplication.shared.applicationState != .active
     if wasSuspended { AppDatabase.resume() }
     defer { if wasSuspended { AppDatabase.suspend() } }
     return try await body()
+    #endif
 }
 
 struct CreateTaskIntent: AppIntent {
@@ -151,13 +161,18 @@ struct CreateTaskIntent: AppIntent {
     @Parameter(title: "Quadrant")
     var quadrant: IntentQuadrant?
 
+    /// Siri resolves spoken dates ("tomorrow", "next Friday") into this; nil leaves the
+    /// task undated, matching the capture bar (spec §10.2 lists due date on Create Task).
+    @Parameter(title: "Due Date")
+    var dueDate: Date?
+
     @Dependency private var store: TaskStore
 
     @MainActor
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let parsed = CaptureParser.parse(taskTitle)
         try await withDatabaseResumedForIntent {
-            try await store.add(parsed, override: quadrant?.quadrant)
+            try await store.add(parsed, override: quadrant?.quadrant, dueDate: dueDate)
         }
         return .result(dialog: "Added \(parsed.title) to GSD.")
     }
@@ -205,11 +220,21 @@ struct OpenGSDIntent: AppIntent {
 
 struct GSDShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
+        // Phrase matching is fairly literal — natural preposition/verb variants ("to" vs "in",
+        // "new"/"capture") must each be registered or Siri answers "I don't see an app for that."
+        // The free-form task text can NOT be inlined in a phrase (String parameters aren't
+        // phrase-embeddable), so every variant leads to Siri prompting for the task.
         AppShortcut(
             intent: CreateTaskIntent(),
             phrases: [
                 "Add a task in \(.applicationName)",
+                "Add a task to \(.applicationName)",
                 "Create a task in \(.applicationName)",
+                "Create a task to \(.applicationName)",
+                "New task in \(.applicationName)",
+                "Capture a task in \(.applicationName)",
+                "Add a to-do in \(.applicationName)",
+                "Add a to-do to \(.applicationName)",
             ],
             shortTitle: "Add Task",
             systemImageName: "plus.circle"
@@ -219,6 +244,8 @@ struct GSDShortcuts: AppShortcutsProvider {
             phrases: [
                 "Complete a task in \(.applicationName)",
                 "Mark a task done in \(.applicationName)",
+                "Finish a task in \(.applicationName)",
+                "Check off a task in \(.applicationName)",
             ],
             shortTitle: "Complete Task",
             systemImageName: "checkmark.circle"
