@@ -34,5 +34,5 @@ xcuserdata/
 *.dSYM.zip
 *.dSYM
 
-# /brag generated launch video (Hyperframes composition + render)
-brag-output/
+# /brag generated launch video (Hyperframes composition + render) — plain and timestamped runs
+brag-output*/
