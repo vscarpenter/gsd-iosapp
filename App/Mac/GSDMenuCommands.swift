@@ -51,6 +51,14 @@ struct GSDMenuCommands: Commands {
             Button(String(localized: "Dashboard")) { DeepLinkHandoff.open(.dashboard) }
             Button(String(localized: "Archive")) { DeepLinkHandoff.open(.archive) }
             Button(String(localized: "Settings")) { DeepLinkHandoff.open(.settings) }
+            Divider()
+            // Catalyst has no pull-to-refresh (UIRefreshControl never engages with
+            // trackpad/mouse scrolling), so ⌘R is the Mac's reachable manual sync.
+            // Signed out it's the same harmless no-op as pulling on iOS.
+            Button(String(localized: "Sync Now")) {
+                NotificationCenter.default.post(name: .gsdSyncNow, object: nil)
+            }
+            .keyboardShortcut("r", modifiers: .command)
         }
     }
 }

@@ -68,6 +68,9 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .gsdShowHelp)) { _ in
                 showHelp = true
             }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdSyncNow)) { _ in
+                _Concurrency.Task { await session.syncNow() }
+            }
             .task {
                 if let url = DeepLinkHandoff.consumePendingURL() {
                     handleDeepLink(url)

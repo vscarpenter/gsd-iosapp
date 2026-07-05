@@ -7,6 +7,7 @@ extension Notification.Name {
     static let gsdShowCommandPalette = Notification.Name("dev.vinny.gsd.showCommandPalette")
     static let gsdShowAbout = Notification.Name("dev.vinny.gsd.showAbout")
     static let gsdShowHelp = Notification.Name("dev.vinny.gsd.showHelp")
+    static let gsdSyncNow = Notification.Name("dev.vinny.gsd.syncNow")
 }
 
 enum DeepLinkHandoff {
