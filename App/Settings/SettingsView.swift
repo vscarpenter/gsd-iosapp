@@ -2,6 +2,7 @@ import SwiftUI
 import UserNotifications
 import GSDModel
 import GSDStore
+import GSDSync
 
 /// The full Settings screen (design-spec §3 scope call): Appearance, Archive, Notifications,
 /// Data & Storage, About. Cloud Sync is intentionally absent (Phase 5 — the project ships no
@@ -85,8 +86,8 @@ struct SettingsView: View {
             if session.isSignedIn {
                 LabeledContent(String(localized: "Signed in"),
                                value: session.email ?? String(localized: "Account"))
-                if session.usingRelayEmail {
-                    Text(String(localized: "Signed in with a private relay email — this is a separate account from your web tasks."))
+                if let note = session.accountNote {
+                    Text(accountNoteText(note))
                         .font(.footnote)
                         .foregroundStyle(Surface.ink3)
                 }
@@ -221,6 +222,18 @@ struct SettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(archiveStatusIsError ? Surface.alert : Surface.ink3)
             }
+        }
+    }
+
+    /// Copy for the signed-in account hint. Each provider is a distinct account on the
+    /// backend, so the provider a person picked decides which tasks they see — a fact that
+    /// is otherwise invisible until sync appears to do nothing.
+    private func accountNoteText(_ note: AppleIdentity.AccountNote) -> String {
+        switch note {
+        case .relaySeparateAccount:
+            String(localized: "Signed in with a private relay email — this is a separate account from your web tasks.")
+        case .appleMayDiffer:
+            String(localized: "Signed in with Apple. If you use Google or GitHub on the web, that’s a different account and won’t show the same tasks.")
         }
     }
 

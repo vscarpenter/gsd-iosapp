@@ -27,7 +27,7 @@ struct DataStorageView: View {
                     }
                 }
                 Button {
-                    exportURL = makeExportURL()
+                    _Concurrency.Task { exportURL = await makeExportURL() }
                 } label: {
                     Label(String(localized: "Prepare Export"), systemImage: "doc.badge.arrow.up")
                 }
@@ -88,10 +88,12 @@ struct DataStorageView: View {
     /// `Transferable`, FileDocument is not) can share it with a real filename. The file is a
     /// full plaintext dump of the user's tasks, so it gets `.completeFileProtection` and is
     /// deleted when the view goes away (`cleanupExportFile`) — never left in tmp/ indefinitely.
-    private func makeExportURL() -> URL? {
+    /// Async because the export now reads the archive, trash and smart-view stores as well
+    /// as the live tasks — a backup that carries only `tasks` is the bug this fixed.
+    private func makeExportURL() async -> URL? {
         let data: Data
         do {
-            data = try store.exportJSON()
+            data = try await store.exportJSON()
         } catch {
             statusMessage = String(localized: "Couldn’t prepare the export file: \(error.localizedDescription)")
             return nil
