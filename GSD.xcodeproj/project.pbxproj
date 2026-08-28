@@ -79,6 +79,7 @@
 		D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD99A69FF72AB17AB5968 /* DashboardView.swift */; };
 		D1A08D8A25028DD6A0CF3B82 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 98C26FEAF665B149C1D46E83 /* GSDSnapshot */; };
 		DAD1C4162E0C6658137A4C21 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = A10EBE9AD3F19E9BF692E87E /* GSDModel */; };
+		E04D1C40421CC1B5FFE98A7B /* TrashListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B8A1791520E8DBCA8A05A3C /* TrashListView.swift */; };
 		E63F93C1AFC3CD88D00DE943 /* BulkActionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30895EFC952028C78E9F99EE /* BulkActionBar.swift */; };
 		E85D86A3C5BC5FC8E8E6A062 /* SyncStatusChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */; };
 		EA4E73E505B881123C11206C /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 772006EE80317C193341A8F4 /* GSDSnapshot */; };
@@ -137,6 +138,7 @@
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
 		05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButtonLabel.swift; sourceTree = "<group>"; };
 		085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0B8A1791520E8DBCA8A05A3C /* TrashListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashListView.swift; sourceTree = "<group>"; };
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		0E938DCA2D038B4703954CF7 /* ShareTitleEnricher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTitleEnricher.swift; sourceTree = "<group>"; };
 		18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
@@ -533,6 +535,7 @@
 			children = (
 				A92D91657DBB6423E6BBE725 /* DataStorageView.swift */,
 				6D97811D144C615B847BA217 /* SettingsView.swift */,
+				0B8A1791520E8DBCA8A05A3C /* TrashListView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -718,9 +721,9 @@
 			projectRoot = "";
 			targets = (
 				C9092E2A5E48E2CA69F326A5 /* GSD */,
-				514075EFE8DBD13643C750B5 /* GSDScreenshotTests */,
-				3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */,
 				FB5769502DA33695CDF99A6E /* GSDWidgets */,
+				3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */,
+				514075EFE8DBD13643C750B5 /* GSDScreenshotTests */,
 			);
 		};
 /* End PBXProject section */
@@ -837,6 +840,7 @@
 				1869F8AA2F2BACCAE9D5A230 /* Theme.swift in Sources */,
 				753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */,
 				F6BD77CCE7D8D5B7A4953F00 /* TodaysFocusView.swift in Sources */,
+				E04D1C40421CC1B5FFE98A7B /* TrashListView.swift in Sources */,
 				7AAD033800ECFE97F9C42811 /* UndoDeleteToast.swift in Sources */,
 				1F2495DBB050390A9BDCFE81 /* WidgetSnapshotRefresher.swift in Sources */,
 			);
