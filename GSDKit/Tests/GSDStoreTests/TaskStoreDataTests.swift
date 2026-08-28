@@ -11,6 +11,7 @@ struct TaskStoreDataTests {
         let store = TaskStore(repository: GRDBTaskRepository(db),
                               smartViewRepository: GRDBSmartViewRepository(db),
                               archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 0) }),
+                              trashRepository: GRDBTrashRepository(db, now: { Date(timeIntervalSince1970: 0) }),
                               defaults: suite,
                               clock: { Date(timeIntervalSince1970: 1000) },
                               newID: { "imp-fixed" },
@@ -35,7 +36,7 @@ struct TaskStoreDataTests {
         try await store.create(task("a"))
         try await store.create(task("b"))
         try await waitForTasks(store, count: 2)
-        let data = try store.exportJSON()
+        let data = try await store.exportJSON()
         try await store.importTasks(data, mode: .replace)
         try await waitForTasks(store, count: 2)
         #expect(Set(store.tasks.map(\.id)) == ["a", "b"])
@@ -88,6 +89,7 @@ struct TaskStoreDataTests {
         let store = TaskStore(repository: GRDBTaskRepository(db),
                               smartViewRepository: GRDBSmartViewRepository(db),
                               archiveRepository: GRDBArchiveRepository(db),
+                              trashRepository: GRDBTrashRepository(db),
                               defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
                               clock: { Date(timeIntervalSince1970: 1000) },
                               syncQueue: queue)

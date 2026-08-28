@@ -16,8 +16,9 @@ struct TaskExportTests {
         #expect(json.contains("\"exportedAt\""))
         #expect(json.contains("\"version\""))
     }
-    @Test func versionDefaultsToOne() {
-        #expect(TaskExport(tasks: [], exportedAt: Date()).version == 1)
+    @Test func versionDefaultsToTheCurrentSemverString() {
+        // Was the Int `1` through 2.2.0, which the web app refused to import.
+        #expect(TaskExport(tasks: [], exportedAt: Date()).version == TaskExport.currentVersion)
     }
     @Test func roundTripsPreservingTasks() throws {
         let original = TaskExport(tasks: [task("a", due: Date(timeIntervalSince1970: 1_700_600_000)), task("b")],
@@ -25,7 +26,7 @@ struct TaskExportTests {
         let decoded = try TaskExport.decode(try TaskExport.encode(original))
         #expect(decoded.tasks.map(\.id) == ["a", "b"])
         #expect(decoded.tasks.first?.dueDate == original.tasks.first?.dueDate)
-        #expect(decoded.version == 1)
+        #expect(decoded.version == TaskExport.currentVersion)
     }
     @Test func datesUseFractionalSecondsISO8601() throws {
         // 500ms past the epoch-aligned second → fractional-seconds component must survive.

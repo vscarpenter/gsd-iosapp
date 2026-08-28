@@ -20,6 +20,7 @@ struct TaskStoreAnalyticsTests {
         return TaskStore(repository: GRDBTaskRepository(db),
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 0) }),
+                         trashRepository: GRDBTrashRepository(db, now: { Date(timeIntervalSince1970: 0) }),
                          defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
                          clock: { fixed }, calendar: utcCalendar())
     }

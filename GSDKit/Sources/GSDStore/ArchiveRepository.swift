@@ -7,9 +7,15 @@ import GSDModel
 /// hold (or both drop) the same id. `archivedAt` is stamped from the injected clock.
 public protocol ArchiveRepository: Sendable {
     func archive(_ task: Task) async throws
+    /// Archive with an EXPLICIT stamp, for restoring a backup: re-stamping those rows with
+    /// `now()` would reset every archived task's age and defeat the retention window.
+    func archive(_ task: Task, at archivedAt: Date) async throws
     func restore(id: String) async throws
     func deletePermanently(id: String) async throws
     func fetchAll() async throws -> [Task]
+    /// Archived rows WITH their `archivedAt` stamp. `fetchAll` drops it (the UI has no use
+    /// for it); a backup does — dropping it there would restore the archive as live tasks.
+    func fetchAllStamped() async throws -> [ArchivedTask]
     func observeAll() -> AsyncThrowingStream<[Task], Error>
 }
 
@@ -24,7 +30,11 @@ public final class GRDBArchiveRepository: ArchiveRepository {
     }
 
     public func archive(_ task: Task) async throws {
-        let record = try ArchivedTaskRecord(task, archivedAt: now())
+        try await archive(task, at: now())
+    }
+
+    public func archive(_ task: Task, at archivedAt: Date) async throws {
+        let record = try ArchivedTaskRecord(task, archivedAt: archivedAt)
         try await dbWriter.write { db in
             try record.save(db)
             _ = try TaskRecord.deleteOne(db, key: task.id)
@@ -47,6 +57,14 @@ public final class GRDBArchiveRepository: ArchiveRepository {
     public func fetchAll() async throws -> [Task] {
         try await dbWriter.read { db in
             try ArchivedTaskRecord.order(Column("archivedAt").desc).fetchAll(db).map { try $0.toDomain() }
+        }
+    }
+
+    public func fetchAllStamped() async throws -> [ArchivedTask] {
+        try await dbWriter.read { db in
+            try ArchivedTaskRecord.order(Column("archivedAt").desc).fetchAll(db).map {
+                ArchivedTask(task: try $0.toDomain(), stampedAt: $0.archivedAt, stampKey: .archivedAt)
+            }
         }
     }
 

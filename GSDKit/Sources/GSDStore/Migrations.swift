@@ -10,7 +10,45 @@ extension AppDatabase {
         registerV3(&migrator)
         registerV4(&migrator)
         registerV5(&migrator)
+        registerV6(&migrator)
         return migrator
+    }
+
+    /// Trash (soft delete). The web client has carried a 30-day recoverable trash since its
+    /// ADR 0015 while this app deleted permanently, so the same action destroyed data on one
+    /// client and not the other. Same column set as `archivedTasks`, stamped `deletedAt`, in
+    /// its own table so trashed rows are excluded from every matrix/smart-view query by
+    /// construction — the reason the archive is a separate table too.
+    static func registerV6(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v6") { db in
+            try db.create(table: "deletedTasks") { t in
+                t.primaryKey("id", .text)
+                t.column("title", .text).notNull()
+                t.column("description", .text).notNull().defaults(to: "")
+                t.column("urgent", .boolean).notNull()
+                t.column("important", .boolean).notNull()
+                t.column("quadrant", .text).notNull()
+                t.column("completed", .boolean).notNull().defaults(to: false)
+                t.column("completedAt", .datetime)
+                t.column("createdAt", .datetime).notNull()
+                t.column("updatedAt", .datetime).notNull()
+                t.column("dueDate", .datetime)
+                t.column("recurrence", .text).notNull().defaults(to: "none")
+                t.column("tags", .text).notNull().defaults(to: "[]")
+                t.column("subtasks", .text).notNull().defaults(to: "[]")
+                t.column("dependencies", .text).notNull().defaults(to: "[]")
+                t.column("parentTaskId", .text)
+                t.column("notifyBefore", .integer)
+                t.column("notificationEnabled", .boolean).notNull().defaults(to: true)
+                t.column("notificationSent", .boolean).notNull().defaults(to: false)
+                t.column("lastNotificationAt", .datetime)
+                t.column("snoozedUntil", .datetime)
+                t.column("estimatedMinutes", .integer)
+                t.column("timeSpent", .integer)
+                t.column("timeEntries", .text).notNull().defaults(to: "[]")
+                t.column("deletedAt", .datetime).notNull().indexed()
+            }
+        }
     }
 
     static func registerV5(_ migrator: inout DatabaseMigrator) {

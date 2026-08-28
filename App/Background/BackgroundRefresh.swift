@@ -46,6 +46,7 @@ enum BackgroundRefresh {
             // us again after setTaskCompleted.
             AppDatabase.resume()
             try? await store.runAutoArchiveSweep()
+            try? await store.runTrashRetentionSweep()
             await store.refreshBadge()
             // NOTE (Phase 5): perform an opportunistic sync here so data is fresh on next open.
             AppDatabase.suspend()

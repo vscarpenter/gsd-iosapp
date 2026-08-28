@@ -19,6 +19,7 @@ struct TaskStoreEnqueueTests {
         return TaskStore(repository: GRDBTaskRepository(db),
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db),
+                         trashRepository: GRDBTrashRepository(db),
                          defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!,
                          clock: { Date(timeIntervalSince1970: 1000) },
                          calendar: { var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone(identifier: "UTC")!; return c }(),

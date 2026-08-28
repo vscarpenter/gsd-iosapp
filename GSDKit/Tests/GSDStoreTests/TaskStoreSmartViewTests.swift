@@ -12,6 +12,7 @@ struct TaskStoreSmartViewTests {
         return TaskStore(repository: GRDBTaskRepository(db),
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 0) }),
+                         trashRepository: GRDBTrashRepository(db, now: { Date(timeIntervalSince1970: 0) }),
                          defaults: suite,
                          clock: { Date(timeIntervalSince1970: 1000) },
                          newID: { "sv-fixed" },

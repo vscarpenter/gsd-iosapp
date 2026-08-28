@@ -11,6 +11,7 @@ struct TaskStoreBulkTests {
         return TaskStore(repository: GRDBTaskRepository(db, now: { Date(timeIntervalSince1970: 0) }),
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 0) }),
+                         trashRepository: GRDBTrashRepository(db, now: { Date(timeIntervalSince1970: 0) }),
                          defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
                          clock: { self.now }, newID: { "id" }, calendar: .current)
     }

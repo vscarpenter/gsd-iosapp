@@ -66,6 +66,7 @@ struct GSDApp: App {
             repository: taskRepo,
             smartViewRepository: GRDBSmartViewRepository(database),
             archiveRepository: GRDBArchiveRepository(database, now: now),
+            trashRepository: GRDBTrashRepository(database, now: now),
             clock: now,
             reminders: scheduler,
             syncQueue: queueRepo
@@ -179,6 +180,7 @@ struct GSDApp: App {
                     }
                     widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()
+                    try? await store.runTrashRetentionSweep()
                     await store.refreshBadge()
                     coordinator.start(trigger: .launch)
                 }

@@ -35,6 +35,7 @@ struct SettingsView: View {
                 sharingSection
                 accountSection
                 archiveSection
+                trashSection
                 notificationSection
                 DataStorageView()          // Group D sections
                 aboutSection
@@ -220,6 +221,21 @@ struct SettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(archiveStatusIsError ? Surface.alert : Surface.ink3)
             }
+        }
+    }
+
+    /// Sits directly under Archive, matching where the web client groups it, so the two
+    /// "where did my task go" destinations are found in the same place on both.
+    private var trashSection: some View {
+        Section {
+            NavigationLink {
+                TrashListView()
+            } label: {
+                Label(String(localized: "Trash"), systemImage: "trash")
+            }
+            .foregroundStyle(Surface.ink)   // navigation reads ink, not tide
+        } footer: {
+            Text(String(localized: "Deleted tasks are recoverable for \(TrashRetention.days) days."))
         }
     }
 

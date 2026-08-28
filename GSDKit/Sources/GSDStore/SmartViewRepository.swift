@@ -8,6 +8,9 @@ import GSDModel
 public protocol SmartViewRepository: Sendable {
     func upsert(_ view: SmartView, createdAt: Date, updatedAt: Date) async throws
     func fetchAll() async throws -> [SmartView]
+    /// Stored (custom) views WITH their timestamps, in the backup envelope's wire shape.
+    /// Built-ins are derived at read time and never stored, so they never appear here.
+    func fetchAllForBackup() async throws -> [SmartViewWire]
     func delete(id: String) async throws
     func observeAll() -> AsyncThrowingStream<[SmartView], Error>
 }
@@ -26,6 +29,17 @@ public final class GRDBSmartViewRepository: SmartViewRepository {
     public func fetchAll() async throws -> [SmartView] {
         try await dbWriter.read { db in
             try SmartViewRecord.order(Column("updatedAt").desc).fetchAll(db).map { try $0.toDomain() }
+        }
+    }
+
+    public func fetchAllForBackup() async throws -> [SmartViewWire] {
+        try await dbWriter.read { db in
+            try SmartViewRecord.order(Column("updatedAt").desc).fetchAll(db).map { record in
+                let view = try record.toDomain()
+                return SmartViewWire(id: view.id, name: view.name, icon: view.icon,
+                                     criteria: view.criteria, isBuiltIn: view.isBuiltIn,
+                                     createdAt: record.createdAt, updatedAt: record.updatedAt)
+            }
         }
     }
 

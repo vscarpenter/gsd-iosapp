@@ -37,6 +37,7 @@ struct TaskStoreObserverRetryTests {
         let store = TaskStore(repository: repo,
                               smartViewRepository: GRDBSmartViewRepository(db),
                               archiveRepository: GRDBArchiveRepository(db),
+                              trashRepository: GRDBTrashRepository(db),
                               defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
         store.start()
         var waited = 0

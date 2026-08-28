@@ -10,6 +10,7 @@ struct NotificationSettingsStoreTests {
         return TaskStore(repository: GRDBTaskRepository(db),
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db),
+                         trashRepository: GRDBTrashRepository(db),
                          defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!)
     }
 
