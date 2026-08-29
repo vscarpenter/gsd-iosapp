@@ -29,19 +29,30 @@ public enum CaptureParser {
         var tags: [String] = []
         var urls: [String] = []
 
-        // 1. Extract URL-like words first (before token stripping mangles them).
-        var remainingWords: [String] = []
-        for word in working.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" }) {
-            let token = String(word)
-            if token.lowercased().hasPrefix("http://") || token.lowercased().hasPrefix("https://") {
-                if let safe = URLSanitizer.sanitize(token) {
-                    if !urls.contains(safe) { urls.append(safe) }
-                    continue   // drop the URL word from the title
-                }
+        // 1. Extract URLs first (before token stripping mangles them). A candidate
+        // starts at the string start or after a non-word character — "foohttps://…"
+        // stays text, "(https://…" and "read:https://…" extract — and runs until
+        // whitespace or a quote/bracket delimiter: the web parser's `\b` boundary
+        // (ASCII word chars) and character class, pinned by the shared corpus.
+        // Valid URLs are removed from the title and deduped; invalid candidates
+        // (bad scheme, credentials, no host, ≥ 2048 chars) stay in place untouched.
+        let urlPattern = #/(?i)https?://[^\s<>"'`{}|\\^]+/#
+        var kept = ""
+        var cursor = working.startIndex
+        for match in working.matches(of: urlPattern) {
+            var wordBefore = false
+            let start = match.range.lowerBound
+            if start > working.startIndex {
+                let prev = working[working.index(before: start)]
+                wordBefore = (prev.isASCII && (prev.isLetter || prev.isNumber)) || prev == "_"
             }
-            remainingWords.append(token)
+            guard !wordBefore, let safe = URLSanitizer.sanitize(String(match.0)) else { continue }
+            if !urls.contains(safe) { urls.append(safe) }
+            kept += working[cursor..<start]
+            cursor = match.range.upperBound
         }
-        working = remainingWords.joined(separator: " ")
+        kept += working[cursor...]
+        working = kept
 
         // 2. Tags: #tag on word boundaries, lowercased, deduped, capped at 20.
         // NOTE: extended-delimiter regex literals (#/.../#) are REQUIRED — bare
