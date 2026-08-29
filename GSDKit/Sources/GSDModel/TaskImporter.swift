@@ -113,8 +113,13 @@ public enum TaskImporter {
             throw ImportError.malformed("\(error)")
         }
 
-        guard envelope.tasks.count <= maxImportTasks else {
-            throw ImportError.tooManyTasks(count: envelope.tasks.count)
+        // Count every task-bearing store: a lossless backup carries archived and
+        // deleted tasks too, and the cap exists to bound total records written.
+        let totalTaskRecords = envelope.tasks.count
+            + (envelope.archivedTasks?.count ?? 0)
+            + (envelope.deletedTasks?.count ?? 0)
+        guard totalTaskRecords <= maxImportTasks else {
+            throw ImportError.tooManyTasks(count: totalTaskRecords)
         }
 
         var tasks: [Task] = []
