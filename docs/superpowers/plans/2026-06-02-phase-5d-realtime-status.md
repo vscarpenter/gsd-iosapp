@@ -52,7 +52,7 @@
 ## Conventions for every task
 
 - **Test framework:** swift-testing. Files begin `import Testing` + `import Foundation` (+ `@testable import GSDSync` / `import GSDStore` / `import GSDModel` as needed). Tests are `@Test func name() async throws`, structs group them, `@MainActor struct` when touching `TaskStore`/coordinator.
-- **Run tests:** `cd /Users/vinnycarpenter/Projects/gsd-iosapp/GSDKit && swift test` (whole suite, sub-second). For one: `swift test --filter <TestStructName>`.
+- **Run tests:** `cd /Users/vinnycarpenter/Projects/GSD/gsd-iosapp/GSDKit && swift test` (whole suite, sub-second). For one: `swift test --filter <TestStructName>`.
 - **In-memory DB:** `let db = try AppDatabase.inMemory()`.
 - **Isolated defaults:** `UserDefaults(suiteName: "t.\(UUID().uuidString)")!`.
 - **Commit cadence:** commit after each task's tests pass. Conventional-commit prefixes (`feat(sync):`, `feat(5d):`, `test(sync):`).
@@ -1571,7 +1571,7 @@ Then add inside the existing `.toolbar { … }`:
 
 - [ ] **Step 1: Regenerate the Xcode project** (picks up `App/Sync/*.swift`)
 
-Run: `cd /Users/vinnycarpenter/Projects/gsd-iosapp && xcodegen generate`
+Run: `cd /Users/vinnycarpenter/Projects/GSD/gsd-iosapp && xcodegen generate`
 Expected: "Created project at GSD.xcodeproj".
 
 - [ ] **Step 2: Package tests still green**
@@ -1583,7 +1583,7 @@ Expected: PASS (all of Group A + B1/B2/B3).
 
 Run:
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-iosapp && xcodebuild -project GSD.xcodeproj -scheme GSD \
+cd /Users/vinnycarpenter/Projects/GSD/gsd-iosapp && xcodebuild -project GSD.xcodeproj -scheme GSD \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath .build-app build 2>&1 | tail -20
 ```
 Expected: `** BUILD SUCCEEDED **`. Fix any compile errors from the rewiring (most likely: a missing `@Environment(SyncCoordinator.self)` injection, or a stale `session.syncing`/`session.lastSync` reference — grep `git grep -n "session.syncing\|session.lastSync"` and fix).
@@ -2183,7 +2183,7 @@ git commit -m "feat(5d): add PocketBaseRealtime SSE subscription client"
 
 Run:
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-iosapp && xcodegen generate && \
+cd /Users/vinnycarpenter/Projects/GSD/gsd-iosapp && xcodegen generate && \
 xcodebuild -project GSD.xcodeproj -scheme GSD \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath .build-app build 2>&1 | tail -20
 ```
@@ -2535,7 +2535,7 @@ and replace the erase action body (`_Concurrency.Task { try? await store.eraseAl
 
 Run:
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-iosapp && xcodegen generate && \
+cd /Users/vinnycarpenter/Projects/GSD/gsd-iosapp && xcodegen generate && \
 xcodebuild -project GSD.xcodeproj -scheme GSD \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath .build-app build 2>&1 | tail -20
 ```
@@ -2582,7 +2582,7 @@ Expected: PASS — prior 351 + all of Groups A–D (~ +40 tests).
 
 Run:
 ```bash
-cd /Users/vinnycarpenter/Projects/gsd-iosapp && xcodegen generate && \
+cd /Users/vinnycarpenter/Projects/GSD/gsd-iosapp && xcodegen generate && \
 xcodebuild -project GSD.xcodeproj -scheme GSD -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath .build-app build 2>&1 | tail -5 && \
 xcrun simctl boot "iPhone 17 Pro" 2>/dev/null; \
 xcrun simctl install booted "$(find .build-app -name 'GSD.app' -path '*Debug-iphonesimulator*' | head -1)" && \
