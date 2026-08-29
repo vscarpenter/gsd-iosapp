@@ -822,7 +822,7 @@ Build-verified UI. `SmartViewListView` switches from `BuiltInSmartViews.all` to 
 
 > Build command (run after each UI task; run `xcodegen generate` first whenever a NEW file was added so the regenerated `GSD.xcodeproj` includes it):
 > ```
-> cd /Users/vinnycarpenter/Projects/gsd-iosapp
+> cd /Users/vinnycarpenter/Projects/GSD/gsd-iosapp
 > xcodegen generate
 > xcodebuild -project GSD.xcodeproj -scheme GSD -destination 'platform=iOS Simulator,name=iPhone 17' build -quiet ; echo "exit $?"
 > xcodebuild -project GSD.xcodeproj -scheme GSD -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)' build -quiet ; echo "exit $?"
