@@ -385,22 +385,38 @@ struct TaskEditorView: View {
 
     /// Reminder controls (product spec §9) — shown only when a due date is set. The picker's
     /// `None` selection disables the reminder; any offset enables it with that `notifyBefore`.
+    /// Offsets are the canonical §5.4 presets; an off-list stored value (0 or 5 from an older
+    /// editor, or anything synced) renders as its own row rather than snapping — mirroring the
+    /// web's reminder control, so editing never silently rewrites the user's choice.
     @ViewBuilder private var reminderSection: some View {
         if dueDate != nil {
             Section(String(localized: "Reminder")) {
                 Picker(String(localized: "Remind me"), selection: reminderSelection) {
                     Text(String(localized: "None")).tag(ReminderOption.none)
-                    Text(String(localized: "At time of event")).tag(ReminderOption.offset(0))
-                    Text(String(localized: "5 minutes before")).tag(ReminderOption.offset(5))
-                    Text(String(localized: "15 minutes before")).tag(ReminderOption.offset(15))
-                    Text(String(localized: "30 minutes before")).tag(ReminderOption.offset(30))
-                    Text(String(localized: "1 hour before")).tag(ReminderOption.offset(60))
-                    Text(String(localized: "2 hours before")).tag(ReminderOption.offset(120))
-                    Text(String(localized: "1 day before")).tag(ReminderOption.offset(1440))
+                    ForEach(NotificationSettings.reminderOptions(including: notifyBefore), id: \.self) { minutes in
+                        Text(reminderLabel(minutes)).tag(ReminderOption.offset(minutes))
+                    }
                 }
                 .tint(Surface.ink3)   // value graphite
             }
         }
+    }
+
+    /// Label for a reminder offset. Exact hour/day multiples read naturally; anything else
+    /// stays in minutes so the label never misstates the stored value.
+    private func reminderLabel(_ minutes: Int) -> String {
+        if minutes == 0 { return String(localized: "At time of event") }
+        if minutes == 1 { return String(localized: "1 minute before") }
+        if minutes < 60 || minutes % 60 != 0 { return String(localized: "\(minutes) minutes before") }
+        if minutes < 1440 {
+            let hours = minutes / 60
+            return hours == 1 ? String(localized: "1 hour before")
+                              : String(localized: "\(hours) hours before")
+        }
+        if minutes % 1440 != 0 { return String(localized: "\(minutes / 60) hours before") }
+        let days = minutes / 1440
+        return days == 1 ? String(localized: "1 day before")
+                         : String(localized: "\(days) days before")
     }
 
     /// The reminder picker's options. `.none` = no reminder; `.offset(m)` = m minutes before due.
@@ -408,10 +424,10 @@ struct TaskEditorView: View {
 
     /// Binds the picker to `notificationEnabled` + `notifyBefore`. Selecting `.none` disables;
     /// selecting an offset enables with that value. When enabled but `notifyBefore` is nil
-    /// (legacy/new), the displayed selection falls back to the store's `defaultReminder` — which
-    /// is always one of the offered offsets (the picker's offsets `{0,5,15,30,60,120,1440}` are a
-    /// superset of `NotificationSettings.allowedReminders` `{15,30,60,120,1440}`, so the Picker
-    /// never renders blank). Enabling a reminder requests OS authorization contextually (§9.2:
+    /// (legacy/new), the displayed selection falls back to the store's `defaultReminder` — always
+    /// one of `NotificationSettings.allowedReminders`, and the offered rows come from
+    /// `reminderOptions(including:)` (presets + the stored value if off-list), so the Picker
+    /// never renders blank. Enabling a reminder requests OS authorization contextually (§9.2:
     /// "when the user … sets a due date with a reminder") — a no-op if already asked/determined.
     private var reminderSelection: Binding<ReminderOption> {
         Binding(

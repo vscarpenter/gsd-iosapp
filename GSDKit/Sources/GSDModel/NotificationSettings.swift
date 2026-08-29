@@ -15,6 +15,14 @@ public struct NotificationSettings: Equatable, Sendable {
     /// The offered default-reminder presets (§5.4): 15m, 30m, 1h, 2h, 1 day.
     public static let allowedReminders = [15, 30, 60, 120, 1440]
 
+    /// The rows the editor's reminder picker offers: the canonical presets plus, when
+    /// `stored` (a task's `notifyBefore`) is off-list, that value in sorted position —
+    /// rendered rather than snapped, mirroring the web's reminder control.
+    public static func reminderOptions(including stored: Int?) -> [Int] {
+        guard let stored, !allowedReminders.contains(stored) else { return allowedReminders }
+        return (allowedReminders + [stored]).sorted()
+    }
+
     public init(enabled: Bool = true, defaultReminder: Int = 15, soundEnabled: Bool = true,
                 quietHoursStart: String? = nil, quietHoursEnd: String? = nil,
                 permissionAsked: Bool = false) {
