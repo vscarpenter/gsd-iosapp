@@ -28,6 +28,8 @@ struct SettingsView: View {
     @State private var authIsDenied = false
 
     @State private var showDeleteAccount = false
+    /// Palette "Send feedback" pushes the Feedback screen via `.gsdShowFeedback`.
+    @State private var showFeedback = false
 
     var body: some View {
         NavigationStack {
@@ -39,6 +41,7 @@ struct SettingsView: View {
                 trashSection
                 notificationSection
                 DataStorageView()          // Group D sections
+                feedbackSection
                 aboutSection
             }
             .scrollContentBackground(.hidden)
@@ -50,6 +53,10 @@ struct SettingsView: View {
             .toolbar {
                 brandedNavigationTitle(String(localized: "Settings"))
                 paletteButton(palette)
+            }
+            .navigationDestination(isPresented: $showFeedback) { FeedbackView() }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdShowFeedback)) { _ in
+                showFeedback = true
             }
             .onAppear {
                 archiveSettings = store.archiveSettings
@@ -386,6 +393,21 @@ struct SettingsView: View {
     private static func hhmm(from date: Date) -> String {
         let c = Calendar.current.dateComponents([.hour, .minute], from: date)
         return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+    }
+
+    /// Anonymous, opt-in feedback (parity with web Settings → Feedback). Sits
+    /// directly above About, next to the privacy copy it complements.
+    private var feedbackSection: some View {
+        Section {
+            NavigationLink {
+                FeedbackView()
+            } label: {
+                Label(String(localized: "Feedback"), systemImage: "bubble.left")
+            }
+            .foregroundStyle(Surface.ink)   // navigation reads ink, not tide
+        } footer: {
+            Text(String(localized: "Anonymous and opt-in — nothing is sent until you press Send."))
+        }
     }
 
     private var aboutSection: some View {

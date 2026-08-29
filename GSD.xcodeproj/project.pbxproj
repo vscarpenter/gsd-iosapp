@@ -43,6 +43,7 @@
 		59071E4849DBEB9BD62E330F /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90129986F7968EDDC63918F0 /* SyncCoordinator.swift */; };
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
 		65F938AD7F2AD90B26C4E67A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AE084189B67CD4EE1370674E /* PrivacyInfo.xcprivacy */; };
+		6CAFA93976207C55ECB637C0 /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4667A49C453FFA30BFAF349B /* FeedbackView.swift */; };
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
 		753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
 		7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ED783FE5C2324C295B0273 /* RelativeDate.swift */; };
@@ -158,6 +159,7 @@
 		45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDShareExtension.entitlements; sourceTree = "<group>"; };
 		46017093D034FF7774FAD6CD /* ProviderSignInButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSignInButtonLabel.swift; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
+		4667A49C453FFA30BFAF349B /* FeedbackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackView.swift; sourceTree = "<group>"; };
 		4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusEntry.swift; sourceTree = "<group>"; };
 		4FCA43224F505628B890F546 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyStateView.swift; sourceTree = "<group>"; };
@@ -534,6 +536,7 @@
 			isa = PBXGroup;
 			children = (
 				A92D91657DBB6423E6BBE725 /* DataStorageView.swift */,
+				4667A49C453FFA30BFAF349B /* FeedbackView.swift */,
 				6D97811D144C615B847BA217 /* SettingsView.swift */,
 				0B8A1791520E8DBCA8A05A3C /* TrashListView.swift */,
 			);
@@ -801,6 +804,7 @@
 				607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
 				8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */,
+				6CAFA93976207C55ECB637C0 /* FeedbackView.swift in Sources */,
 				58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
 				FF5DA971C1D7F0E459C85820 /* GSDAppIntents.swift in Sources */,
