@@ -24,7 +24,14 @@ let package = Package(
         ),
         .target(name: "GSDSync", dependencies: ["GSDModel", "GSDStore"]),
         .target(name: "GSDSnapshot", dependencies: ["GSDModel"]),
-        .testTarget(name: "GSDModelTests", dependencies: ["GSDModel"]),
+        .testTarget(
+            name: "GSDModelTests",
+            dependencies: ["GSDModel"],
+            // The capture-parser corpus is a byte-identical copy of the web repo's
+            // tests/fixtures/cross-platform/capture-parser-corpus.json — both suites run
+            // every case so the two parser implementations cannot drift apart unnoticed.
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(
             name: "GSDStoreTests",
             dependencies: ["GSDStore"],
