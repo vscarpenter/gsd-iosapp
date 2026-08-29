@@ -203,6 +203,11 @@ struct ContentView: View {
             let current = AppTheme(rawValue: themeRaw) ?? .system
             let next = order[(order.firstIndex(of: current).map { $0 + 1 } ?? 0) % order.count]
             themeRaw = next.rawValue
+        case .sendFeedback:
+            navigate(to: .settings)
+            // SettingsView owns the push (its own NavigationStack) — same handoff
+            // pattern as the Help sheet.
+            NotificationCenter.default.post(name: .gsdShowFeedback, object: nil)
         case .navigate(let dest): navigate(to: dest)
         case .openSmartView(let id): openSmartView(id)
         }
