@@ -25,7 +25,14 @@ let package = Package(
         .target(name: "GSDSync", dependencies: ["GSDModel", "GSDStore"]),
         .target(name: "GSDSnapshot", dependencies: ["GSDModel"]),
         .testTarget(name: "GSDModelTests", dependencies: ["GSDModel"]),
-        .testTarget(name: "GSDStoreTests", dependencies: ["GSDStore"]),
+        .testTarget(
+            name: "GSDStoreTests",
+            dependencies: ["GSDStore"],
+            // The cross-platform backup fixture is a byte-identical copy of the web repo's
+            // tests/fixtures/cross-platform/. Both suites read the same file so neither can
+            // drift into passing against a shape the other never writes.
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(
             name: "GSDSyncTests",
             dependencies: ["GSDSync"],

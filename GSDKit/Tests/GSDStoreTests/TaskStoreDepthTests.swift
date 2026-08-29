@@ -21,6 +21,7 @@ struct TaskStoreDepthTests {
             repository: repo,
             smartViewRepository: GRDBSmartViewRepository(db),
             archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 1_700_000_000) }),
+            trashRepository: GRDBTrashRepository(db, now: { Date(timeIntervalSince1970: 1_700_000_000) }),
             defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
             clock: { Date(timeIntervalSince1970: 1_700_000_000) },
             newID: { ids.isEmpty ? "fallback" : ids.removeFirst() },

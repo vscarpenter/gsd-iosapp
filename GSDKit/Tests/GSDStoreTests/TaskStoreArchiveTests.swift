@@ -21,6 +21,7 @@ struct TaskStoreArchiveTests {
         return TaskStore(repository: GRDBTaskRepository(db, now: { fixed }),
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db, now: { fixed }),
+                         trashRepository: GRDBTrashRepository(db, now: { fixed }),
                          defaults: suite,
                          clock: { fixed }, newID: { "id" }, calendar: cal)
     }

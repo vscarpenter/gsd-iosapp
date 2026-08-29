@@ -35,6 +35,7 @@ struct TaskStoreReminderHooksTests {
         return TaskStore(repository: GRDBTaskRepository(db),
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db),
+                         trashRepository: GRDBTrashRepository(db),
                          defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
                          clock: { fixed },
                          newID: { idCount += 1; return "id-\(idCount)" },

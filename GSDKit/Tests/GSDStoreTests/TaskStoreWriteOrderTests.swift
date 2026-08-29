@@ -28,6 +28,30 @@ struct TaskStoreWriteOrderTests {
         }
     }
 
+    /// Delete is a SOFT delete now, so the local write it must be ordered against is the
+    /// move into the trash, not `TaskRepository.delete`. Without this double the ordering
+    /// assertions below would pass vacuously — the task repo never sees the write at all.
+    final class LoggingTrash: TrashRepository, @unchecked Sendable {
+        let log: EventLog
+        var failTrash = false
+        struct Boom: Error {}
+        init(log: EventLog) { self.log = log }
+        func trash(_ task: Task) async throws { try await trash(task, at: Date()) }
+        func trash(_ task: Task, at deletedAt: Date) async throws {
+            log.events.append("trash")
+            if failTrash { throw Boom() }
+        }
+        func restore(id: String) async throws -> Task? { nil }
+        func deleteForever(id: String) async throws {}
+        func empty() async throws -> Int { 0 }
+        func fetchAll() async throws -> [Task] { [] }
+        func fetchAllStamped() async throws -> [ArchivedTask] { [] }
+        func purge(before cutoff: Date) async throws -> Int { 0 }
+        func observeAll() -> AsyncThrowingStream<[Task], Error> {
+            AsyncThrowingStream { $0.finish() }
+        }
+    }
+
     final class LoggingQueue: SyncQueueRepository, @unchecked Sendable {
         let log: EventLog
         var items: [SyncQueueItem] = []
@@ -45,11 +69,13 @@ struct TaskStoreWriteOrderTests {
         func all() async throws -> [SyncQueueItem] { items }
     }
 
-    private func makeStore(repo: LoggingRepository, queue: LoggingQueue) throws -> TaskStore {
+    private func makeStore(repo: LoggingRepository, queue: LoggingQueue,
+                           trash: LoggingTrash? = nil) throws -> TaskStore {
         let db = try AppDatabase.inMemory()
         return TaskStore(repository: repo,
                          smartViewRepository: GRDBSmartViewRepository(db),
                          archiveRepository: GRDBArchiveRepository(db),
+                         trashRepository: trash ?? LoggingTrash(log: repo.log),
                          defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!,
                          clock: { Date(timeIntervalSince1970: 1000) },
                          syncQueue: queue)
@@ -66,11 +92,11 @@ struct TaskStoreWriteOrderTests {
         #expect(log.events == ["enqueue", "upsert"])
     }
 
-    @Test func deleteEnqueuesBeforeDeleting() async throws {
+    @Test func deleteEnqueuesBeforeMovingTheRowToTheTrash() async throws {
         let log = EventLog()
         let store = try makeStore(repo: LoggingRepository(log: log), queue: LoggingQueue(log: log))
         try await store.delete(task("a"))
-        #expect(log.events == ["enqueue", "delete"])
+        #expect(log.events == ["enqueue", "trash"])
     }
 
     /// A delete whose enqueue fails must NOT delete the local row: unlike an upsert (whose row
@@ -83,7 +109,7 @@ struct TaskStoreWriteOrderTests {
         let queue = LoggingQueue(log: log); queue.failEnqueue = true
         let store = try makeStore(repo: repo, queue: queue)
         await #expect(throws: (any Error).self) { try await store.delete(self.task("a")) }
-        #expect(!log.events.contains("delete"))   // local row NOT deleted → cannot resurrect
+        #expect(!log.events.contains("trash"))    // row NOT moved → still active → cannot resurrect
         #expect(queue.items.isEmpty)
     }
 

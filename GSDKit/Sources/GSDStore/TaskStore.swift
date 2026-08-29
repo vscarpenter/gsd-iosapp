@@ -75,6 +75,7 @@ public final class TaskStore {
     private let repository: any TaskRepository
     private let smartViewRepository: any SmartViewRepository
     private let archiveRepository: any ArchiveRepository
+    private let trashRepository: any TrashRepository
     private let defaults: UserDefaults
     private let clock: @Sendable () -> Date
     private let newID: @Sendable () -> String
@@ -97,6 +98,7 @@ public final class TaskStore {
         repository: any TaskRepository,
         smartViewRepository: any SmartViewRepository,
         archiveRepository: any ArchiveRepository,
+        trashRepository: any TrashRepository,
         defaults: UserDefaults = AppGroupDefaults.shared,
         clock: @escaping @Sendable () -> Date = { Date() },
         newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.smartView) },
@@ -107,6 +109,7 @@ public final class TaskStore {
         self.repository = repository
         self.smartViewRepository = smartViewRepository
         self.archiveRepository = archiveRepository
+        self.trashRepository = trashRepository
         self.defaults = defaults
         self.clock = clock
         self.newID = newID
@@ -306,21 +309,67 @@ public final class TaskStore {
         try await upsertEnqueued(t, op: .update)
     }
 
+    /// Soft delete: the row moves to the trash, recoverable for `TrashRetention.days`.
+    ///
+    /// The WIRE behaviour is deliberately unchanged — this still enqueues a `.delete` and
+    /// still refuses to touch the row if that enqueue fails. Trash is device-local recovery
+    /// layered over the same server delete the web client performs, so the two clients
+    /// remain byte-identical on the wire while both now offer a way back.
     public func delete(_ task: Task) async throws {
-        // Require the delete to be recorded for sync BEFORE removing the local row. Unlike an
+        // Require the delete to be recorded for sync BEFORE moving the local row. Unlike an
         // upsert — whose row survives a failed enqueue and is re-enqueued by the next sync's seed
-        // — a deleted row is gone, so seed can't re-enqueue a lost delete and the next pull would
-        // resurrect the task. If the enqueue fails, abort and keep the row (the user can retry).
+        // — a removed row can't be re-enqueued by seed, and the next pull would resurrect the
+        // task. If the enqueue fails, abort and keep the row active (the user can retry).
         guard let queueItemId = await enqueue(task.id, .delete, payload: nil) else {
             throw TaskStoreError.deleteNotRecorded
         }
         do {
-            try await repository.delete(id: task.id)
+            try await trashRepository.trash(task, at: clock())
         } catch {
             try? await syncQueue.remove(id: queueItemId)
             throw error
         }
         await reminders.cancel(taskID: task.id)
+    }
+
+    // MARK: Trash (soft delete, 30-day retention — see TrashRetention)
+
+    /// Trashed tasks, newest first. Read on demand rather than observed: the trash is a
+    /// settings-screen surface, not something the matrix renders.
+    public func trashedTasks() async throws -> [ArchivedTask] {
+        try await trashRepository.fetchAllStamped()
+    }
+
+    /// Archived tasks WITH their `archivedAt` stamp. `archivedTasks` (the observed snapshot)
+    /// drops it; callers that need the age — backup, and any "archived N days ago" copy —
+    /// use this instead.
+    public func archivedTasksStamped() async throws -> [ArchivedTask] {
+        try await archiveRepository.fetchAllStamped()
+    }
+
+    /// Move a task back out of the trash. Enqueues `.create` — the server deleted it when it
+    /// was trashed, so restoring has to put it back, which is exactly what the web does.
+    public func restoreFromTrash(id: String) async throws {
+        guard let task = try await trashRepository.restore(id: id) else { return }
+        _ = await enqueue(task.id, .create, payload: task)
+        await reminders.schedule(task)
+    }
+
+    /// Permanently drop one trashed row. No enqueue: the server deleted it at trash time.
+    public func deleteForever(id: String) async throws {
+        try await trashRepository.deleteForever(id: id)
+    }
+
+    @discardableResult
+    public func emptyTrash() async throws -> Int {
+        try await trashRepository.empty()
+    }
+
+    /// Purge trashed rows past the retention window. Runs alongside the auto-archive sweep
+    /// (launch + background refresh) rather than on an in-app timer.
+    @discardableResult
+    public func runTrashRetentionSweep() async throws -> Int {
+        try await trashRepository.purge(before: TrashRetention.cutoff(now: clock(), calendar: calendar))
     }
 
     /// Set `snoozedUntil = now + preset`, clamped to the 1-year max (product spec §6.7).
@@ -730,9 +779,26 @@ public final class TaskStore {
 
     public enum ImportMode: Sendable { case replace, merge }
 
-    /// Serialize the live task snapshot to a `TaskExport` JSON payload (design-spec §3).
-    public func exportJSON() throws -> Data {
-        try TaskExport.encode(TaskExport(tasks: tasks, exportedAt: clock()))
+    /// Serialize every user-owned store to a `TaskExport` JSON payload (design-spec §3),
+    /// in the web client's envelope shape so either client can restore the other's backup.
+    ///
+    /// Through 2.2.0 this wrote `tasks` alone, which silently dropped the archive, custom
+    /// smart views and settings from every backup a user had ever taken — the same failure
+    /// the web app fixed in its ADR 0014. Async because the archive and view stores are
+    /// behind repositories.
+    public func exportJSON() async throws -> Data {
+        let export = TaskExport(
+            tasks: tasks,
+            exportedAt: clock(),
+            archivedTasks: try await archiveRepository.fetchAllStamped(),
+            deletedTasks: try await trashRepository.fetchAllStamped(),
+            smartViews: try await smartViewRepository.fetchAllForBackup(),
+            notificationSettings: NotificationSettingsWire(notificationSettings, updatedAt: clock()),
+            archiveSettings: ArchiveSettingsWire(autoEnabled: archiveSettings.autoEnabled,
+                                                 afterDays: archiveSettings.afterDays),
+            appPreferences: AppPreferencesWire(pinnedSmartViewIds: pinnedSmartViewIds,
+                                               maxPinnedViews: SmartViewPinning.maxPins))
+        return try TaskExport.encode(export)
     }
 
     /// Parse + persist an import. Replace clears all tasks then bulk-inserts (single
@@ -767,6 +833,7 @@ public final class TaskStore {
                 for id in enqueued { try? await syncQueue.remove(id: id) }
                 throw error
             }
+            try await restoreCompanionStores(result, mode: .replace)
             return result
         case .merge:
             let existing = Set(try await repository.fetchAll().map(\.id))
@@ -775,7 +842,60 @@ public final class TaskStore {
                 var t = task; t.updatedAt = clock()
                 try await upsertEnqueued(t, op: .update)
             }
+            try await restoreCompanionStores(result, mode: .merge)
             return result
+        }
+    }
+
+    /// Write back the non-task stores a backup carried: archive, trash, custom smart
+    /// views, the two settings singletons and pinned view ids.
+    ///
+    /// A nil store means the backup said nothing about it, and is left untouched — the
+    /// distinction that lets an old tasks-only export restore without wiping the archive.
+    /// An empty array is a statement and does clear, but only under `.replace`.
+    ///
+    /// None of this enqueues. Archive and trash membership is device-local state that has
+    /// no column in the §7.1 wire model, and the settings singletons never sync at all;
+    /// the tasks themselves were already enqueued by the caller.
+    private func restoreCompanionStores(_ result: ImportResult, mode: ImportMode) async throws {
+        if let archived = result.archivedTasks {
+            if mode == .replace {
+                for existing in try await archiveRepository.fetchAll() {
+                    try await archiveRepository.deletePermanently(id: existing.id)
+                }
+            }
+            for row in archived { try await archiveRepository.archive(row.task, at: row.stampedAt) }
+        }
+
+        if let trashed = result.deletedTasks {
+            if mode == .replace {
+                for existing in try await trashRepository.fetchAll() {
+                    try await trashRepository.deleteForever(id: existing.id)
+                }
+            }
+            for row in trashed { try await trashRepository.trash(row.task, at: row.stampedAt) }
+        }
+
+        if let views = result.smartViews {
+            if mode == .replace {
+                for existing in try await smartViewRepository.fetchAll() {
+                    try await smartViewRepository.delete(id: existing.id)
+                }
+            }
+            for wire in views where !wire.isBuiltIn {
+                let view = SmartView(id: wire.id, name: wire.name, icon: wire.icon ?? "line.3.horizontal.decrease.circle",
+                                     criteria: wire.criteria, isBuiltIn: false)
+                try await smartViewRepository.upsert(view, createdAt: wire.createdAt, updatedAt: wire.updatedAt)
+            }
+        }
+
+        if let settings = result.notificationSettings { notificationSettings = settings }
+        if let archive = result.archiveSettings {
+            archiveSettings = ArchiveSettings(autoEnabled: archive.autoEnabled, afterDays: archive.afterDays)
+        }
+        if let pins = result.pinnedSmartViewIds {
+            pinnedIDs = Array(pins.prefix(SmartViewPinning.maxPins))
+            defaults.set(pinnedIDs, forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
         }
     }
 
@@ -790,6 +910,9 @@ public final class TaskStore {
         for archived in try await archiveRepository.fetchAll() {
             try await archiveRepository.deletePermanently(id: archived.id)
         }
+        // "Erase all data" must mean all of it — leaving the trash behind would keep a
+        // recoverable copy of tasks the user just asked to be rid of.
+        _ = try await trashRepository.empty()
         for view in try await smartViewRepository.fetchAll() {
             try await smartViewRepository.delete(id: view.id)
         }

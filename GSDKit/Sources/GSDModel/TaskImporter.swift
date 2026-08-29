@@ -6,12 +6,48 @@ public enum ImportError: Error, Equatable {
     case malformed(String)
 }
 
-/// The outcome of a pure import parse: the tasks the store should write, plus how many
-/// raw task entries were skipped (failed lenient decode).
+/// The outcome of a pure import parse: the tasks the store should write, how many raw
+/// task entries were skipped (failed lenient decode), and every other user-owned store
+/// the envelope carried.
+///
+/// Each extra store is OPTIONAL and nil means "the backup said nothing about it" — the
+/// store must leave that table alone rather than clearing it. An empty array is a
+/// different statement: it means the backup genuinely holds none.
 public struct ImportResult: Equatable, Sendable {
     public let tasks: [Task]
     public let skipped: Int
-    public init(tasks: [Task], skipped: Int) { self.tasks = tasks; self.skipped = skipped }
+    public let archivedTasks: [ArchivedTask]?
+    public let deletedTasks: [ArchivedTask]?
+    public let smartViews: [SmartViewWire]?
+    public let notificationSettings: NotificationSettings?
+    public let archiveSettings: (autoEnabled: Bool, afterDays: Int)?
+    public let pinnedSmartViewIds: [String]?
+
+    public init(tasks: [Task], skipped: Int,
+                archivedTasks: [ArchivedTask]? = nil,
+                deletedTasks: [ArchivedTask]? = nil,
+                smartViews: [SmartViewWire]? = nil,
+                notificationSettings: NotificationSettings? = nil,
+                archiveSettings: (autoEnabled: Bool, afterDays: Int)? = nil,
+                pinnedSmartViewIds: [String]? = nil) {
+        self.tasks = tasks
+        self.skipped = skipped
+        self.archivedTasks = archivedTasks
+        self.deletedTasks = deletedTasks
+        self.smartViews = smartViews
+        self.notificationSettings = notificationSettings
+        self.archiveSettings = archiveSettings
+        self.pinnedSmartViewIds = pinnedSmartViewIds
+    }
+
+    public static func == (a: ImportResult, b: ImportResult) -> Bool {
+        a.tasks == b.tasks && a.skipped == b.skipped
+            && a.archivedTasks == b.archivedTasks && a.deletedTasks == b.deletedTasks
+            && a.smartViews == b.smartViews && a.notificationSettings == b.notificationSettings
+            && a.archiveSettings?.autoEnabled == b.archiveSettings?.autoEnabled
+            && a.archiveSettings?.afterDays == b.archiveSettings?.afterDays
+            && a.pinnedSmartViewIds == b.pinnedSmartViewIds
+    }
 }
 
 /// Pure import parsing (design-spec §3): lenient per-task decode (unknown keys ignored,
@@ -53,7 +89,12 @@ public enum TaskImporter {
             if let p = task.parentTaskId { t.parentTaskId = remap[p] ?? p }
             return t
         }
-        return ImportResult(tasks: remapped, skipped: parsed.skipped)
+        return ImportResult(tasks: remapped, skipped: parsed.skipped,
+                            archivedTasks: parsed.archivedTasks, deletedTasks: parsed.deletedTasks,
+                            smartViews: parsed.smartViews,
+                            notificationSettings: parsed.notificationSettings,
+                            archiveSettings: parsed.archiveSettings,
+                            pinnedSmartViewIds: parsed.pinnedSmartViewIds)
     }
 
     // MARK: parsing
@@ -88,13 +129,34 @@ public enum TaskImporter {
                 skipped += 1
             }
         }
-        return ImportResult(tasks: tasks, skipped: skipped)
+        return ImportResult(
+            tasks: tasks, skipped: skipped,
+            archivedTasks: envelope.archivedTasks?.compactMap(\.decoded),
+            deletedTasks: envelope.deletedTasks?.compactMap(\.decoded),
+            smartViews: envelope.smartViews,
+            notificationSettings: envelope.notificationSettings?.settings,
+            archiveSettings: envelope.archiveSettings.map { ($0.enabled, $0.archiveAfterDays) },
+            pinnedSmartViewIds: envelope.appPreferences?.pinnedSmartViewIds)
     }
 
     /// Envelope whose `tasks` are decoded one-at-a-time via `LenientTask` so a single
     /// malformed entry is isolated. Unknown envelope keys are ignored by `Codable` default.
     private struct LenientEnvelope: Decodable {
         let tasks: [LenientTask]
+        // Absent stays nil ("the backup says nothing"); a present-but-broken ROW inside a
+        // store is dropped by `compactMap` rather than failing the whole import, matching
+        // how a broken task entry is handled.
+        let archivedTasks: [LenientArchived]?
+        let deletedTasks: [LenientArchived]?
+        let smartViews: [SmartViewWire]?
+        let notificationSettings: NotificationSettingsWire?
+        let archiveSettings: ArchiveSettingsWire?
+        let appPreferences: AppPreferencesWire?
+    }
+    /// Per-row isolation for an archived/trashed entry, mirroring `LenientTask`.
+    private struct LenientArchived: Decodable {
+        let decoded: ArchivedTask?
+        init(from decoder: Decoder) throws { decoded = try? ArchivedTask(from: decoder) }
     }
     /// Wraps a per-task decode attempt. `Task` already defaults its optional fields and
     /// `Codable` ignores unknown keys, so a missing-key or extra-key task decodes fine;

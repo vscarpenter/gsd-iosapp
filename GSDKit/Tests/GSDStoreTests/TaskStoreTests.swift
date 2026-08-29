@@ -13,6 +13,7 @@ struct TaskStoreTests {
         let store = TaskStore(repository: repo,
                               smartViewRepository: GRDBSmartViewRepository(db),
                               archiveRepository: GRDBArchiveRepository(db, now: { Date(timeIntervalSince1970: 1000) }),
+                              trashRepository: GRDBTrashRepository(db, now: { Date(timeIntervalSince1970: 1000) }),
                               defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
                               clock: { Date(timeIntervalSince1970: 1000) },
                               newID: { "fixed-id" })

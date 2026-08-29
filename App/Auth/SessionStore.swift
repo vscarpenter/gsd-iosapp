@@ -12,9 +12,13 @@ final class SessionStore {
     private(set) var email: String?
     private(set) var inProgress = false
     private(set) var lastError: String?
-    /// True when the last sign-in returned an Apple "Hide My Email" relay address — gates the
-    /// "separate account" hint (design §3). Reset on sign-out.
-    private(set) var usingRelayEmail = false
+    /// What to tell the user about which account they landed on, or nil when there is
+    /// nothing worth saying (Google/GitHub). Reset on sign-out.
+    ///
+    /// Was a relay-email-only flag, which under-warned: signing in with Apple at all lands
+    /// a different PocketBase user than Google/GitHub does, whether or not the address is
+    /// a private relay, and that used to be entirely silent.
+    private(set) var accountNote: AppleIdentity.AccountNote?
 
     /// Set when a DIFFERENT account signed in while local tasks exist (design 2026-06-10
     /// Fix C); the ContentView dialog resolves it. Sync stays parked until resolved.
@@ -30,6 +34,7 @@ final class SessionStore {
     private let tokenStore: TokenStore
     private let coordinator: SyncCoordinator?
     private let emailKey = "gsd.accountEmail"
+    private let providerKey = "gsd.accountProvider"
     private let lastOwnerKey = "gsd.lastOwnerId"
     private let hasLocalActiveTasks: @MainActor () -> Bool
     private let eraseLocal: @MainActor () async throws -> Void
@@ -45,7 +50,9 @@ final class SessionStore {
         if tokenStore.load() != nil {
             let cached = UserDefaults.standard.string(forKey: emailKey)
             email = cached
-            usingRelayEmail = cached.map(AppleIdentity.isRelayEmail) ?? false
+            accountNote = AppleIdentity.accountNote(
+                provider: UserDefaults.standard.string(forKey: providerKey) ?? "",
+                email: cached)
             // Backfill the owner baseline for installs that signed in before Fix C shipped —
             // without it, the first account switch after upgrading couldn't be detected.
             if UserDefaults.standard.string(forKey: lastOwnerKey) == nil,
@@ -62,16 +69,17 @@ final class SessionStore {
 
     /// Web-redirect OAuth for every provider (`"google"`, `"apple"`, `"github"`). Apple rides the same
     /// path as the rest — its native sheet was retired (Option A: one PocketBase provider, a Services-ID
-    /// `client_id`). Silent on cancel, generic banner otherwise. Sets `usingRelayEmail` so an Apple
-    /// "Hide My Email" sign-in surfaces the §3 "separate account" hint regardless of provider.
+    /// `client_id`). Silent on cancel, generic banner otherwise. Sets `accountNote` so any Apple
+    /// sign-in surfaces the §8.4 "separate account" hint, not only a "Hide My Email" one.
     func signIn(provider: String) async {
         inProgress = true; lastError = nil
         defer { inProgress = false }
         do {
             let result = try await auth.signIn(provider: provider)
             email = result.record.email
-            usingRelayEmail = AppleIdentity.isRelayEmail(result.record.email)
+            accountNote = AppleIdentity.accountNote(provider: provider, email: result.record.email)
             UserDefaults.standard.set(result.record.email, forKey: emailKey)
+            UserDefaults.standard.set(provider, forKey: providerKey)
             routeAfterSignIn(result)   // same/first account → seed+pull; different → dialog (Fix C)
         } catch AuthError.cancelled {
             // user dismissed — silent, stay signed out, no banner
@@ -83,9 +91,10 @@ final class SessionStore {
     func signOut() {
         auth.signOut()
         email = nil
-        usingRelayEmail = false
+        accountNote = nil
         pendingAccountSwitch = nil
         UserDefaults.standard.removeObject(forKey: emailKey)
+        UserDefaults.standard.removeObject(forKey: providerKey)
         // lastOwnerKey is deliberately KEPT — remembering the previous owner is what lets the
         // next sign-in detect an account switch (Fix C).
         coordinator?.signedOut()   // tear down + reset cursor; local tasks kept
