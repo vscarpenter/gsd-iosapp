@@ -325,7 +325,7 @@ After parsing, the cleaned title has the tokens and URLs removed and whitespace 
 - **Tags:** a token field; type + Return (or comma) to add; backspace on empty removes the last; autocomplete from existing tags.
 - **Subtasks:** an inline, reorderable checklist with add/remove (§6.6).
 - **Dependencies:** a searchable task picker that **prevents cycles** (§6.8) and shows current blockers/blocked.
-- **Reminder:** a toggle + "remind me N before" picker using the presets (15m/30m/1h/2h/1d) defaulting to the user's `defaultReminder`.
+- **Reminder:** a toggle + "remind me N before" picker using the presets (15m/30m/1h/2h/1d) defaulting to the user's `defaultReminder`. An off-list stored `notifyBefore` (e.g. 0 or 5 from an older editor, or anything synced) renders as its own option rather than snapping — both clients honor this, so editing never silently rewrites the value.
 - **Estimate:** a minutes/duration field (1 min – 7 days).
 - Save disabled while title is empty; Cancel/Escape discards.
 
