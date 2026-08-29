@@ -82,6 +82,32 @@ struct TaskImporterTests {
         let many = (0..<(TaskImporter.maxImportTasks + 1)).map { task("t\($0)") }
         #expect(throws: ImportError.self) { _ = try TaskImporter.replace(from: try data(many)) }
     }
+    @Test func capCountsEveryTaskBearingStore() throws {
+        // 4,000 active + 4,000 archived + 2,001 deleted = 10,001 records — over the
+        // guard even though `tasks` alone is far under it. A lossless backup carries
+        // all three stores, and the cap exists to bound total records written.
+        let stamp = Date(timeIntervalSince1970: 0)
+        let export = TaskExport(
+            tasks: (0..<4_000).map { task("t\($0)") },
+            exportedAt: stamp,
+            archivedTasks: (0..<4_000).map { ArchivedTask(task: task("a\($0)"), stampedAt: stamp) },
+            deletedTasks: (0..<2_001).map { ArchivedTask(task: task("d\($0)"), stampedAt: stamp, stampKey: .deletedAt) }
+        )
+        #expect(throws: ImportError.self) { _ = try TaskImporter.replace(from: try TaskExport.encode(export)) }
+    }
+    @Test func capAdmitsAFullEnvelopeUnderTheLimit() throws {
+        let stamp = Date(timeIntervalSince1970: 0)
+        let export = TaskExport(
+            tasks: [task("t1"), task("t2")],
+            exportedAt: stamp,
+            archivedTasks: [ArchivedTask(task: task("a1"), stampedAt: stamp)],
+            deletedTasks: [ArchivedTask(task: task("d1"), stampedAt: stamp, stampKey: .deletedAt)]
+        )
+        let result = try TaskImporter.replace(from: try TaskExport.encode(export))
+        #expect(result.tasks.count == 2)
+        #expect(result.archivedTasks?.count == 1)
+        #expect(result.deletedTasks?.count == 1)
+    }
     @Test func oversizedPayloadThrows() throws {
         let big = Data(count: TaskImporter.maxImportBytes + 1)
         #expect(throws: ImportError.self) { _ = try TaskImporter.replace(from: big) }
