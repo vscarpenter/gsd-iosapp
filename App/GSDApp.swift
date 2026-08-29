@@ -180,7 +180,7 @@ struct GSDApp: App {
                     }
                     widgetRefresher.start()
                     try? await store.runAutoArchiveSweep()
-                    try? await store.runTrashRetentionSweep()
+                    _ = try? await store.runTrashRetentionSweep()
                     await store.refreshBadge()
                     coordinator.start(trigger: .launch)
                 }
