@@ -8,6 +8,7 @@ import GSDSnapshot
 /// — no computation here. The 7/30/90 segmented control only changes `trendDays`.
 /// Charts are re-skinned to the editorial palette: the four quadrant pigments, `success`
 /// for completion, and graphite for the "created" baseline — no system blue/green.
+/// Until the store's first snapshot lands it shows `DashboardSkeleton`, not the empty state.
 struct DashboardView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
@@ -16,6 +17,8 @@ struct DashboardView: View {
     // iPad doesn't show a second chip (the sidebar already has one) and the tap (Settings tab)
     // stays meaningful.
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.calendar) private var calendar
     @State private var trendDays = 7
     @State private var editor: EditorRequest?
 
@@ -29,7 +32,9 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if summary.totalCount == 0 {
+                if !store.hasLoadedTasks {
+                    DashboardSkeleton()
+                } else if summary.totalCount == 0 {
                     DashboardEmptyState()
                 } else {
                     ScrollView {
@@ -38,6 +43,7 @@ struct DashboardView: View {
                             statGrid(summary)
                             trendSection(summary)
                             quadrantDonut(summary)
+                            quadrantCompletionRings(summary)
                             topTagsChart(summary)
                             timeByQuadrantChart(summary)
                             upcomingDeadlines(summary)
@@ -121,6 +127,8 @@ struct DashboardView: View {
             }
             Text(value).font(.serif(.title).weight(.semibold)).monospacedDigit()
                 .foregroundStyle(Surface.ink)
+                .contentTransition(.numericText())   // a live value morphs its digits instead of snapping (ShipSwift KPI-card detail)
+                .animation(reduceMotion ? nil : .default, value: value)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -214,6 +222,17 @@ struct DashboardView: View {
         .surfaceCard()
     }
 
+    /// Per-quadrant completion rate (§6.15) as concentric rings; the center is the overall rate.
+    private func quadrantCompletionRings(_ s: AnalyticsSummary) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(String(localized: "Completion by Quadrant"))
+                .font(.serif(.title3).weight(.semibold)).foregroundStyle(Surface.ink)
+            QuadrantCompletionRings(stats: s.quadrantStats, overallRate: s.completionRate)
+        }
+        .padding(18)
+        .surfaceCard()
+    }
+
     private func topTagsChart(_ s: AnalyticsSummary) -> some View {
         Group {
             if s.topTags.isEmpty { EmptyView() } else {
@@ -273,13 +292,13 @@ struct DashboardView: View {
                         .padding(.bottom, 8)
                     ForEach(Array(s.upcomingDeadlines.enumerated()), id: \.element.id) { index, task in
                         Button { editor = .edit(task) } label: {
-                            HStack {
+                            HStack(spacing: 8) {
                                 Text(task.title).foregroundStyle(Surface.ink)
                                 Spacer()
                                 if let due = task.dueDate {
-                                    Text(due, style: .date)
-                                        .foregroundStyle(due < .now ? Surface.alert : Surface.ink3)
-                                        .fontWeight(due < .now ? .semibold : .regular)
+                                    deadlineBadge(DeadlineStatus.of(dueDate: due, now: .now, calendar: calendar))
+                                    Text(due, style: .date).foregroundStyle(Surface.ink3)
+                                        .lineLimit(1).layoutPriority(1)   // a long title wraps; the date and badge never do
                                 }
                             }
                         }
@@ -293,6 +312,19 @@ struct DashboardView: View {
                 .padding(18)
                 .surfaceCard()
             }
+        }
+    }
+
+    /// Today is a neutral badge; anything later carries no badge — the date alone says
+    /// enough. Day-based via `DeadlineStatus`, so a task due today is no longer painted red
+    /// (the old `due < .now` check flagged it from midnight on). The overdue branch keeps the
+    /// switch exhaustive: `upcomingDeadlines` starts at today, and overdue tasks are the
+    /// banner's job, so it isn't a live path.
+    @ViewBuilder private func deadlineBadge(_ status: DeadlineStatus) -> some View {
+        switch status {
+        case .overdue:  StatusBadge(text: String(localized: "Overdue"), style: .alert)
+        case .today:    StatusBadge(text: String(localized: "Today"), style: .neutral)
+        case .upcoming: EmptyView()
         }
     }
 }
