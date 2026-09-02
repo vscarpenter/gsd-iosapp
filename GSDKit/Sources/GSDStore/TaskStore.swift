@@ -69,6 +69,9 @@ public enum TaskStoreError: Error, LocalizedError {
 @Observable
 public final class TaskStore {
     public private(set) var tasks: [Task] = []
+    /// True once the task observer has delivered its first snapshot. Lets the UI tell
+    /// "loaded, and empty" apart from "not loaded yet" — `tasks` starts empty either way.
+    public private(set) var hasLoadedTasks = false
     public private(set) var customViews: [SmartView] = []
     public private(set) var archivedTasks: [Task] = []
 
@@ -143,6 +146,7 @@ public final class TaskStore {
                     for try await snapshot in repository.observeAll() {
                         failures = 0
                         self?.tasks = snapshot
+                        self?.hasLoadedTasks = true
                         self?.onTasksChanged?()
                     }
                     return   // stream ended cleanly (cancellation/termination) — stop
