@@ -55,7 +55,9 @@ struct FilteredTaskListView: View {
         )
         ZStack {
             Group {
-                if tasks.isEmpty {
+                if !store.hasLoadedTasks {
+                    TaskListSkeleton()
+                } else if tasks.isEmpty {
                     emptyState
                 } else {
                     List(selection: $selection) {

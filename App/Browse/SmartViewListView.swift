@@ -3,48 +3,33 @@ import GSDModel
 import GSDStore
 
 /// Browse (iPhone tab): pinned views first, then built-ins, then custom — with a "+"
-/// to create a custom view and per-custom-row edit/delete/pin actions.
+/// to create a custom view and per-custom-row edit/delete/pin actions. A root search
+/// field swaps the list for `BrowseSearchResults` across every active task.
 struct SmartViewListView: View {
     @Environment(TaskStore.self) private var store
     @Environment(PaletteController.self) private var palette
     @Environment(SyncCoordinator.self) private var sync
     @State private var editorTarget: SmartViewEditorTarget?
     @State private var actionFailure: TaskActionFailure?
+    @State private var searchText = ""
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
         @Bindable var palette = palette
         // Browse owns its NavigationStack path so the command palette can push a smart
         // view or Archive into it (value-based links — a BrowseRoute carries both).
         NavigationStack(path: $palette.browsePath) {
-            List {
-                Section {
-                    NavigationLink(value: BrowseRoute.archive) {
-                        Label {
-                            Text(String(localized: "Archive")).foregroundStyle(Surface.ink)
-                        } icon: {
-                            Image(systemName: "archivebox").foregroundStyle(Surface.ink2)
-                        }
-                    }
-                    .listRowBackground(Surface.surface)
-                }
-                if !store.pinnedViews.isEmpty {
-                    Section(String(localized: "Pinned")) {
-                        ForEach(store.pinnedViews) { view in viewLink(view) }
-                    }
-                }
-                Section(String(localized: "Built-in")) {
-                    ForEach(BuiltInSmartViews.all.filter { !store.pinnedSmartViewIds.contains($0.id) }) { view in
-                        viewLink(view)
-                    }
-                }
-                if !customRows.isEmpty {
-                    Section(String(localized: "Custom")) {
-                        ForEach(customRows) { view in viewLink(view) }
-                    }
+            Group {
+                if query.isEmpty {
+                    smartViewList
+                } else {
+                    BrowseSearchResults(query: query)
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Surface.paper)
+            .searchable(text: $searchText, prompt: String(localized: "Search all tasks"))
             .navigationTitle(String(localized: "Browse"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarTitleDisplayMode(.inline)
@@ -80,6 +65,37 @@ struct SmartViewListView: View {
             }
             .sheet(item: $editorTarget) { SmartViewEditorView(target: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
             .taskActionFailureAlert($actionFailure)
+        }
+    }
+
+    /// Archive, then pinned, built-in, and custom smart views.
+    private var smartViewList: some View {
+        List {
+            Section {
+                NavigationLink(value: BrowseRoute.archive) {
+                    Label {
+                        Text(String(localized: "Archive")).foregroundStyle(Surface.ink)
+                    } icon: {
+                        Image(systemName: "archivebox").foregroundStyle(Surface.ink2)
+                    }
+                }
+                .listRowBackground(Surface.surface)
+            }
+            if !store.pinnedViews.isEmpty {
+                Section(String(localized: "Pinned")) {
+                    ForEach(store.pinnedViews) { view in viewLink(view) }
+                }
+            }
+            Section(String(localized: "Built-in")) {
+                ForEach(BuiltInSmartViews.all.filter { !store.pinnedSmartViewIds.contains($0.id) }) { view in
+                    viewLink(view)
+                }
+            }
+            if !customRows.isEmpty {
+                Section(String(localized: "Custom")) {
+                    ForEach(customRows) { view in viewLink(view) }
+                }
+            }
         }
     }
 
@@ -171,5 +187,55 @@ struct SmartViewRow: View {
         case "weeks-wins":                  QuadrantStyle.accent(.urgentNotImportant)     // q3 ochre
         default:                            Surface.ink2                                  // graphite
         }
+    }
+}
+
+/// Browse-root search: every active task whose title, description, or tags match the
+/// query, as the same flat rows a smart view shows (swipe actions, editor, confetti).
+/// The ⌘K palette also finds tasks, but it's a modal picker; this is a working list.
+private struct BrowseSearchResults: View {
+    @Environment(TaskStore.self) private var store
+    let query: String
+
+    @State private var editor: EditorRequest?
+    @State private var confettiTrigger = 0
+    @State private var actionFailure: TaskActionFailure?
+
+    private var tasks: [Task] { store.tasks(matching: FilterCriteria(status: .active, searchQuery: query)) }
+    private var graph: DependencyGraph { DependencyGraph(tasks: store.tasks) }
+
+    var body: some View {
+        let rowActions = TaskActions(
+            store: store,
+            onCompleted: { confettiTrigger += 1 },
+            onError: { actionFailure = TaskActionFailure($0) }
+        )
+        ZStack {
+            Group {
+                if tasks.isEmpty {
+                    EmptyStateView(icon: "magnifyingglass",
+                                   title: String(localized: "No tasks match \"\(query)\""),
+                                   message: String(localized: "Try a different word, tag, or quadrant."))
+                } else {
+                    List {
+                        ForEach(tasks) { task in
+                            TaskListRow(
+                                task: task,
+                                blockedByCount: graph.uncompletedBlockers(of: task.id).count,
+                                blockingCount: graph.blockedTasks(of: task.id).count,
+                                actions: rowActions,
+                                onEdit: { editor = .edit($0) }
+                            )
+                            .listRowBackground(Surface.surface)
+                            .listRowSeparatorTint(Surface.hairline)
+                        }
+                    }
+                    .listStyle(.insetGrouped)
+                }
+            }
+            ConfettiView(trigger: confettiTrigger)
+        }
+        .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
+        .taskActionFailureAlert($actionFailure)
     }
 }
