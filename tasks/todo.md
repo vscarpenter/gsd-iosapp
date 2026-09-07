@@ -1,44 +1,37 @@
-# Cross-platform parity fixes — status
+# GSD product video (45 s, three aspect ratios)
 
-Branch: `fix/cross-platform-parity` (same name in gsd-taskmanager).
+Branch: `video/product-demo`. Spec: `docs/superpowers/specs/2026-09-07-product-video-design.md`.
 
-## Done
+## Phase 1: plan and confirm
+- [x] Read the project, list user flows, fetch the brand guide and landing page
+- [x] Beat sheet, voiceover script, captions, flows, devices (in the spec)
+- [x] Voice verification pass on the script and captions
+- [x] Owner approval given 2026-09-07: widget beat OK, Mac/web labels only, music only
 
-- [x] **Backup envelope parity.** String version (decode accepts legacy Int), plus
-      archivedTasks / deletedTasks / smartViews / notificationSettings /
-      archiveSettings / appPreferences. `FilterCriteria` decodes leniently;
-      backups write the derived `quadrant`. ADR: `docs/2026-08-28-trash-and-backup-parity.md`.
-- [x] **Trash.** v6 `deletedTasks` table, `TrashRepository`, `TrashRetention`
-      (30 days, start-of-day anchor), Settings → Trash, sweep alongside auto-archive.
-      Wire behaviour unchanged: delete still enqueues `.delete` first; restore
-      enqueues `.create`.
-- [x] **Apple identity.** Warns on every Apple sign-in, not only private-relay.
-      Provider persisted so the note survives relaunch.
+## Phase 2: capture footage
+- [x] Add `video-*` scenes to `ScreenshotTests/DemoChoreography.swift`
+- [x] `scripts/capture-video-clips.sh`: boot, status bar, record, run test, stop, normalize, probe
+- [ ] Record 5 iPhone clips + 5 iPad clips (6 to 10 s, 1 s holds)
+- [ ] Verify iPad landscape rotation trick; fall back to portrait if needed
+- [ ] Normalize with ffmpeg (30 fps, H.264, yuv420p, native size); ffprobe report
+- [ ] Commit choreography + capture script
 
-Verification: `swift test` 594 passing; iPhone, iPad and Mac Catalyst all build.
+## Phase 3: Remotion project
+- [ ] Scaffold `./video` with the plugin; clips in `public/captures`
+- [ ] Extract music to `video/public/music.m4a`; ffprobe duration; 45 s trim + 2 s fade
+- [ ] Shared `GSDVideo` component with `aspect` prop; three compositions
+- [ ] Captions with spring easing and stagger; brand font and tokens; safe areas
+- [ ] End card (lockup, gsdtaskmanager.com, platforms, Android coming soon)
+- [ ] Commit
+
+## Phase 4: render and verify
+- [ ] Render three compositions to `out/`
+- [ ] ffprobe each: dimensions, 30 fps, 45 s, audio present
+- [ ] Frame every 3 s; inspect; fix; re-render; re-check
+- [ ] Report paths, final script, unverifiable items
 
 ## Resuming from here
-
-**Next:** nothing outstanding in this repo for these four findings.
-
-**Blocked / needs the owner:**
-- **PocketBase account linking.** Adding Apple to the web (done) stops the provider
-  choice being a one-way trap, but it does NOT merge accounts already split across
-  providers. That needs the `users` collection set to link OAuth2 identities by
-  verified email, in the PocketBase admin UI — not in `docker/pb_migrations`, and
-  not something either client can do.
-
-**Deliberate follow-ups (not regressions):**
-- `TaskImporter.maxImportTasks` counts `tasks` only; a lossless backup can exceed
-  the 10,000 guard. Web has the same gap. Its own change.
-- The task editor offers 8 reminder options while `NotificationSettings.allowedReminders`
-  defines 5 (adds None / At time of event / 5 minutes). Internal to iOS and
-  pre-existing; the web control added in the other repo renders off-list values
-  rather than snapping, so nothing is lost meanwhile.
-
-**Assumptions made:**
-- `apple` is configured on the live PocketBase server. Evidence: `AuthService.signIn`
-  resolves providers from the server's auth-methods endpoint and the iOS Apple
-  button works today.
-- Only custom smart views travel in a backup — both clients derive the nine
-  built-ins at read time and never store them.
+- Done: research, spec, branch created (nothing committed yet)
+- Next: wait for owner approval of the spec's beat sheet, script, and flows
+- Blockers: three open questions in the spec (widget beat, Mac/web footage, voiceover)
+- Assumptions: light appearance; iPhone 17 Pro + iPad Pro 13-inch (M5) on iOS 26.5; Newsreader stands in for New York; music-only audio
