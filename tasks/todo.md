@@ -35,8 +35,8 @@ Branch: `video/product-demo`. Spec: `docs/superpowers/specs/2026-09-07-product-v
 - [ ] Commit render/verify scripts; report paths, final script, unverifiable items
 
 ## Resuming from here
-- Done: everything through the final render; five commits on `video/product-demo` (not pushed)
+- Done: everything through the final render; branch pushed, PR #17 open (landing page swap: gsdtaskmanager.com PR #2)
 - Deliverables: `out/gsd-16x9.mp4`, `out/gsd-9x16.mp4`, `out/gsd-1x1.mp4` (gitignored, regenerate with `video/scripts/render.sh`)
-- Next: owner review of the videos; push and PR only on the owner's go-ahead
+- Next: owner reviews and merges both PRs, then deploys the landing page with `./deploy.sh`
 - Not verified: real-device playback, the Newsreader stand-in against New York on an Apple screen, audio level taste
 - Owner's own uncommitted build-number bump (project.yml/pbxproj) and staged skill files were left untouched
