@@ -14,7 +14,13 @@ enum DemoSeed {
         do {
             // Idempotent: clear any prior run so re-records are deterministic.
             for task in try await store.fetchAllTasks() { try await store.delete(task) }
-            for task in fixtures(now: now) { try await store.create(task) }
+            for task in fixtures(now: now) {
+                try await store.create(task)
+                // create() stamps createdAt with "now"; save() keeps the task's own. The second
+                // write backdates the seeded creation so the dashboard's Created trend reads like
+                // real history instead of one spike on the demo day.
+                if task.createdAt < now { try await store.save(task) }
+            }
         } catch {
             print("[DemoSeed] seeding failed: \(error)")   // best-effort; empty matrix is the worst case
         }
@@ -26,13 +32,14 @@ enum DemoSeed {
         func daysFromNow(_ d: Int) -> Date { cal.date(byAdding: .day, value: d, to: now)! }
 
         // urgent/important → quadrant: (T,T) Do First · (F,T) Schedule · (T,F) Delegate · (F,F) Eliminate
+        // `created` is days ago, so the dashboard's Created trend spreads across the past two weeks.
         func t(_ id: String, _ title: String, u: Bool, i: Bool,
                tags: [String] = [], recurrence: RecurrenceType = .none,
                subtasks: [Subtask] = [], deps: [String] = [],
-               due: Date? = nil, done: Date? = nil) -> Task {
+               due: Date? = nil, done: Date? = nil, created: Int = 0) -> Task {
             Task(id: id, title: title, urgent: u, important: i,
                  completed: done != nil, completedAt: done,
-                 createdAt: now, updatedAt: now, dueDate: due,
+                 createdAt: daysAgo(created), updatedAt: now, dueDate: due,
                  recurrence: recurrence, tags: tags, subtasks: subtasks, dependencies: deps)
         }
 
@@ -40,28 +47,31 @@ enum DemoSeed {
         // ---- Active: Do First ---- (varied due dates so the cards read realistically AND
         // deterministically against the frozen demo clock: today / +2d / overdue)
         out.append(t("demo-finance", "Get finance sign-off", u: true, i: true, tags: ["work"],
-                     due: cal.startOfDay(for: now)))
+                     due: cal.startOfDay(for: now), created: 1))
         out.append(t("demo-deck", "Finish the Q3 board deck", u: true, i: true, tags: ["work"],
                      subtasks: [Subtask(id: "sub1", title: "Pull revenue numbers", completed: true),
                                 Subtask(id: "sub2", title: "Draft the narrative"),
                                 Subtask(id: "sub3", title: "Design the key slides")],
-                     deps: ["demo-finance"], due: daysFromNow(2)))
+                     deps: ["demo-finance"], due: daysFromNow(2), created: 3))
         // Overdue, and kept free of subtasks/deps so it's the clean card we complete on camera.
         out.append(t("demo-investor", "Reply to the investor email", u: true, i: true, tags: ["work"],
-                     due: daysAgo(1)))
+                     due: daysAgo(1), created: 2))
         // ---- Active: Schedule ----
         out.append(t("demo-vacation", "Plan the summer vacation", u: false, i: true, tags: ["family"],
-                     due: daysFromNow(7)))
-        out.append(t("demo-physical", "Book the annual physical", u: false, i: true, tags: ["health"]))
+                     due: daysFromNow(7), created: 5))
+        out.append(t("demo-physical", "Book the annual physical", u: false, i: true, tags: ["health"],
+                     created: 9))
         out.append(t("demo-passport", "Renew passport", u: false, i: true, tags: ["family"],
-                     due: daysFromNow(30)))
+                     due: daysFromNow(30), created: 4))
         // ---- Active: Delegate ----
         out.append(t("demo-newsletter", "Send the weekly newsletter", u: true, i: false,
-                     tags: ["work"], recurrence: .weekly, due: daysFromNow(1)))
-        out.append(t("demo-supplies", "Order office supplies", u: true, i: false, tags: ["errands"]))
+                     tags: ["work"], recurrence: .weekly, due: daysFromNow(1), created: 6))
+        out.append(t("demo-supplies", "Order office supplies", u: true, i: false, tags: ["errands"],
+                     created: 1))
         // ---- Active: Eliminate ----
-        out.append(t("demo-downloads", "Sort the downloads folder", u: false, i: false, tags: ["errands"]))
-        out.append(t("demo-reviews", "Browse gadget reviews", u: false, i: false))
+        out.append(t("demo-downloads", "Sort the downloads folder", u: false, i: false, tags: ["errands"],
+                     created: 8))
+        out.append(t("demo-reviews", "Browse gadget reviews", u: false, i: false, created: 12))
 
         // ---- Completed history (drives the Dashboard trend; completedAt is preserved by create()) ----
         let done: [(String, String, Bool, Bool, [String], Int)] = [
@@ -81,7 +91,7 @@ enum DemoSeed {
             ("d-read", "Read the design article", false, false, [], 11),
         ]
         for (id, title, u, i, tags, ago) in done {
-            out.append(t(id, title, u: u, i: i, tags: tags, done: daysAgo(ago)))
+            out.append(t(id, title, u: u, i: i, tags: tags, done: daysAgo(ago), created: ago + 1 + ago % 3))
         }
         return out
     }

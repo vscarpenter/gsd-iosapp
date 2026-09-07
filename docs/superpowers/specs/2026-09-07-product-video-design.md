@@ -88,7 +88,8 @@ Xcode 26.6 (17F113). Light appearance (the brand guide is light first; dark is a
 Demo data: the app already ships a demo harness, so this needs no new launch argument.
 
 - `--demo-seed` wipes the store, loads fixed realistic tasks, and skips onboarding (`App/Support/DemoSeed.swift`).
-- `--demo-clock <epoch>` freezes "now". The video uses `1789146000` (Friday 2026-09-11 17:00 UTC, noon Central) so relative dates and the trend chart read current.
+- `--demo-clock <epoch>` freezes "now". The capture script passes noon local on the recording day, because `simctl` can pin the status bar's time but not its date, and the iPad shows the date. This keeps the app's "today" and the status bar in agreement on any recording day.
+- The seed now backdates `createdAt` per task (a second `save()` after `create()`), so the dashboard's Created trend reads like real history instead of one spike on the demo day.
 - `--demo-appearance light` forces the scheme.
 - `--demo-home` renders the real Today's Focus widget on a simulated Home Screen (`App/Demo/DemoHomeScreen.swift`).
 
@@ -107,9 +108,9 @@ XCUITest drives every flow from the existing `GSDScreenshotTests` target (`Scree
 | `ipad-dashboard` | iPad | ~7 s | Sidebar Dashboard, charts animate, hold |
 | `ipad-drag` | iPad | ~8 s | Long-press "Finish the Q3 board deck", drag from Do First into Schedule, drop, hold |
 
-iPad orientation: the split view reads best in landscape. `simctl recordVideo` captures the portrait framebuffer, so a landscape run records sideways. The plan is to rotate the clip 90 degrees with ffmpeg and confirm the result frame by frame. If that fails, the iPad records portrait, which still shows the full 2x2 board.
+iPad orientation: the split view reads best in landscape. `simctl recordVideo` captures the portrait framebuffer, so a landscape run records on its side with the UI's top edge on the right. The normalize step rotates it upright (ffmpeg `transpose=2`, 90 degrees counter-clockwise), confirmed frame by frame; the result is 2752x2064.
 
-Recording: `xcrun simctl io <udid> recordVideo --codec h264 --mask ignored captures/<device>-<flow>.mov` in the background, stopped with SIGINT after the test ends. Status bar: `simctl status_bar override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4`. Normalize: `ffmpeg -r 30 -c:v libx264 -pix_fmt yuv420p` at native resolution, trimmed to the flow window, verified with ffprobe.
+Recording: `xcrun simctl io <udid> recordVideo --codec h264 --mask ignored captures/<device>-<flow>.mov` in the background, started when the scene touches its ready marker and stopped with SIGINT when it touches the done marker, so every clip opens and closes on a hold. The scene keeps the app up for a second after the done marker so no springboard frame lands in the clip. Status bar: `simctl status_bar override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4`. Normalize: `ffmpeg -vf fps=30 -c:v libx264 -pix_fmt yuv420p` at native resolution, trimmed to a 6 to 10 second window chosen from one-frame-per-second contact sheets (`trim_for` in `scripts/capture-video-clips.sh`), verified with ffprobe.
 
 ## Remotion plan (Phase 3)
 
@@ -124,8 +125,10 @@ Recording: `xcrun simctl io <udid> recordVideo --codec h264 --mask ignored captu
 
 ## Repo changes (kept small)
 
-- `ScreenshotTests/DemoChoreography.swift`: add the `video-*` scenes (about 80 lines). No new file, so `project.yml` and the generated project stay untouched, and the owner's uncommitted build-number bump stays out of this branch's commits.
-- `video/`: the Remotion project, plus `video/scripts/capture.sh` (boot, status bar, record, run test, normalize).
+- `ScreenshotTests/DemoChoreography.swift`: the `video-*` scenes plus the recorder handshake. No new file, so `project.yml` and the generated project stay untouched, and the owner's uncommitted build-number bump stays out of this branch's commits.
+- `App/Support/DemoSeed.swift`: per-task `createdAt` offsets (demo data only).
+- `scripts/capture-video-clips.sh`: boot, status bar, record, run test, normalize, probe. It lives beside the existing recorder scripts because `create-video` needs an empty `video/`.
+- `video/`: the Remotion project. Clips and music are generated, not committed (`video/.gitignore`).
 - `captures/` and `out/`: generated media, added to `.gitignore`.
 
 ## Open questions for the owner
