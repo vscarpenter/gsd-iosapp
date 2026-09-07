@@ -1,0 +1,10 @@
+/* Global type rendering for every composition. Layout and color live in src/theme.ts. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
