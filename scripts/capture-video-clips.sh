@@ -126,7 +126,9 @@ cmd_normalize() {
     local name vf start dur; name=$(basename "$mov" .mov); vf="fps=30"
     case "$name" in ipad-*) [ -n "$ROTATE_IPAD" ] && vf="$ROTATE_IPAD,$vf" ;; esac
     read -r start dur <<< "$(trim_for "$name")"
-    ffmpeg -y -v error -ss "$start" -t "$dur" -i "$mov" -vf "$vf" -fps_mode cfr \
+    # simctl writes a frame only when the screen changes, so a raw clip is sparse; -t must be an
+    # OUTPUT option here (after -i) or the duration is measured against those sparse packets.
+    ffmpeg -y -v error -ss "$start" -i "$mov" -t "$dur" -vf "$vf" -fps_mode cfr \
       -c:v libx264 -preset slow -crf 17 -pix_fmt yuv420p -movflags +faststart -an \
       "$CAPTURES/normalized/$name.mp4"
     echo "   $CAPTURES/normalized/$name.mp4 (from ${start}s, ${dur}s)"
