@@ -14,7 +14,7 @@ Branch: `video/product-demo`. Spec: `docs/superpowers/specs/2026-09-07-product-v
 - [x] Record 5 iPhone clips + 5 iPad clips (6 to 10 s, 1 s holds); all scenes pass
 - [x] iPad landscape: records sideways, `transpose=2` rotates upright (verified)
 - [x] Seed backdates createdAt so the dashboard trend reads naturally (re-recorded)
-- [ ] Normalize with ffmpeg (30 fps, H.264, yuv420p, native size); ffprobe report (running)
+- [x] Normalize with ffmpeg (30 fps, H.264, yuv420p, native size); ffprobe report matches the trim table
 - [x] Commit choreography + seed + capture script
 
 ## Phase 3: Remotion project
@@ -23,17 +23,20 @@ Branch: `video/product-demo`. Spec: `docs/superpowers/specs/2026-09-07-product-v
 - [x] Shared `GSDVideo` component with `aspect` prop; three compositions
 - [x] Captions with spring easing and stagger; brand font and tokens; safe areas (tests green)
 - [x] End card (lockup, gsdtaskmanager.com, platforms, Android coming soon)
-- [ ] Layout stills reviewed; fixes applied
-- [ ] Commit
+- [x] Layout stills reviewed (21 stills, 3 transition sequences); no layout fixes needed
+- [x] Commit (`6af494f`)
 
 ## Phase 4: render and verify
-- [ ] Render three compositions to `out/`
-- [ ] ffprobe each: dimensions, 30 fps, 45 s, audio present
-- [ ] Frame every 3 s; inspect; fix; re-render; re-check
-- [ ] Report paths, final script, unverifiable items
+- [x] Render three compositions to `out/`
+- [x] ffprobe each: dimensions, 30 fps, 45 s, AAC audio present
+- [x] Frame every 3 s; inspected all three sheets
+- [x] Fix: `--color-space bt709` so the output is standard yuv420p (first render was yuvj420p)
+- [ ] Final render + verify + Mac Catalyst build (running)
+- [ ] Commit render/verify scripts; report paths, final script, unverifiable items
 
 ## Resuming from here
-- Done: research, spec, branch created (nothing committed yet)
-- Next: wait for owner approval of the spec's beat sheet, script, and flows
-- Blockers: three open questions in the spec (widget beat, Mac/web footage, voiceover)
-- Assumptions: light appearance; iPhone 17 Pro + iPad Pro 13-inch (M5) on iOS 26.5; Newsreader stands in for New York; music-only audio
+- Done: everything through the final render; five commits on `video/product-demo` (not pushed)
+- Deliverables: `out/gsd-16x9.mp4`, `out/gsd-9x16.mp4`, `out/gsd-1x1.mp4` (gitignored, regenerate with `video/scripts/render.sh`)
+- Next: owner review of the videos; push and PR only on the owner's go-ahead
+- Not verified: real-device playback, the Newsreader stand-in against New York on an Apple screen, audio level taste
+- Owner's own uncommitted build-number bump (project.yml/pbxproj) and staged skill files were left untouched

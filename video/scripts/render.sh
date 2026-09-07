@@ -11,7 +11,9 @@ mkdir -p "$OUT"
 
 render() {
   local id="$1" file="$2"
-  npx remotion render "$id" "$OUT/$file" --codec h264 --audio-codec aac --crf 18 --log warn
+  # bt709 makes the encoder emit standard limited-range yuv420p (the default keeps the JPEG
+  # frames' full-range flag and ffprobe reports yuvj420p).
+  npx remotion render "$id" "$OUT/$file" --codec h264 --audio-codec aac --crf 18 --color-space bt709 --log warn
   ffprobe -v error -show_entries stream=codec_type,codec_name,width,height,r_frame_rate:format=duration \
     -of csv=p=0 "$OUT/$file" | tr '\n' ' '
   echo " <- $OUT/$file"
