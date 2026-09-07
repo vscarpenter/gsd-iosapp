@@ -1,3 +1,4 @@
+import UIKit
 import XCTest
 
 /// Marketing-demo video scenes. Each is a deterministic, paced flow recorded individually by
@@ -19,6 +20,8 @@ final class DemoChoreography: XCTestCase {
         // The continuous per-device reels (hero clip + App-Store previews) own their full launch
         // (fixed clock + forced appearance) and platform-specific flow — see runReel().
         if sceneName.hasPrefix("reel-") { try runReel(); return }
+        // The product-video clips (one per beat) own their launch too, plus a host-recorder handshake.
+        if sceneName.hasPrefix("video-") { try runVideoScene(); return }
         let app = XCUIApplication()
         app.launchArguments = ["--demo-seed"]
         app.launch()
@@ -232,9 +235,124 @@ final class DemoChoreography: XCTestCase {
     private func dismissKeyboard(_ app: XCUIApplication) {
         guard app.keyboards.firstMatch.exists else { return }
         let hide = app.keyboards.buttons["Hide keyboard"]
-        if hide.exists { hide.tap() }
+        // Tap the key by coordinate: a plain tap() first tries to scroll it "into view", which fails
+        // in landscape because the key's frame is reported in portrait coordinates.
+        if hide.exists { hide.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap() }
         else { app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.07)).tap() }
         pause(0.6)
+    }
+
+    // MARK: - Product-video clips (docs/superpowers/specs/2026-09-07-product-video-design.md)
+
+    /// Frozen clock for the product video. scripts/capture-video-clips.sh passes VIDEO_EPOCH as noon
+    /// local on the recording day, so the app's "today" matches the date the iPad status bar shows
+    /// (simctl can pin the time but not the date). Without the script it falls back to a fixed
+    /// Friday, 2026-09-11 17:00 UTC.
+    static var videoEpoch: Int {
+        Int(ProcessInfo.processInfo.environment["VIDEO_EPOCH"] ?? "") ?? 1_789_146_000
+    }
+
+    /// One clip per beat of the 45-second product video. Each scene launches seeded with the frozen
+    /// clock and light appearance, waits for the seeded matrix, then hands off to the host recorder:
+    /// touch VIDEO_READY (the recorder starts), hold so the clip opens on a settled screen, run the
+    /// beat, hold again, touch VIDEO_DONE (the recorder stops on the closing hold). Both env vars are
+    /// optional, so the scenes also run without a recorder attached.
+    private func runVideoScene() throws {
+        let isPad = UIDevice.current.userInterfaceIdiom == .pad
+        if isPad {
+            // The split view (sidebar + 2×2 board) reads best wide. simctl records the portrait
+            // framebuffer, so scripts/capture-video-clips.sh rotates the clip back upright.
+            XCUIDevice.shared.orientation = .landscapeLeft
+            pause(1.5)   // launching sooner trips a transient accessibility error on the springboard
+        }
+        let app = XCUIApplication()
+        if sceneName == "video-widget" {
+            app.launchArguments = ["--demo-home"]
+            app.launch()
+            XCTAssertTrue(app.staticTexts["Today's Focus"].waitForExistence(timeout: 25), "widget tile never appeared")
+            pause(1.2)             // let the tile's entrance settle before the recorder starts
+            signal("VIDEO_READY")
+            pause(8.0)             // opening hold + dwell + closing hold
+            signal("VIDEO_DONE")
+            pause(1.0)             // keep the app up while the recorder stops, so no springboard frame lands in the clip
+            return
+        }
+        app.launchArguments = ["--demo-seed",
+                               "--demo-clock", "\(Self.videoEpoch)",
+                               "--demo-appearance", "light"]
+        app.launch()
+        if !isPad {
+            let tabs = app.tabBars.firstMatch
+            XCTAssertTrue(tabs.waitForExistence(timeout: 25), "tab bar never appeared")
+            tabs.buttons["Matrix"].tap()
+        }
+        XCTAssertTrue(app.textFields["capture-field"].waitForExistence(timeout: 25), "matrix never appeared")
+        // The seed wipes and reloads the store after launch; wait for a seeded card so the clip never
+        // opens on the first-frame skeleton.
+        XCTAssertTrue(card(app, "demo-investor").waitForExistence(timeout: 20), "seeded cards never appeared")
+        pause(1.0)
+        signal("VIDEO_READY")
+        pause(2.0)                 // recorder spin-up + the opening hold
+
+        switch sceneName {
+        case "video-matrix":    videoMatrix(app, isPad: isPad)
+        case "video-capture":   videoCapture(app)
+        case "video-complete":  completeBeat(app)
+        case "video-dashboard": videoDashboard(app, isPad: isPad)
+        case "video-drag":      videoDrag(app)
+        default: XCTFail("unknown video scene '\(sceneName)'")
+        }
+
+        pause(1.2)                 // closing hold
+        signal("VIDEO_DONE")
+        pause(1.0)                 // keep the app up while the recorder stops (see the widget scene)
+    }
+
+    // Problem beat. iPhone: two slow scrolls reveal the four quadrant sections (a slow XCUITest swipe
+    // takes about 1.5 s on its own, so two keep the clip inside the beat). iPad: the whole board is
+    // already on screen, so hold.
+    private func videoMatrix(_ app: XCUIApplication, isPad: Bool) {
+        if isPad { pause(4.5); return }
+        app.swipeUp(velocity: .slow); pause(1.0)
+        app.swipeUp(velocity: .slow); pause(1.0)
+    }
+
+    // Capture beat, same copy as the shipped App Store screenshot: the title, then `!!` recolors the
+    // quadrant chip to Do First, then `#home` adds the tag chip; Return lands the card in Do First.
+    private func videoCapture(_ app: XCUIApplication) {
+        let field = app.textFields["capture-field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "capture field not found")
+        field.tap(); pause(0.8)
+        field.typeText("Call the plumber"); pause(0.8)
+        field.typeText(" !!"); pause(0.9)
+        field.typeText(" #home"); pause(1.0)
+        field.typeText("\n"); pause(1.4)
+        dismissKeyboard(app)
+    }
+
+    // Dashboard beat: open it, let the charts animate in, then scroll to the quadrant rings.
+    private func videoDashboard(_ app: XCUIApplication, isPad: Bool) {
+        if isPad { app.staticTexts["Dashboard"].firstMatch.tap() }
+        else { app.tabBars.firstMatch.buttons["Dashboard"].tap() }
+        pause(2.4)
+        app.swipeUp(velocity: .slow); pause(1.6)
+    }
+
+    // iPad-only reclassify: lift a Do-First card and drop it across the boundary into Schedule.
+    private func videoDrag(_ app: XCUIApplication) {
+        let source = card(app, "demo-deck")
+        let target = card(app, "demo-passport")
+        guard source.waitForExistence(timeout: 5), target.waitForExistence(timeout: 5) else {
+            XCTFail("drag cards not on screen"); return
+        }
+        source.press(forDuration: 1.0, thenDragTo: target); pause(2.2)
+    }
+
+    /// Touches the file named by an env var (TEST_RUNNER_-prefixed from xcodebuild). Simulator
+    /// processes share the host filesystem, so the capture script polls the same path.
+    private func signal(_ key: String) {
+        guard let path = ProcessInfo.processInfo.environment[key], !path.isEmpty else { return }
+        FileManager.default.createFile(atPath: path, contents: Data())
     }
 
     // MARK: Element helpers
@@ -245,6 +363,7 @@ final class DemoChoreography: XCTestCase {
         "demo-deck": "Finish the Q3 board deck",
         "demo-supplies": "Order office supplies",
         "demo-finance": "Get finance sign-off",
+        "demo-passport": "Renew passport",
     ]
 
     /// The card element for a seeded task id. The `task-card-<id>` identifier surfaces inside the

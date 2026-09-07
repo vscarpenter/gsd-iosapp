@@ -1,5 +1,25 @@
 # Lessons
 
+## The simulator recorder only writes a frame when the screen changes (2026-09-07)
+
+`simctl io recordVideo` produced a 7-second clip of a static screen with two video
+packets. Everything downstream that reasons in packets misreads it: an ffmpeg `-t` placed
+before `-i` measured the duration against those packets and every clip came out about a
+second long, and the container duration is only as accurate as the last change.
+
+**Rule:** treat raw simulator captures as sparse. Convert them to constant 30 fps first
+(`-vf fps=30`), trim with `-t` as an output option, and verify with ffprobe rather than
+trusting the recorder's numbers. Also keep the app on screen for a second after the last
+beat, or the springboard lands in the tail of the clip.
+
+## XCUITest scrolls elements "into view" in portrait coordinates (2026-09-07)
+
+Tapping the iPad keyboard's Hide key with `tap()` failed in landscape with
+"Failed to scroll to visible" because the key's frame was reported in portrait space and
+looked off-screen. `element.coordinate(withNormalizedOffset:).tap()` skips that scroll and
+taps where the key actually is. The same portrait framebuffer is what `recordVideo`
+captures, so landscape iPad clips need a 90-degree rotation in post.
+
 ## Two clients that agree with themselves can still disagree with each other (2026-08-28)
 
 Every same-client round-trip test passed while cross-client backups were broken in
