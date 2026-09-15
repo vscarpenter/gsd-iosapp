@@ -55,7 +55,9 @@ struct ContentView: View {
                 CommandPaletteView(onSelect: handle).environment(store)
             }
             // The one task editor sheet for every surface (see PaletteController.editor).
-            .sheet(item: $palette.editor) { TaskEditorView(request: $0).environment(store) }
+            .sheet(item: $palette.editor) {
+                TaskEditorView(request: $0, compactPresenter: sizeClass == .compact).environment(store)
+            }
             .sheet(isPresented: $showAbout) { AboutView().presentationSizing(.fitted) }
             .sheet(isPresented: $showHelp) { HelpView() }
             .onOpenURL { handleDeepLink($0) }
