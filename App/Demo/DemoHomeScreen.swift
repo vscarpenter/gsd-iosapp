@@ -11,17 +11,22 @@ struct DemoHomeScreen: View {
 
     @State private var appeared = false
 
-    // The widget echoes the three Do-First tasks the rest of the demo already showed.
-    private let entry = TodaysFocusEntry(
-        date: Date(),
-        snapshot: WidgetSnapshot(
-            generatedAt: Date(),
-            tasks: [
-                WidgetTask(id: "demo-finance",  title: "Get finance sign-off", dueDate: nil),
-                WidgetTask(id: "demo-deck",     title: "Finish the Q3 board deck", dueDate: nil),
-                WidgetTask(id: "demo-investor", title: "Reply to the investor email", dueDate: nil),
-            ],
-            totalCount: 3))
+    // The widget echoes the three Do-First tasks the rest of the demo already showed, with the
+    // same due states as the seed (today, in two days, overdue) so the shape markers read.
+    private let entry: TodaysFocusEntry = {
+        let now = Date()
+        let day: TimeInterval = 86_400
+        return TodaysFocusEntry(
+            date: now,
+            snapshot: WidgetSnapshot(
+                generatedAt: now,
+                tasks: [
+                    WidgetTask(id: "demo-finance",  title: "Get finance sign-off", dueDate: now),
+                    WidgetTask(id: "demo-deck",     title: "Finish the Q3 board deck", dueDate: now.addingTimeInterval(2 * day)),
+                    WidgetTask(id: "demo-investor", title: "Reply to the investor email", dueDate: now.addingTimeInterval(-day)),
+                ],
+                totalCount: 3))
+    }()
 
     private let gridIcons: [(symbol: String, fill: Color, brand: Bool)] = [
         ("target",         Surface.surface,                        true),   // GSD's own motif (trademark-safe)

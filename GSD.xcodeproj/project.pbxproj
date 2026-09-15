@@ -23,6 +23,7 @@
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
 		258511F5108C63A1FCFE399D /* GlassSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79DBE02C7478A306C40B7B29 /* GlassSetting.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
+		2D10B56DA9254E08E89FE623 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 1453BDC2D91332EB87100A1D /* AppIcon.icon */; };
 		2DAC8455D9EDB41A5278D652 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 6A3C3A671584405B65D83D55 /* GSDModel */; };
 		305B1E2FEF9947D20EDC16CE /* SpotlightIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 874A98A2278EE80A36EC0976 /* SpotlightIndexer.swift */; };
 		32AC8D69042D0AA6FEA03C34 /* PreviewChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 664E6FF5137DE167118E123D /* PreviewChoreography.swift */; };
@@ -150,6 +151,7 @@
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		0E938DCA2D038B4703954CF7 /* ShareTitleEnricher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTitleEnricher.swift; sourceTree = "<group>"; };
 		1226EAD759CBC2DA62A58442 /* DashboardSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSkeleton.swift; sourceTree = "<group>"; };
+		1453BDC2D91332EB87100A1D /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		1E44544249232FE202E59EB0 /* GSD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSD.entitlements; sourceTree = "<group>"; };
 		1FA0D2F82C759037F6A2DD38 /* GSDWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWidgetBundle.swift; sourceTree = "<group>"; };
@@ -274,6 +276,7 @@
 		0408C7043A3AAB9AC827D964 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				1453BDC2D91332EB87100A1D /* AppIcon.icon */,
 				249F029B40FD9FDAA6A68A25 /* Assets.xcassets */,
 				F13D65075CBAAF0DA403E950 /* ContentView.swift */,
 				E82FA87A467E8E3CB5B6E075 /* GSD-Catalyst.entitlements */,
@@ -765,6 +768,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2D10B56DA9254E08E89FE623 /* AppIcon.icon in Resources */,
 				AD6837183E00E04042A56ED0 /* Assets.xcassets in Resources */,
 				65F938AD7F2AD90B26C4E67A /* PrivacyInfo.xcprivacy in Resources */,
 			);
