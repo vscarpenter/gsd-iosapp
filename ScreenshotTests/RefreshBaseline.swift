@@ -184,7 +184,10 @@ final class RefreshBaseline: XCTestCase {
             app.terminate()
         }
         let app = launchPinned("1100x860")
-        openEditor(app, dragToTop: false, dismiss: false)
+        // ⌘N (File ▸ New Task) opens the root editor sheet; a card tap does not register on the Mac.
+        app.typeKey("n", modifierFlags: .command); pause(1.5)
+        XCTAssertTrue(element(app, "task-editor").waitForExistence(timeout: 5), "editor never opened")
+        save(app, "swap-regular-before")
         post("dev.vinny.gsd.demo.window.compact"); pause(2.5)
         XCTAssertTrue(element(app, "task-editor").exists, "the editor did not survive the swap to compact")
         save(app, "swap-compact-editor")
