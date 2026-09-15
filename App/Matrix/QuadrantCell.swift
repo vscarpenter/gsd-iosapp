@@ -14,7 +14,7 @@ struct QuadrantCell: View {
     var onAdd: () -> Void
 
     @State private var isTargeted = false
-    /// Which row is swiped open — shared with every row so opening one closes the others.
+    /// iOS 26 fallback only: which `SwipeRevealRow` is open, so opening one closes the others.
     @State private var openTaskID: String?
     private var items: [Task] { store.tasks(in: quadrant, showCompleted: showCompleted) }
     private var activeCount: Int { store.tasks(in: quadrant, showCompleted: false).count }
@@ -85,12 +85,57 @@ struct QuadrantCell: View {
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(selection.contains(task.id) ? .isSelected : [])
-        } else {
+        } else if #available(iOS 27, macOS 27, *) {
             swipeRow(task)
+        } else {
+            legacySwipeRow(task)
         }
     }
 
+    /// A card with the system swipe actions (iOS 27): leading Complete (full swipe completes),
+    /// trailing Snooze and Delete. Same verbs, order, and tints as the iPhone `TaskListRow`,
+    /// so both idioms share one gesture vocabulary, and the system supplies the haptics,
+    /// right-to-left mirroring, and the reveal's VoiceOver actions. The matrix `ScrollView`
+    /// is the `swipeActionsContainer()` that keeps one row open at a time. The card keeps
+    /// its own drag-to-move (a semantic move between quadrants), long-press menu, and
+    /// tap-to-edit. `SwipeRevealRow` covers the iOS 26 floor.
+    @available(iOS 27, macOS 27, *)
     private func swipeRow(_ task: Task) -> some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            TaskCardView(
+                task: task,
+                now: demoClock ?? context.date,
+                blockedByCount: graph.uncompletedBlockers(of: task.id).count,
+                blockingCount: graph.blockedTasks(of: task.id).count,
+                onToggle: { actions.toggle(task) },
+                menu: { AnyView(TaskRowMenu(task: task, actions: actions, onEdit: onEdit)) }
+            )
+        }
+        .background(Surface.surface)   // opaque, so the sliding card covers the revealed actions
+        .contentShape(Rectangle())
+        .onTapGesture { onEdit(task) }
+        .draggable(task.id)
+        .contextMenu { TaskRowMenu(task: task, actions: actions, onEdit: onEdit) }
+        .swipeActions(edge: .leading) {
+            Button { actions.toggle(task) } label: {
+                Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"),
+                      systemImage: task.completed ? "arrow.uturn.left" : "checkmark")
+            }
+            .tint(Surface.success)
+        }
+        .swipeActions(edge: .trailing) {
+            Button(String(localized: "Snooze")) { actions.snooze(task, by: .oneHour) }
+                .tint(QuadrantStyle.accent(.notUrgentNotImportant)) // slate
+            Button(role: .destructive) { actions.delete(task) } label: {
+                Label(String(localized: "Delete"), systemImage: "trash")
+            }
+            .tint(Surface.alert) // rust
+        }
+        .accessibilityActions { cardActions(task) }
+    }
+
+    /// The iOS 26 floor: the hand-rolled reveal, with the same verbs and VoiceOver actions.
+    private func legacySwipeRow(_ task: Task) -> some View {
         SwipeRevealRow(
             task: task,
             actions: actions,
@@ -110,17 +155,20 @@ struct QuadrantCell: View {
                 }
             }
         )
-        .accessibilityActions {
-            Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
-            Button(String(localized: "Edit")) { onEdit(task) }
-            Button(String(localized: "Duplicate")) { actions.duplicate(task) }
-            Button(String(localized: "Delete")) { actions.delete(task) }
-            Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
-            if TimeTracking.runningEntry(task.timeEntries) == nil {
-                Button(String(localized: "Start timer")) { actions.startTimer(task) }
-            } else {
-                Button(String(localized: "Stop timer")) { actions.stopTimer(task) }
-            }
+        .accessibilityActions { cardActions(task) }
+    }
+
+    /// VoiceOver custom actions shared by both row variants.
+    @ViewBuilder private func cardActions(_ task: Task) -> some View {
+        Button(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete")) { actions.toggle(task) }
+        Button(String(localized: "Edit")) { onEdit(task) }
+        Button(String(localized: "Duplicate")) { actions.duplicate(task) }
+        Button(String(localized: "Delete")) { actions.delete(task) }
+        Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
+        if TimeTracking.runningEntry(task.timeEntries) == nil {
+            Button(String(localized: "Start timer")) { actions.startTimer(task) }
+        } else {
+            Button(String(localized: "Stop timer")) { actions.stopTimer(task) }
         }
     }
 

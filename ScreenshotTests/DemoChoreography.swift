@@ -367,8 +367,9 @@ final class DemoChoreography: XCTestCase {
     ]
 
     /// The card element for a seeded task id. The `task-card-<id>` identifier surfaces inside the
-    /// iPhone `List`, but the iPad `SwipeRevealRow` (custom drag/context-menu wrapping) hides it —
-    /// so fall back to matching the accessibility label, which begins with the task title on both.
+    /// iPhone `List` and the iOS 27 iPad cards, but the iOS 26 `SwipeRevealRow` (custom
+    /// drag/context-menu wrapping) hides it, so fall back to matching the accessibility label,
+    /// which begins with the task title on both.
     private func card(_ app: XCUIApplication, _ taskID: String) -> XCUIElement {
         let byID = element(app, "task-card-\(taskID)")
         if byID.exists { return byID }

@@ -20,7 +20,6 @@ struct DashboardView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.calendar) private var calendar
     @State private var trendDays = 7
-    @State private var editor: EditorRequest?
 
     private var summary: AnalyticsSummary { store.analytics(trendDays: trendDays) }
 
@@ -62,7 +61,6 @@ struct DashboardView: View {
                 paletteButton(palette)
                 if sizeClass == .compact { syncStatusChip(sync, palette) }
             }
-            .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         }
     }
 
@@ -291,7 +289,7 @@ struct DashboardView: View {
                         .font(.serif(.title3).weight(.semibold)).foregroundStyle(Surface.ink)
                         .padding(.bottom, 8)
                     ForEach(Array(s.upcomingDeadlines.enumerated()), id: \.element.id) { index, task in
-                        Button { editor = .edit(task) } label: {
+                        Button { palette.editor = .edit(task) } label: {
                             HStack(spacing: 8) {
                                 Text(task.title).foregroundStyle(Surface.ink)
                                 Spacer()

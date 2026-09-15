@@ -26,7 +26,6 @@ private struct MatrixListContent: View {
     @Environment(PaletteController.self) private var palette
     @Environment(SyncCoordinator.self) private var sync
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
-    @State private var editor: EditorRequest?
     @State private var actionFailure: TaskActionFailure?
     @State private var selection = Set<String>()
     @Environment(\.editMode) private var editMode
@@ -49,8 +48,8 @@ private struct MatrixListContent: View {
                                     onCompleted: onCompleted,
                                     onError: { actionFailure = TaskActionFailure($0) }
                                 ),
-                                onEdit: { editor = .edit($0) },
-                                onAdd: { editor = .new(q, prefill: nil) }
+                                onEdit: { palette.editor = .edit($0) },
+                                onAdd: { palette.editor = .new(q, prefill: nil) }
                             )
                         }
                     }
@@ -72,18 +71,17 @@ private struct MatrixListContent: View {
             brandedNavigationTitle(String(localized: "Matrix"))
             paletteButton(palette)
             showCompletedToggle($showCompleted)
-            ToolbarItem(placement: .topBarTrailing) { EditButton() }
+            ToolbarItem(placement: .topBarTrailing) { EditButton() }.overflowsFirst()
             syncStatusChip(sync, palette)
         }
         .safeAreaInset(edge: .top) {
             CaptureBar { parsed, ov in
-                editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
+                palette.editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
             }
         }
         // Bar visual sits in a bottom safeAreaInset; its prompts present from the main
         // content (see BulkActionBar) so they don't get reparented out of existence.
         .bulkActionBar(selection: $selection, failure: $actionFailure)
-        .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }
@@ -104,6 +102,32 @@ func showCompletedToggle(_ binding: Binding<Bool>) -> some ToolbarContent {
         Toggle(isOn: binding) { Label("Show Completed", systemImage: "checkmark.circle") }
             .toggleStyle(.button)
     }
+    .overflowsFirst()
+}
+
+extension ToolbarContent {
+    /// Ranks a toolbar item below the search button and the sync chip: when the toolbar runs
+    /// out of room (a narrow resized window, accessibility text sizes), this item moves to the
+    /// overflow menu first, so the chrome the capture flow depends on stays in view. The
+    /// modifier is iOS 27 and macOS 26.1; on the iOS 26 floor the item keeps the default rank.
+    @ToolbarContentBuilder
+    func overflowsFirst() -> some ToolbarContent {
+        if #available(iOS 27, macOS 26.1, *) {
+            visibilityPriority(.low)
+        } else {
+            self
+        }
+    }
+
+    /// The counterpart: the item stays visible longest.
+    @ToolbarContentBuilder
+    func staysVisible() -> some ToolbarContent {
+        if #available(iOS 27, macOS 26.1, *) {
+            visibilityPriority(.high)
+        } else {
+            self
+        }
+    }
 }
 
 /// A magnifying-glass toolbar button that opens the ⌘K command palette. Lives in each
@@ -115,6 +139,7 @@ func paletteButton(_ palette: PaletteController) -> some ToolbarContent {
             Label(String(localized: "Search"), systemImage: "magnifyingglass")
         }
     }
+    .staysVisible()
 }
 
 /// The quiet sync-status chip for compact (iPhone) surfaces. Mirrors the iPad sidebar chip

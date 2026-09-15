@@ -192,9 +192,9 @@ struct SmartViewRow: View {
 /// The ⌘K palette also finds tasks, but it's a modal picker; this is a working list.
 private struct BrowseSearchResults: View {
     @Environment(TaskStore.self) private var store
+    @Environment(PaletteController.self) private var palette
     let query: String
 
-    @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
     @State private var actionFailure: TaskActionFailure?
 
@@ -221,7 +221,7 @@ private struct BrowseSearchResults: View {
                                 blockedByCount: graph.uncompletedBlockers(of: task.id).count,
                                 blockingCount: graph.blockedTasks(of: task.id).count,
                                 actions: rowActions,
-                                onEdit: { editor = .edit($0) }
+                                onEdit: { palette.editor = .edit($0) }
                             )
                             .listRowBackground(Surface.surface)
                             .listRowSeparatorTint(Surface.hairline)
@@ -232,7 +232,6 @@ private struct BrowseSearchResults: View {
             }
             ConfettiView(trigger: confettiTrigger)
         }
-        .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)
     }
 }

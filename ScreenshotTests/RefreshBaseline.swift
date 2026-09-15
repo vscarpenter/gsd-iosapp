@@ -64,7 +64,7 @@ final class RefreshBaseline: XCTestCase {
     private func walkCompact(_ app: XCUIApplication) throws {
         let tabs = app.tabBars.firstMatch
         XCTAssertTrue(tabs.waitForExistence(timeout: 25), "tab bar never appeared")
-        tabs.buttons["Matrix"].tap()
+        selectTab(app, "Matrix")
         XCTAssertTrue(card(app, "demo-investor").waitForExistence(timeout: 45), "seeded cards never appeared")   // a cold first launch seeds slowly
         pause(1.5)
         save(app, "01-matrix")
@@ -76,21 +76,21 @@ final class RefreshBaseline: XCTestCase {
         swipeReveal(app)
         openEditor(app, dragToTop: true)
 
-        tabs.buttons["Browse"].tap(); pause(1.2)
+        selectTab(app, "Browse")
         save(app, "05-browse")
         if tap(row(app, "This Week"), "This Week row") { save(app, "06-smartview"); goBack(app) }
         if tap(element(app, label: "Archive"), "Archive row") { save(app, "07-archive"); goBack(app) }
 
-        tabs.buttons["Dashboard"].tap(); pause(3.0)   // charts animate in
+        selectTab(app, "Dashboard"); pause(1.8)   // charts animate in
         save(app, "08-dashboard")
         app.swipeUp(velocity: .slow); pause(1.2)
         save(app, "09-dashboard-rings")
 
-        tabs.buttons["Settings"].tap(); pause(1.2)
+        selectTab(app, "Settings")
         save(app, "10-settings")
         settingsScreens(app)
 
-        tabs.buttons["Matrix"].tap(); pause(1.0)
+        selectTab(app, "Matrix")
         openPalette(app)
         // The capture bar with a live parse preview: last, so the draft text and the keyboard
         // pollute nothing else.
@@ -195,6 +195,17 @@ final class RefreshBaseline: XCTestCase {
 
     // MARK: - Navigation helpers
 
+    /// Switches tabs. After a scroll the floating tab bar minimizes to the active tab and the
+    /// other tab buttons leave the accessibility tree; a tap on the minimized bar expands it.
+    private func selectTab(_ app: XCUIApplication, _ name: String) {
+        let bar = app.tabBars.firstMatch
+        let button = bar.buttons[name]
+        if !button.exists, bar.buttons.firstMatch.exists {
+            bar.buttons.firstMatch.tap(); pause(0.8)
+        }
+        guard tap(button, "\(name) tab") else { return }
+    }
+
     /// Waits for `element`, taps it (unless `tapping` is false), and pauses. A miss records a
     /// failure and returns false so the walk skips that screen instead of aborting.
     @discardableResult
@@ -264,8 +275,7 @@ final class RefreshBaseline: XCTestCase {
         app.descendants(matching: .any).matching(identifier: id).firstMatch
     }
 
-    /// The card for a seeded task id, falling back to its title (the iPad reveal row hides
-    /// the identifier; see DemoChoreography.card).
+    /// The card for a seeded task id, falling back to its title (see DemoChoreography.card).
     private func card(_ app: XCUIApplication, _ taskID: String) -> XCUIElement {
         let byID = element(app, "task-card-\(taskID)")
         if byID.exists { return byID }

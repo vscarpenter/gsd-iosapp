@@ -20,7 +20,6 @@ struct ContentView: View {
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
 
     @State private var palette = PaletteController()
-    @State private var paletteEditor: EditorRequest?
     /// Stashed when the palette picks an editor result; acted on in the sheet's onDismiss
     /// so we don't dismiss + present in the same runloop (iOS drops the second present).
     @State private var pendingEditor: EditorRequest?
@@ -48,7 +47,8 @@ struct ContentView: View {
             .sheet(isPresented: $palette.showPalette, onDismiss: presentPendingEditor) {
                 CommandPaletteView(onSelect: handle).environment(store)
             }
-            .sheet(item: $paletteEditor) { TaskEditorView(request: $0).environment(store) }
+            // The one task editor sheet for every surface (see PaletteController.editor).
+            .sheet(item: $palette.editor) { TaskEditorView(request: $0).environment(store) }
             .sheet(isPresented: $showAbout) { AboutView().presentationSizing(.fitted) }
             .sheet(isPresented: $showHelp) { HelpView() }
             .onOpenURL { handleDeepLink($0) }
@@ -115,7 +115,7 @@ struct ContentView: View {
                 .keyboardShortcut("k", modifiers: .command)
             Button("", action: { palette.showPalette = true })
                 .keyboardShortcut("f", modifiers: .command)
-            Button("", action: { paletteEditor = .new(.urgentImportant, prefill: nil) })
+            Button("", action: { palette.editor = .new(.urgentImportant, prefill: nil) })
                 .keyboardShortcut("n", modifiers: .command)
             Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.urgentImportant).url) })
                 .keyboardShortcut("1", modifiers: .command)
@@ -137,7 +137,7 @@ struct ContentView: View {
         case .focus:
             navigate(to: .matrix)   // the Matrix's Q1 quadrant IS today's focus
         case .capture:
-            paletteEditor = .new(.urgentImportant, prefill: nil)
+            palette.editor = .new(.urgentImportant, prefill: nil)
         case .quadrant(let quadrant):
             navigate(to: .matrix)
             palette.focusedQuadrant = quadrant
@@ -160,7 +160,7 @@ struct ContentView: View {
     private func openTask(_ id: String) {
         _Concurrency.Task { @MainActor in
             if let task = try? await store.fetchTask(id: id) {
-                paletteEditor = .edit(task)
+                palette.editor = .edit(task)
             } else {
                 navigate(to: .matrix)
             }
@@ -188,6 +188,10 @@ struct ContentView: View {
                     .tabItem { Label(String(localized: "Settings"), systemImage: "gearshape") }
                     .tag(3)
             }
+            // The floating tab bar shrinks to the active tab while the user scrolls down and
+            // returns on scroll up, so on a scrolled matrix the pinned capture bar is the only
+            // chrome left in full.
+            .tabBarMinimizeBehavior(.onScrollDown)
         } else {
             RegularRootView()
         }
@@ -217,7 +221,7 @@ struct ContentView: View {
     private func presentPendingEditor() {
         guard let pending = pendingEditor else { return }
         pendingEditor = nil
-        paletteEditor = pending
+        palette.editor = pending
     }
 
     private func navigate(to dest: PaletteDestination) {
@@ -289,8 +293,8 @@ private struct RegularRootView: View {
                     sidebarNavLabel(String(localized: "Settings"), .settings) { sidebarSymbol("gearshape", .settings) }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Surface.surface2)
+            // No opaque fill: the sidebar is system chrome and takes the system's material
+            // (edge to edge on macOS 27), per PRODUCT.md principle 6.
             .navigationTitle("GSD")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
