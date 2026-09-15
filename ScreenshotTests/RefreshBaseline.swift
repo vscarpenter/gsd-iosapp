@@ -144,7 +144,7 @@ final class RefreshBaseline: XCTestCase {
         investor.tap(); pause(1.0)
     }
 
-    private func openEditor(_ app: XCUIApplication, dragToTop: Bool) {
+    private func openEditor(_ app: XCUIApplication, dragToTop: Bool, dismiss: Bool = true) {
         let deck = card(app, "demo-deck")
         guard tap(deck, "deck card", tapping: false) else { return }
         // Tap inside the title area rather than the element's centre: on the Mac the centre of
@@ -164,7 +164,52 @@ final class RefreshBaseline: XCTestCase {
             grab.press(forDuration: 0.1, thenDragTo: top); pause(1.0)
         }
         save(app, "04-editor")
-        _ = tap(app.buttons["editor-cancel"].firstMatch, "editor Cancel")
+        if dismiss { _ = tap(app.buttons["editor-cancel"].firstMatch, "editor Cancel") }
+    }
+
+    // MARK: - Widths (Mac)
+
+    /// Mac only: the matrix at three window widths (compact, just above the boundary, regular),
+    /// then the compact/regular swap while the editor is open, which must survive it. Env
+    /// WIDTHS=1; a plain run skips it. The app is pinned with `--demo-window` and moved with
+    /// the DemoWindow Darwin notifications.
+    func testCaptureWidths() throws {
+        #if targetEnvironment(macCatalyst)
+        guard ProcessInfo.processInfo.environment["WIDTHS"] == "1" else {
+            throw XCTSkip("widths run only with TEST_RUNNER_WIDTHS=1")
+        }
+        for (label, size) in [("w420", "420x860"), ("w700", "700x860"), ("w1100", "1100x860")] {
+            let app = launchPinned(size)
+            save(app, "\(label)-matrix")
+            app.terminate()
+        }
+        let app = launchPinned("1100x860")
+        openEditor(app, dragToTop: false, dismiss: false)
+        post("dev.vinny.gsd.demo.window.compact"); pause(2.5)
+        XCTAssertTrue(element(app, "task-editor").exists, "the editor did not survive the swap to compact")
+        save(app, "swap-compact-editor")
+        post("dev.vinny.gsd.demo.window.regular"); pause(2.5)
+        XCTAssertTrue(element(app, "task-editor").exists, "the editor did not survive the swap back")
+        save(app, "swap-regular-editor")
+        #else
+        throw XCTSkip("widths run on the Mac")
+        #endif
+    }
+
+    private func launchPinned(_ size: String) -> XCUIApplication {
+        let appearance = ProcessInfo.processInfo.environment["SCREENSHOT_APPEARANCE"] ?? "light"
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo-seed", "--demo-clock", "\(Self.epoch)",
+                               "--demo-appearance", appearance, "--demo-window", size]
+        app.launch()
+        XCTAssertTrue(card(app, "demo-investor").waitForExistence(timeout: 45), "seeded cards never appeared")
+        pause(1.5)
+        return app
+    }
+
+    private func post(_ name: String) {
+        CFNotificationCenterPostNotification(
+            CFNotificationCenterGetDarwinNotifyCenter(), CFNotificationName(name as CFString), nil, nil, true)
     }
 
     /// Help (a sheet) and Feedback (a push) from the bottom of the Settings list. The list is

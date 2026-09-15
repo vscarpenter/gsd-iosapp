@@ -44,7 +44,11 @@ final class QuickActionSceneDelegate: NSObject, UIWindowSceneDelegate {
     ) {
         #if targetEnvironment(macCatalyst)
         if let windowScene = scene as? UIWindowScene {
-            windowScene.sizeRestrictions?.minimumSize = CGSize(width: 720, height: 560)
+            if let size = DemoWindow.requested {
+                DemoWindow.pin(windowScene, to: size)   // screenshot harness only
+            } else {
+                windowScene.sizeRestrictions?.minimumSize = CGSize(width: 720, height: 560)
+            }
         }
         #endif
         guard let shortcutItem = connectionOptions.shortcutItem else { return }

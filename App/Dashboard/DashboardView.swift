@@ -149,7 +149,7 @@ struct DashboardView: View {
                     Text(String(localized: "90d")).tag(90)
                 }
                 .pickerStyle(.segmented)
-                .frame(width: 170)
+                .fixedSize()   // its own width at any window width or text size, not a fixed 170pt
             }
             Chart {
                 ForEach(s.trend) { point in

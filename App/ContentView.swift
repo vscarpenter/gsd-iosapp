@@ -20,6 +20,7 @@ struct ContentView: View {
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
 
     @State private var palette = PaletteController()
+    @State private var undo = UndoDeleteController()
     /// Stashed when the palette picks an editor result; acted on in the sheet's onDismiss
     /// so we don't dismiss + present in the same runloop (iOS drops the second present).
     @State private var pendingEditor: EditorRequest?
@@ -34,12 +35,18 @@ struct ContentView: View {
             // Hidden ⌘K trigger — a zero-size button carrying the keyboard shortcut so the
             // hardware ⌘K opens the palette anywhere in the app.
             .background { keyboardShortcuts }
-            // Root-hosted so a delete from ANY surface gets the same Undo window; padded
-            // clear of the compact floating tab bar.
+            // Root-hosted so a delete from ANY surface gets the same Undo window. Compact hosts
+            // it as the tab bar's accessory (see UndoDeleteAccessory); regular keeps the capsule.
             .overlay(alignment: .bottom) {
-                UndoDeleteToast()
-                    .padding(.bottom, sizeClass == .compact ? 72 : 24)
+                if sizeClass != .compact {
+                    UndoDeleteToast(undo: undo).padding(.bottom, 24)
+                }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdTaskDeleted)) { note in
+                guard let task = note.object as? Task else { return }
+                undo.noteDeleted(task)
+            }
+            .taskActionFailureAlert($undo.failure)
             // Catalyst re-inject: its sheet hosting controller evaluates the presentation's
             // preferences before it inherits the presenter's environment, so @Observable stores
             // must be re-applied on the presented content (a no-op on iOS). Without it, the sheet's
@@ -174,27 +181,39 @@ struct ContentView: View {
 
     @ViewBuilder private var rootContent: some View {
         if sizeClass == .compact {
-            TabView(selection: $palette.compactTab) {
-                MatrixView()
-                    .tabItem { Label(String(localized: "Matrix"), systemImage: "square.grid.2x2") }
-                    .tag(0)
-                SmartViewListView()
-                    .tabItem { Label(String(localized: "Browse"), systemImage: "line.3.horizontal.decrease.circle") }
-                    .tag(1)
-                DashboardView()
-                    .tabItem { Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis") }
-                    .tag(2)
-                SettingsView()
-                    .tabItem { Label(String(localized: "Settings"), systemImage: "gearshape") }
-                    .tag(3)
+            if #available(iOS 26.1, *) {
+                compactRoot
+                    // The undo window rides the tab bar as its accessory (see UndoDeleteAccessory).
+                    .tabViewBottomAccessory(isEnabled: undo.deleted != nil) { UndoDeleteAccessory(undo: undo) }
+            } else {
+                compactRoot
+                    // iOS 26.0 has no isEnabled accessory: keep the capsule clear of the tab bar.
+                    .overlay(alignment: .bottom) { UndoDeleteToast(undo: undo).padding(.bottom, 72) }
             }
-            // The floating tab bar shrinks to the active tab while the user scrolls down and
-            // returns on scroll up, so on a scrolled matrix the pinned capture bar is the only
-            // chrome left in full.
-            .tabBarMinimizeBehavior(.onScrollDown)
         } else {
             RegularRootView()
         }
+    }
+
+    private var compactRoot: some View {
+        TabView(selection: $palette.compactTab) {
+            MatrixView()
+                .tabItem { Label(String(localized: "Matrix"), systemImage: "square.grid.2x2") }
+                .tag(0)
+            SmartViewListView()
+                .tabItem { Label(String(localized: "Browse"), systemImage: "line.3.horizontal.decrease.circle") }
+                .tag(1)
+            DashboardView()
+                .tabItem { Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis") }
+                .tag(2)
+            SettingsView()
+                .tabItem { Label(String(localized: "Settings"), systemImage: "gearshape") }
+                .tag(3)
+        }
+        // The floating tab bar shrinks to the active tab while the user scrolls down and
+        // returns on scroll up, so on a scrolled matrix the pinned capture bar is the only
+        // chrome left in full.
+        .tabBarMinimizeBehavior(.onScrollDown)
     }
 
     private func handle(_ result: PaletteResult) {

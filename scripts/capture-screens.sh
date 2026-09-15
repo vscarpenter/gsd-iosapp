@@ -3,7 +3,10 @@
 # RefreshBaseline UI test (ScreenshotTests/RefreshBaseline.swift). Used for the iOS 27 refresh:
 # a "baseline" run before any visual change, then one run per phase to compare against it.
 #
-#   scripts/capture-screens.sh <label> [iphone|ipad|mac ...]     # default: all three
+#   scripts/capture-screens.sh <label> [iphone|ipad|mac|widths ...]   # default: iphone ipad mac
+#
+# `widths` (Mac only) pins the window to three widths and crosses the compact/regular boundary
+# with the editor open (RefreshBaseline.testCaptureWidths).
 #
 # Output: build/screens/<label>/<platform>-<appearance>-NN-name.png (build/ is gitignored).
 # The Mac run needs a GUI session and signing for the host (the same as the reel-mac demo).
@@ -57,6 +60,24 @@ run_sim() {
   xcrun simctl status_bar "$udid" clear 2>/dev/null || true
 }
 
+run_widths() {
+  local dest="platform=macOS,variant=Mac Catalyst"
+  local sandbox="$HOME/Library/Containers/dev.vinny.gsd.screenshot-tests.xctrunner/Data/tmp/gsd-screens"
+  xcodebuild build-for-testing -project GSD.xcodeproj -scheme "$SCHEME" \
+    -destination "$dest" -derivedDataPath "$DD" -quiet
+  mkdir -p "$sandbox"
+  find "$sandbox" -name '*.png' -delete
+  local log="$OUT/logs/mac-widths.log"
+  echo "=== mac / widths ==="
+  TEST_RUNNER_BASELINE=1 TEST_RUNNER_WIDTHS=1 TEST_RUNNER_SCREENSHOT_PREFIX="mac-widths-" \
+    xcodebuild test-without-building -project GSD.xcodeproj -scheme "$SCHEME" \
+      -destination "$dest" -derivedDataPath "$DD" \
+      -only-testing:GSDScreenshotTests/RefreshBaseline/testCaptureWidths >"$log" 2>&1 \
+    || echo "   mac/widths: xcodebuild reported failures (see $log)"
+  cp "$sandbox"/mac-widths-*.png "$OUT/" 2>/dev/null || true
+  echo "   copied: $(ls "$OUT" | grep -c "^mac-widths-" || true)"
+}
+
 run_mac() {
   local dest="platform=macOS,variant=Mac Catalyst"
   # The Catalyst test runner is sandboxed (read-only outside its container), so the walk
@@ -78,7 +99,8 @@ for platform in "${PLATFORMS[@]}"; do
     iphone) run_sim iphone "$IPHONE_UDID" ;;
     ipad)   run_sim ipad "$IPAD_UDID" ;;
     mac)    run_mac ;;
-    *) echo "unknown platform '$platform' (iphone|ipad|mac)" >&2; exit 1 ;;
+    widths) run_widths ;;
+    *) echo "unknown platform '$platform' (iphone|ipad|mac|widths)" >&2; exit 1 ;;
   esac
 done
 echo "Done. Screens in $OUT"
