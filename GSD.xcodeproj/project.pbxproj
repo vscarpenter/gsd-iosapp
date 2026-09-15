@@ -21,6 +21,7 @@
 		1F6721700983447468D664C1 /* GSDMenuCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8E3161EF21EF57F6E08CB8 /* GSDMenuCommands.swift */; };
 		1FDBA6B34191BD05C33E7153 /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4AB4A7D546F89E5F67F5AA /* QuickActions.swift */; };
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
+		258511F5108C63A1FCFE399D /* GlassSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79DBE02C7478A306C40B7B29 /* GlassSetting.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
 		2DAC8455D9EDB41A5278D652 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 6A3C3A671584405B65D83D55 /* GSDModel */; };
 		305B1E2FEF9947D20EDC16CE /* SpotlightIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 874A98A2278EE80A36EC0976 /* SpotlightIndexer.swift */; };
@@ -64,6 +65,7 @@
 		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
 		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
+		9D045973ADABC27A5E62E5C4 /* RefreshBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB571C8749323E0E3C429823 /* RefreshBaseline.swift */; };
 		9E43F4121A7768B6C7A89119 /* DatabaseUnavailableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87A78E38615C8196A51B466F /* DatabaseUnavailableView.swift */; };
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
 		A004032986C5ACEB406BB2C5 /* DemoHomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7B229DAFAC4E845FCCC5C5 /* DemoHomeScreen.swift */; };
@@ -189,6 +191,7 @@
 		761CD99A69FF72AB17AB5968 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		7955446497B26D20179DFD36 /* WidgetSnapshotRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotRefresher.swift; sourceTree = "<group>"; };
 		79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandoff.swift; sourceTree = "<group>"; };
+		79DBE02C7478A306C40B7B29 /* GlassSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSetting.swift; sourceTree = "<group>"; };
 		7C0F320A150281F72B39E5C5 /* SkeletonShimmer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonShimmer.swift; sourceTree = "<group>"; };
 		834FF1E8BA076E31BA383962 /* GSDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDApp.swift; sourceTree = "<group>"; };
 		84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GSDScreenshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -207,6 +210,7 @@
 		A39B990BF91EC1589069C726 /* GSDShareExtension-Catalyst.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GSDShareExtension-Catalyst.entitlements"; sourceTree = "<group>"; };
 		A706546D6BC547A4D13660DC /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
 		A92D91657DBB6423E6BBE725 /* DataStorageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStorageView.swift; sourceTree = "<group>"; };
+		AB571C8749323E0E3C429823 /* RefreshBaseline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshBaseline.swift; sourceTree = "<group>"; };
 		ABCFD2CB1A7F53B54E6E1725 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AE084189B67CD4EE1370674E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
@@ -533,7 +537,9 @@
 			isa = PBXGroup;
 			children = (
 				E859591AFA113674374C5700 /* DemoChoreography.swift */,
+				79DBE02C7478A306C40B7B29 /* GlassSetting.swift */,
 				664E6FF5137DE167118E123D /* PreviewChoreography.swift */,
+				AB571C8749323E0E3C429823 /* RefreshBaseline.swift */,
 				E87C46CC1405702B23330578 /* ScreenshotTests.swift */,
 			);
 			path = ScreenshotTests;
@@ -875,7 +881,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */,
+				258511F5108C63A1FCFE399D /* GlassSetting.swift in Sources */,
 				32AC8D69042D0AA6FEA03C34 /* PreviewChoreography.swift in Sources */,
+				9D045973ADABC27A5E62E5C4 /* RefreshBaseline.swift in Sources */,
 				C8EFB5F817DADDA1C48B0356 /* ScreenshotTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1002,7 +1010,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 52HVJ3VDSM;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1017,7 +1025,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.3.0;
+				MARKETING_VERSION = 3.0.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1165,7 +1173,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 33;
+				CURRENT_PROJECT_VERSION = 34;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 52HVJ3VDSM;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1186,7 +1194,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.3.0;
+				MARKETING_VERSION = 3.0.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

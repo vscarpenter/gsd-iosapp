@@ -6,14 +6,16 @@ options:
   createIntermediateGroups: true
 settings:
   base:
+    # Language mode, not compiler version: Xcode accepts only 4, 4.2, 5, and 6 here. The
+    # Swift 6.4 compiler comes from Xcode 27 itself (iOS 27 refresh, 2026-09-15).
     SWIFT_VERSION: "6.0"
     CODE_SIGN_IDENTITY: "Apple Development"
     DEVELOPMENT_TEAM: "52HVJ3VDSM"   # owner's Apple Developer team — applies to all targets (incl. Phase 6 extensions)
     # Version is project-wide: the app and ALL embedded extensions must share one
     # CFBundleShortVersionString/CFBundleVersion (App Store rule). Bump these two lines
     # per release — never per-target (that's how the app/extension versions drifted apart).
-    MARKETING_VERSION: "2.3.0"
-    CURRENT_PROJECT_VERSION: "33"
+    MARKETING_VERSION: "3.0.0"
+    CURRENT_PROJECT_VERSION: "34"
     # Xcode 26 "recommended settings" — declared here so they survive `xcodegen
     # generate` (clicking "Perform Changes" in Xcode would edit the generated pbxproj
     # and be wiped). These are already the SDK-default resolved values; made explicit
