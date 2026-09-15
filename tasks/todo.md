@@ -14,16 +14,16 @@ lives in git history at `388d7ef`.
 - [x] `cd GSDKit && swift test` baseline green (271 Swift Testing tests, 30 suites)
 - [x] Build iPhone, iPad, and Catalyst on the 27 SDK (zero errors, zero project warnings, no source change)
 - [x] @State macro sweep: nothing to fix; the macro coexists with the wrapper and every `State(initialValue:)` site compiles
-- [ ] Scene lifecycle audit: scene-based already; remove the dead `AppDelegate.performActionFor` (pre-scene path)
-- [ ] Baseline screenshots on all three targets (light and dark): iPhone 14/14, iPad 11/12 done; Mac needs the sandbox-aware writer
-- [ ] Commit
+- [x] Scene lifecycle audit: scene-based already; removed the dead `AppDelegate.performActionFor` (pre-scene path)
+- [x] Baseline screenshots on all three targets (light and dark): iPhone 14/14, iPad 11/12, Mac 3 (matrix, smart view, dashboard)
+- [x] Commit `f5c7fb4`
 
 ## Phase 1: Liquid Glass, selectively
-- [ ] `AppAppearance.configure()`: keep serif title attributes, drop background overrides where the 27 material reads better; same for the tab bar
+- [x] `AppAppearance.configure()`: title attributes only; appearance objects dropped (pixel-identical on iPhone)
 - [ ] Glass slider extremes (ultra-clear and tinted), light and dark: ink and `Surface.tint` hold AA on Matrix, Browse, Dashboard toolbars, the tab bar, sheet chrome
-- [ ] `PRODUCT.md`: one paragraph, editorial surfaces never take glass
+- [x] `PRODUCT.md`: principle 6, editorial surfaces never take glass
 - [ ] Catalyst pass: sidebar edge to edge, serif large titles, `GSDMenuCommands.swift`, remove Tahoe-era workarounds that fight the system
-- [ ] Sidebar icons tinted with `QuadrantStyle` accents (no new colors)
+- [x] Sidebar: Matrix row carries the four-pigment mark; selected row defers to `.primary` (iPad ink pill, Mac neutral fill)
 - [ ] Commit
 
 ## Phase 2: new SwiftUI APIs

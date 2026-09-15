@@ -44,6 +44,7 @@ What GSD must **not** look or feel like:
 3. **Native, not ported.** Reimagine around iOS idioms — swipe actions, context menus, drag-and-drop, widgets, App Intents, `NavigationSplitView` — rather than transliterating web layouts. iPhone and iPad are co-equal, each laid out for its size class.
 4. **Frictionless capture.** Adding and classifying a task is one keystroke-light gesture; the capture field is always one tap away, and natural-language shorthand (`!`, `!!`, `*`, `#tag`) does the classifying.
 5. **Restraint carries the brand.** Color is rationed to the quadrant accents; typography does the hierarchy work (serif display + system body); motion is intentional and always Reduce-Motion-aware. When in doubt, remove rather than add.
+6. **Editorial surfaces stay opaque.** Liquid Glass belongs to system chrome: toolbars, the tab bar, the sidebar, and sheet grab regions take the material the OS gives them. Everything Inkwell owns stays paper and ink: `surfaceCard()`, the quadrant washes, sheet content, and the matrix never take glass or translucency. The brand is the content layer and the OS is the frame, so parity work on other platforms adopts the patterns (quieter chrome on scroll, swipe verbs) and never the material. Nothing in `Theme.swift` or `QuadrantStyle.swift` is translucent.
 
 ## Accessibility & Inclusion
 

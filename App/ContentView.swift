@@ -262,8 +262,13 @@ private struct RegularRootView: View {
         @Bindable var palette = palette
         NavigationSplitView {
             List(selection: $palette.regularSelection) {
-                sidebarNavLabel(String(localized: "Matrix"), "square.grid.2x2", .matrix)
-                sidebarNavLabel(String(localized: "Dashboard"), "chart.bar.xaxis", .dashboard)
+                // The four-pigment mark, not a gray grid symbol: the matrix row is the app.
+                sidebarNavLabel(String(localized: "Matrix"), .matrix) {
+                    Image("LaunchMark").resizable().scaledToFit().frame(width: 22, height: 22)
+                }
+                sidebarNavLabel(String(localized: "Dashboard"), .dashboard) {
+                    sidebarSymbol("chart.bar.xaxis", .dashboard)
+                }
 
                 Section(String(localized: "Smart Views")) {
                     ForEach(store.pinnedViews) { view in sidebarRow(view) }
@@ -280,8 +285,8 @@ private struct RegularRootView: View {
                 }
 
                 Section(String(localized: "Library")) {
-                    sidebarNavLabel(String(localized: "Archive"), "archivebox", .archive)
-                    sidebarNavLabel(String(localized: "Settings"), "gearshape", .settings)
+                    sidebarNavLabel(String(localized: "Archive"), .archive) { sidebarSymbol("archivebox", .archive) }
+                    sidebarNavLabel(String(localized: "Settings"), .settings) { sidebarSymbol("gearshape", .settings) }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -320,24 +325,28 @@ private struct RegularRootView: View {
         }
     }
 
-    /// A top-level sidebar destination: graphite icon + ink label (de-blued chrome).
-    private func sidebarNavLabel(_ title: String, _ icon: String, _ item: RegularItem) -> some View {
+    /// A top-level sidebar destination: an ink label beside the given icon (de-blued chrome).
+    private func sidebarNavLabel(_ title: String, _ item: RegularItem,
+                                 @ViewBuilder icon: () -> some View) -> some View {
         Label {
             Text(title).foregroundStyle(sidebarInk(item, base: Surface.ink))
         } icon: {
-            Image(systemName: icon).foregroundStyle(sidebarInk(item, base: Surface.ink2))
+            icon()
         }
         .tag(item)
     }
 
-    /// The row's normal ink, or the on-accent glyph color when it is the selected row over the
-    /// opaque Catalyst selection fill. iPad's selection is translucent, so it keeps the graphite ink.
-    private func sidebarInk(_ item: RegularItem, base: Color) -> Color {
-        #if targetEnvironment(macCatalyst)
-        palette.regularSelection == item ? Surface.inkOnAccent : base
-        #else
-        base
-        #endif
+    /// A graphite SF Symbol for a sidebar row, flipped to the on-accent ink when selected.
+    private func sidebarSymbol(_ name: String, _ item: RegularItem) -> some View {
+        Image(systemName: name).foregroundStyle(sidebarInk(item, base: Surface.ink2))
+    }
+
+    /// The row's normal ink, or the system's selected-content color when it is the selected
+    /// row. The selection fill is not ours to predict: since the 27 SDK it is the opaque app
+    /// tint (ink) on iPad, and on the Mac it is the accent while the sidebar has focus and a
+    /// neutral fill when it does not. `.primary` follows whichever fill the system painted.
+    private func sidebarInk(_ item: RegularItem, base: Color) -> AnyShapeStyle {
+        palette.regularSelection == item ? AnyShapeStyle(.primary) : AnyShapeStyle(base)
     }
 
     @ViewBuilder private func sidebarRow(_ view: SmartView) -> some View {

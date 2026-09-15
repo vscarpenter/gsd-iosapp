@@ -115,29 +115,25 @@ func brandedNavigationTitle(_ screen: String) -> some ToolbarContent {
 }
 
 /// One-time UIKit appearance setup so every `navigationTitle` renders in the
-/// editorial New York serif and chrome stays ink (not system blue). Called from
-/// `GSDApp.init()`. SwiftUI has no native hook to restyle large titles, so the
-/// UIKit appearance proxy is the standard path.
+/// editorial New York serif. Called from `GSDApp.init()`. SwiftUI has no native hook
+/// to restyle titles, so the UIKit appearance proxy is the standard path.
+///
+/// Only the title attributes are set. Assigning a `UINavigationBarAppearance` or
+/// `UITabBarAppearance` pins a legacy bar background, and on the 27 SDK that overrides
+/// the system's toolbar and tab-bar material. The bars keep what the OS gives them
+/// (Liquid Glass on the chrome; the content underneath stays opaque paper), and the
+/// ink chrome color comes from the root `.tint(Surface.ink)`.
 enum AppAppearance {
     @MainActor static func configure() {
-        let nav = UINavigationBarAppearance()
-        nav.configureWithDefaultBackground() // translucent paper-tinted material
-        nav.largeTitleTextAttributes = [
+        let bar = UINavigationBar.appearance()
+        bar.largeTitleTextAttributes = [
             .font: serifFont(.largeTitle, weight: .semibold),
             .foregroundColor: UIColor(Surface.ink),
         ]
-        nav.titleTextAttributes = [
+        bar.titleTextAttributes = [
             .font: serifFont(.headline, weight: .semibold),
             .foregroundColor: UIColor(Surface.ink),
         ]
-        UINavigationBar.appearance().standardAppearance = nav
-        UINavigationBar.appearance().scrollEdgeAppearance = nav
-        UINavigationBar.appearance().compactAppearance = nav
-
-        let tab = UITabBarAppearance()
-        tab.configureWithDefaultBackground()
-        UITabBar.appearance().standardAppearance = tab
-        UITabBar.appearance().scrollEdgeAppearance = tab
     }
 
     /// New York (serif design) variant of a Dynamic-Type text style. `size: 0`

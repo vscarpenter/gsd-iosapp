@@ -148,9 +148,9 @@ struct SmartViewListView: View {
 struct SmartViewRow: View {
     @Environment(TaskStore.self) private var store
     let view: SmartView
-    /// When this is the selected sidebar row on Catalyst, the content sits on the opaque accent
-    /// fill, so its colors flip to the on-accent glyph color. Default false (the Browse list and
-    /// iPad's translucent selection) keeps the identity/ink colors.
+    /// When this is the selected sidebar row (iPad and Catalyst), the content sits on the
+    /// system's selection fill, so its colors defer to the system's selected-content color.
+    /// Default false (the Browse list) keeps the identity/ink colors.
     var selected: Bool = false
     private var count: Int { store.tasks(matching: view.criteria).count }
 
@@ -169,13 +169,10 @@ struct SmartViewRow: View {
         .accessibilityLabel(String(localized: "\(view.name), \(count) tasks"))
     }
 
-    /// `Surface.inkOnAccent` when selected over the opaque Catalyst fill; otherwise `base`.
-    private func onAccent(or base: Color) -> Color {
-        #if targetEnvironment(macCatalyst)
-        selected ? Surface.inkOnAccent : base
-        #else
-        base
-        #endif
+    /// `.primary` when selected (the fill varies by platform and focus; see `sidebarInk` in
+    /// ContentView); otherwise `base`.
+    private func onAccent(or base: Color) -> AnyShapeStyle {
+        selected ? AnyShapeStyle(.primary) : AnyShapeStyle(base)
     }
 
     /// Graphite by default; an accent only where the view has identity.
