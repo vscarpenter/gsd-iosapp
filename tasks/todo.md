@@ -20,28 +20,28 @@ lives in git history at `388d7ef`.
 
 ## Phase 1: Liquid Glass, selectively
 - [x] `AppAppearance.configure()`: title attributes only; appearance objects dropped (pixel-identical on iPhone)
-- [ ] Glass slider extremes (ultra-clear and tinted), light and dark: ink and `Surface.tint` hold AA on Matrix, Browse, Dashboard toolbars, the tab bar, sheet chrome
+- [x] Glass slider extremes: simulator Settings has no Display page; analytic AA check in the doc, `GlassSetting.swift` for the owner's device pass
 - [x] `PRODUCT.md`: principle 6, editorial surfaces never take glass
-- [ ] Catalyst pass: sidebar edge to edge, serif large titles, `GSDMenuCommands.swift`, remove Tahoe-era workarounds that fight the system
+- [x] Catalyst pass: selected-row rule unified, sidebar keeps the system material (experiment in the phase2 captures), menu commands unchanged
 - [x] Sidebar: Matrix row carries the four-pigment mark; selected row defers to `.primary` (iPad ink pill, Mac neutral fill)
-- [ ] Commit
+- [x] Commit `e93efdb`
 
 ## Phase 2: new SwiftUI APIs
-- [ ] Replace `SwipeRevealRow` with `.swipeActions` on the iPad matrix cards (inside `.swipeActionsContainer()`), wired through `TaskActions`; VoiceOver actions and RTL parity; retire the file
-- [ ] Evaluate `reorderContainer` for in-quadrant order and smart-view list order; cross-quadrant drag semantics unchanged
-- [ ] Toolbar `visibilityPriority` on the Matrix toolbar so the capture bar stays the hero on compact
-- [ ] Commit
+- [x] `.swipeActions` on the iPad matrix cards inside `.swipeActionsContainer()` (iOS 27); `SwipeRevealRow` stays as the iOS 26 fallback because the floor stays at 26
+- [x] `reorderContainer` evaluated and rejected (no stored order; a positional field is a three-repo contract change); see the doc
+- [x] Toolbar `visibilityPriority` (search high, Show Completed and Edit low) plus `tabBarMinimizeBehavior(.onScrollDown)`
+- [x] Commit (with Phase 3.1, one unit)
 
 ## Phase 3: resizable iPhone app
-- [ ] TabView and NavigationSplitView swap mid-session: selection, open sheets, Browse push path, `pendingEditor`
-- [ ] Fixed geometry sweep: undo toast 72pt, capture-bar width, sheet detents, rings grid
-- [ ] Two or three intermediate widths in `ScreenshotTests/`
+- [x] Root swap: selection and Browse path already shared; the editor sheet moved to the root (`PaletteController.editor`), five per-surface sheets removed
+- [x] Fixed geometry sweep: undo window as the tab bar accessory on iOS 26.1+ (`UndoDeleteController`), trend picker `fixedSize`; capture bar, detents, rings already fluid
+- [ ] Three window widths plus the mid-session swap on the Mac (`--demo-window` hook, `testCaptureWidths`): code in, run blocked by the locked Mac session
 - [ ] Commit
 
 ## Phase 4: icon and widget
-- [ ] Layered app icon (Icon Composer `.icon`); monochrome variant survives on shape alone
-- [ ] Today's Focus under tinted and clear rendering: shape identity per quadrant, `widgetRenderingMode`
-- [ ] Catalyst menu bar and Mac widget check after the icon rebuild
+- [x] Layered app icon `App/AppIcon.icon` (check group first, opaque tiles, dark specializations); live on the iPad Home Screen in both appearances; Clear/Tinted need a device look
+- [x] Today's Focus: due-state shape markers (filled overdue, half today, outline later), `widgetRenderingMode`-aware tint; sample rows carry due states
+- [x] Catalyst menu bar and Mac widget: not applicable (no status item; the widget extension is iOS only)
 - [ ] Commit
 
 ## Verification gates (every phase)
@@ -50,9 +50,8 @@ lives in git history at `388d7ef`.
 - Screenshot comparison against the Phase 0 baseline for every touched screen
 
 ## Resuming from here
-- Done: Phase 0 toolchain, version bump, three-target build, State and lifecycle sweeps, simulator baselines
-- Next: Mac baseline (rerunning), remove the dead AppDelegate method, commit Phase 0, start Phase 1
-- Found by the baseline: iPad sidebar selected row is an opaque ink pill on the 27 SDK (label unreadable); fix in Phase 1
-- Blockers: none
+- Done: Phases 0, 1, 2, 3.1 committed (`f5c7fb4`, `e93efdb`, `83887f4`); Phase 3b (undo accessory, geometry, Mac width hook) and Phase 4 (icon, widget) applied and compiling on all three targets; `whatsnew.txt` drafted for 3.0.0
+- Next: review the `phase3` captures (iPhone, iPad, widget demo), commit Phase 3b then Phase 4, final three-target build, handoff
+- Blocked: Mac captures (`phase2 mac`, `phase3 mac`, `widths`) need an unlocked GUI session; the glass slider extremes need a device
 - Assumptions: `xcode-select` points at the Command Line Tools on this machine; every
   xcodebuild call sets `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`

@@ -1,24 +1,20 @@
-iOS — recommended
+iOS (recommended)
 
-▎ This update is a focused polish pass: better contrast, calmer dashboard, and safer editing.
+▎ GSD 3.0 is built for iOS 27. The system chrome takes the new Liquid Glass; your tasks stay on the same warm paper.
 ▎
-▎ • Undo for deleted tasks. Delete a task by accident? An Undo option appears right after — restore it exactly as it was, online or off.
-▎ • Easier to read. Sharper contrast on due dates, counts, and chart labels throughout the app, plus larger tap targets on card menus and tag removal.
-▎ • iPad editor no longer clips. The task editor now opens at full size on iPad; on iPhone, a "Show all details" button reveals every section.
-▎ • Calmer dashboard. The overdue reminder is now a normal card instead of a red alert banner, and the streak tiles are gone for good.
-▎ • More private by default. Fetching a page title when you share a link is now off unless you turn it on — and only ever touches links you explicitly share.
-▎ • A round of smaller polish: consistent sign-in buttons, one toggle color throughout Settings, and clearer onboarding copy.
+▎ • A layered app icon. The four quadrant tiles and the check now render in every Home Screen style, including Clear and Tinted.
+▎ • Swipe on iPad. Matrix cards use the system swipe actions: swipe right to complete, left to snooze or delete, the same gestures as iPhone.
+▎ • Room to work. The tab bar tucks away while you scroll and comes back when you scroll up, so the capture field is the only chrome left in full.
+▎ • Resize without losing your place. Open the editor, change the window size (iPhone Mirroring, iPad multitasking), and the editor stays open.
+▎ • Today's Focus in any style. The widget marks overdue and due-today tasks by shape, so it reads in Tinted and Clear modes too.
 ▎
-▎ As always, GSD works fully offline — syncing is optional and only happens when you're signed in.
+▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
 
-macOS — recommended
+macOS (recommended)
 
-▎ This update is a focused polish pass: better contrast, calmer dashboard, and safer editing.
+▎ GSD 3.0 is built for macOS 27. The window, sidebar, and toolbar take the new Liquid Glass; your tasks stay on the same warm paper.
 ▎
-▎ • Undo for deleted tasks, restorable exactly as they were.
-▎ • Easier to read, with sharper contrast on due dates, counts, and chart labels.
-▎ • Task editor opens at full size instead of clipping content.
-▎ • Calmer dashboard — the overdue reminder is a normal card, not a red alert banner, and the streak tiles are gone.
-▎ • More private by default — link-title fetching for shared links is now off unless you enable it.
-▎ • Sign-in and Settings polish throughout.
-
+▎ • A layered app icon that renders in every icon style.
+▎ • The sidebar runs edge to edge and its selected row reads clearly in every state.
+▎ • Resize the window across the compact boundary and an open editor stays open.
+▎ • Toolbar items yield in a sensible order when a window gets narrow: search stays, Edit and Show Completed move to the overflow menu first.
