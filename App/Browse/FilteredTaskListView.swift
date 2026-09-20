@@ -3,12 +3,12 @@ import GSDModel
 import GSDStore
 
 /// A smart view's results as a flat, cross-quadrant list. Reuses `TaskListRow`; owns its
-/// own editor sheet + confetti (mirrors `MatrixView`). Read-only of `store.tasks(matching:)`.
+/// own confetti (mirrors `MatrixView`); the editor is the root sheet. Read-only of `store.tasks(matching:)`.
 struct FilteredTaskListView: View {
     @Environment(TaskStore.self) private var store
+    @Environment(PaletteController.self) private var palette
     let view: SmartView
 
-    @State private var editor: EditorRequest?
     @State private var confettiTrigger = 0
     @State private var searchText = ""
     @State private var selection = Set<String>()
@@ -67,7 +67,7 @@ struct FilteredTaskListView: View {
                                 blockedByCount: graph.uncompletedBlockers(of: task.id).count,
                                 blockingCount: graph.blockedTasks(of: task.id).count,
                                 actions: rowActions,
-                                onEdit: { editor = .edit($0) }
+                                onEdit: { palette.editor = .edit($0) }
                             )
                             .tag(task.id)
                             .listRowBackground(Surface.surface)
@@ -92,7 +92,6 @@ struct FilteredTaskListView: View {
         // Bar visual sits in a bottom safeAreaInset; its prompts present from the main
         // content (see BulkActionBar) so they don't get reparented out of existence.
         .bulkActionBar(selection: $selection, failure: $actionFailure)
-        .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }

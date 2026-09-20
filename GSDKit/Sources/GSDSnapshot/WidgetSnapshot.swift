@@ -17,14 +17,20 @@ public struct WidgetSnapshot: Codable, Sendable, Equatable {
     public static let empty = WidgetSnapshot(generatedAt: .distantPast, tasks: [], totalCount: 0)
 
     /// Representative data for the widget gallery / placeholder previews.
-    public static let sample = WidgetSnapshot(
-        generatedAt: Date(timeIntervalSince1970: 0),
-        tasks: [
-            WidgetTask(id: "s1", title: "Ship the release", dueDate: nil),
-            WidgetTask(id: "s2", title: "Reply to the board", dueDate: nil),
-            WidgetTask(id: "s3", title: "Finalize the deck", dueDate: nil),
-        ],
-        totalCount: 5)
+    /// One row per due state (overdue, today, later), relative to now, so the gallery preview
+    /// shows the widget's shape markers rather than three identical rows.
+    public static var sample: WidgetSnapshot {
+        let now = Date()
+        let day: TimeInterval = 86_400
+        return WidgetSnapshot(
+            generatedAt: now,
+            tasks: [
+                WidgetTask(id: "s1", title: "Ship the release", dueDate: now.addingTimeInterval(-day)),
+                WidgetTask(id: "s2", title: "Reply to the board", dueDate: now),
+                WidgetTask(id: "s3", title: "Finalize the deck", dueDate: now.addingTimeInterval(3 * day)),
+            ],
+            totalCount: 5)
+    }
 }
 
 /// One row in the widget. Minimal by design — every Today's Focus row is urgent+important.

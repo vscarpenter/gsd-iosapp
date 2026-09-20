@@ -1,10 +1,11 @@
 import SwiftUI
 import GSDModel
 
-/// iPad swipe-to-reveal actions for a matrix card. The iPad matrix is a `LazyVGrid`,
-/// not a `List`, so native `.swipeActions` (which is `List`-only) can't be used; this
-/// hand-rolls the same affordance while coexisting with the card's existing
-/// drag-to-move, long-press menu, and tap-to-edit.
+/// iPad swipe-to-reveal actions for a matrix card on the iOS 26 floor. The iPad matrix is
+/// a `LazyVGrid`, not a `List`, and native `.swipeActions` reaches non-List views only from
+/// iOS 27 (`QuadrantCell.swipeRow`); this hand-rolls the same affordance for 26 while
+/// coexisting with the card's drag-to-move, long-press menu, and tap-to-edit. Retire it
+/// when the deployment floor moves to iOS 27.
 ///
 /// The reveal buttons are layered **in front of** the card (only while open). The card
 /// owns the swipe / `.draggable` / `.contextMenu` / tap gestures; behind the offset

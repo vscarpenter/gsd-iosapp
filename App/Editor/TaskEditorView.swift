@@ -41,7 +41,12 @@ struct TaskEditorView: View {
     /// the dependency graph the picker validates against matches the persisted task (C4).
     private let editingTaskID: String
 
-    init(request: EditorRequest) {
+    /// Whether the presenting root is compact. Decides the sheet shape (see `body`); passed in
+    /// because a sheet's own environment reads compact even on a full-width iPad.
+    private let compactPresenter: Bool
+
+    init(request: EditorRequest, compactPresenter: Bool = false) {
+        self.compactPresenter = compactPresenter
         switch request {
         case .new(let q, let prefill):
             _title = State(initialValue: prefill?.title ?? "")
@@ -77,9 +82,11 @@ struct TaskEditorView: View {
     }
 
     var body: some View {
-        // iPhone: half-height quick edit stays, with an explicit path to the full form.
-        // iPad/Mac: a page-sized sheet — the medium detent cut the quadrant picker mid-tile.
-        if UIDevice.current.userInterfaceIdiom == .phone {
+        // Compact presenter (iPhone, a narrow iPad or Mac window): the half-height quick edit
+        // with an explicit path to the full form. Regular: a page-sized sheet, since the medium
+        // detent cut the quadrant picker mid-tile. The presenter's size class, not the device
+        // idiom, decides, so a resized window gets a sheet that fits it.
+        if compactPresenter {
             editorStack.presentationDetents([.medium, .large], selection: $detent)
         } else {
             editorStack.presentationSizing(.page)
@@ -121,7 +128,7 @@ struct TaskEditorView: View {
             .tint(Surface.tint)   // baseline calm action tint (carets + true actions, never system blue); picker values → ink3 by role
             .environment(\.editMode, $subtaskEditMode)
             .safeAreaInset(edge: .bottom) {
-                if UIDevice.current.userInterfaceIdiom == .phone && detent == .medium {
+                if compactPresenter && detent == .medium {
                     showAllDetailsButton
                 }
             }

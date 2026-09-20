@@ -40,6 +40,11 @@ final class PaletteController {
     /// One-shot quadrant focus request (⌘1–⌘4 / `gsd://quadrant/<q>`): the matrix view
     /// scrolls to the quadrant and clears it.
     var focusedQuadrant: Quadrant?
+    /// The task editor sheet, presented once at the root (`ContentView`) for every surface.
+    /// Hosted here rather than per surface so an open editor survives the compact/regular
+    /// root swap when the window is resized mid-session (iPad multitasking, iPhone on iPad,
+    /// iPhone Mirroring): the surfaces are rebuilt, the root and this controller are not.
+    var editor: EditorRequest?
 }
 
 /// iPad sidebar selection. Shared so the palette handler can drive it; `RegularRootView`

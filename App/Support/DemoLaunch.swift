@@ -33,6 +33,60 @@ enum DemoLaunch {
     }
 }
 
+/// Mac Catalyst screenshot harness: `--demo-window <width>x<height>` pins the window to an
+/// exact size, and two Darwin notifications move it across the compact/regular boundary while
+/// the app runs, so the root swap can be captured with state in flight (iPhone apps resize on
+/// iOS 27; on the Mac the window is the one place a size class can cross in a test). Every hook
+/// is inert without the argument.
+enum DemoWindow {
+    static let argument = "--demo-window"
+    static let compactNotification = "dev.vinny.gsd.demo.window.compact"
+    static let regularNotification = "dev.vinny.gsd.demo.window.regular"
+    static let compact = CGSize(width: 420, height: 860)
+    static let regular = CGSize(width: 1100, height: 860)
+
+    /// The pinned size from the launch argument, or `nil` in a normal launch.
+    static var requested: CGSize? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: argument), i + 1 < args.count else { return nil }
+        let parts = args[i + 1].split(separator: "x").compactMap { Double($0) }
+        guard parts.count == 2 else { return nil }
+        return CGSize(width: parts[0], height: parts[1])
+    }
+
+    #if targetEnvironment(macCatalyst)
+    @MainActor private static var scene: UIWindowScene?
+
+    /// Pins `scene` to `size` and listens for the resize notifications. Call once per scene.
+    @MainActor static func pin(_ windowScene: UIWindowScene, to size: CGSize) {
+        scene = windowScene
+        apply(size)
+        for name in [compactNotification, regularNotification] {
+            CFNotificationCenterAddObserver(
+                CFNotificationCenterGetDarwinNotifyCenter(), nil,
+                { _, _, name, _, _ in
+                    let posted = name.map { $0.rawValue as String }
+                    _Concurrency.Task { @MainActor in DemoWindow.handle(posted) }
+                },
+                name as CFString, nil, .deliverImmediately)
+        }
+    }
+
+    @MainActor private static func handle(_ notification: String?) {
+        switch notification {
+        case compactNotification: apply(compact)
+        case regularNotification: apply(regular)
+        default: break
+        }
+    }
+
+    @MainActor private static func apply(_ size: CGSize) {
+        scene?.sizeRestrictions?.minimumSize = size
+        scene?.sizeRestrictions?.maximumSize = size
+    }
+    #endif
+}
+
 private struct DemoClockKey: EnvironmentKey {
     static let defaultValue: Date? = nil
 }

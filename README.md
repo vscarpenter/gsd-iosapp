@@ -55,7 +55,7 @@ xcodebuild -project GSD.xcodeproj -scheme GSD \
 
 The app also ships on iPad and Mac Catalyst — build all three before considering UI work done (see [`CLAUDE.md`](CLAUDE.md) for the iPad and Catalyst destinations).
 
-**Requirements:** Xcode for iOS 26.0+, Swift 6.0 (strict concurrency on), and `xcodegen` on your `PATH`.
+**Requirements:** Xcode 27 (the iOS 27 SDK; the deployment floor stays iOS 26.0), Swift language mode 6 (strict concurrency on), and `xcodegen` on your `PATH`.
 
 ## Project layout & conventions
 

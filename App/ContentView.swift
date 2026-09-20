@@ -20,7 +20,7 @@ struct ContentView: View {
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
 
     @State private var palette = PaletteController()
-    @State private var paletteEditor: EditorRequest?
+    @State private var undo = UndoDeleteController()
     /// Stashed when the palette picks an editor result; acted on in the sheet's onDismiss
     /// so we don't dismiss + present in the same runloop (iOS drops the second present).
     @State private var pendingEditor: EditorRequest?
@@ -35,12 +35,18 @@ struct ContentView: View {
             // Hidden ⌘K trigger — a zero-size button carrying the keyboard shortcut so the
             // hardware ⌘K opens the palette anywhere in the app.
             .background { keyboardShortcuts }
-            // Root-hosted so a delete from ANY surface gets the same Undo window; padded
-            // clear of the compact floating tab bar.
+            // Root-hosted so a delete from ANY surface gets the same Undo window. Compact hosts
+            // it as the tab bar's accessory (see UndoDeleteAccessory); regular keeps the capsule.
             .overlay(alignment: .bottom) {
-                UndoDeleteToast()
-                    .padding(.bottom, sizeClass == .compact ? 72 : 24)
+                if sizeClass != .compact {
+                    UndoDeleteToast(undo: undo).padding(.bottom, 24)
+                }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdTaskDeleted)) { note in
+                guard let task = note.object as? Task else { return }
+                undo.noteDeleted(task)
+            }
+            .taskActionFailureAlert($undo.failure)
             // Catalyst re-inject: its sheet hosting controller evaluates the presentation's
             // preferences before it inherits the presenter's environment, so @Observable stores
             // must be re-applied on the presented content (a no-op on iOS). Without it, the sheet's
@@ -48,7 +54,10 @@ struct ContentView: View {
             .sheet(isPresented: $palette.showPalette, onDismiss: presentPendingEditor) {
                 CommandPaletteView(onSelect: handle).environment(store)
             }
-            .sheet(item: $paletteEditor) { TaskEditorView(request: $0).environment(store) }
+            // The one task editor sheet for every surface (see PaletteController.editor).
+            .sheet(item: $palette.editor) {
+                TaskEditorView(request: $0, compactPresenter: sizeClass == .compact).environment(store)
+            }
             .sheet(isPresented: $showAbout) { AboutView().presentationSizing(.fitted) }
             .sheet(isPresented: $showHelp) { HelpView() }
             .onOpenURL { handleDeepLink($0) }
@@ -115,7 +124,7 @@ struct ContentView: View {
                 .keyboardShortcut("k", modifiers: .command)
             Button("", action: { palette.showPalette = true })
                 .keyboardShortcut("f", modifiers: .command)
-            Button("", action: { paletteEditor = .new(.urgentImportant, prefill: nil) })
+            Button("", action: { palette.editor = .new(.urgentImportant, prefill: nil) })
                 .keyboardShortcut("n", modifiers: .command)
             Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.urgentImportant).url) })
                 .keyboardShortcut("1", modifiers: .command)
@@ -137,7 +146,7 @@ struct ContentView: View {
         case .focus:
             navigate(to: .matrix)   // the Matrix's Q1 quadrant IS today's focus
         case .capture:
-            paletteEditor = .new(.urgentImportant, prefill: nil)
+            palette.editor = .new(.urgentImportant, prefill: nil)
         case .quadrant(let quadrant):
             navigate(to: .matrix)
             palette.focusedQuadrant = quadrant
@@ -160,7 +169,7 @@ struct ContentView: View {
     private func openTask(_ id: String) {
         _Concurrency.Task { @MainActor in
             if let task = try? await store.fetchTask(id: id) {
-                paletteEditor = .edit(task)
+                palette.editor = .edit(task)
             } else {
                 navigate(to: .matrix)
             }
@@ -174,23 +183,39 @@ struct ContentView: View {
 
     @ViewBuilder private var rootContent: some View {
         if sizeClass == .compact {
-            TabView(selection: $palette.compactTab) {
-                MatrixView()
-                    .tabItem { Label(String(localized: "Matrix"), systemImage: "square.grid.2x2") }
-                    .tag(0)
-                SmartViewListView()
-                    .tabItem { Label(String(localized: "Browse"), systemImage: "line.3.horizontal.decrease.circle") }
-                    .tag(1)
-                DashboardView()
-                    .tabItem { Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis") }
-                    .tag(2)
-                SettingsView()
-                    .tabItem { Label(String(localized: "Settings"), systemImage: "gearshape") }
-                    .tag(3)
+            if #available(iOS 26.1, *) {
+                compactRoot
+                    // The undo window rides the tab bar as its accessory (see UndoDeleteAccessory).
+                    .tabViewBottomAccessory(isEnabled: undo.deleted != nil) { UndoDeleteAccessory(undo: undo) }
+            } else {
+                compactRoot
+                    // iOS 26.0 has no isEnabled accessory: keep the capsule clear of the tab bar.
+                    .overlay(alignment: .bottom) { UndoDeleteToast(undo: undo).padding(.bottom, 72) }
             }
         } else {
             RegularRootView()
         }
+    }
+
+    private var compactRoot: some View {
+        TabView(selection: $palette.compactTab) {
+            MatrixView()
+                .tabItem { Label(String(localized: "Matrix"), systemImage: "square.grid.2x2") }
+                .tag(0)
+            SmartViewListView()
+                .tabItem { Label(String(localized: "Browse"), systemImage: "line.3.horizontal.decrease.circle") }
+                .tag(1)
+            DashboardView()
+                .tabItem { Label(String(localized: "Dashboard"), systemImage: "chart.bar.xaxis") }
+                .tag(2)
+            SettingsView()
+                .tabItem { Label(String(localized: "Settings"), systemImage: "gearshape") }
+                .tag(3)
+        }
+        // The floating tab bar shrinks to the active tab while the user scrolls down and
+        // returns on scroll up, so on a scrolled matrix the pinned capture bar is the only
+        // chrome left in full.
+        .tabBarMinimizeBehavior(.onScrollDown)
     }
 
     private func handle(_ result: PaletteResult) {
@@ -217,7 +242,7 @@ struct ContentView: View {
     private func presentPendingEditor() {
         guard let pending = pendingEditor else { return }
         pendingEditor = nil
-        paletteEditor = pending
+        palette.editor = pending
     }
 
     private func navigate(to dest: PaletteDestination) {
@@ -262,8 +287,13 @@ private struct RegularRootView: View {
         @Bindable var palette = palette
         NavigationSplitView {
             List(selection: $palette.regularSelection) {
-                sidebarNavLabel(String(localized: "Matrix"), "square.grid.2x2", .matrix)
-                sidebarNavLabel(String(localized: "Dashboard"), "chart.bar.xaxis", .dashboard)
+                // The four-pigment mark, not a gray grid symbol: the matrix row is the app.
+                sidebarNavLabel(String(localized: "Matrix"), .matrix) {
+                    Image("LaunchMark").resizable().scaledToFit().frame(width: 22, height: 22)
+                }
+                sidebarNavLabel(String(localized: "Dashboard"), .dashboard) {
+                    sidebarSymbol("chart.bar.xaxis", .dashboard)
+                }
 
                 Section(String(localized: "Smart Views")) {
                     ForEach(store.pinnedViews) { view in sidebarRow(view) }
@@ -280,12 +310,12 @@ private struct RegularRootView: View {
                 }
 
                 Section(String(localized: "Library")) {
-                    sidebarNavLabel(String(localized: "Archive"), "archivebox", .archive)
-                    sidebarNavLabel(String(localized: "Settings"), "gearshape", .settings)
+                    sidebarNavLabel(String(localized: "Archive"), .archive) { sidebarSymbol("archivebox", .archive) }
+                    sidebarNavLabel(String(localized: "Settings"), .settings) { sidebarSymbol("gearshape", .settings) }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(Surface.surface2)
+            // No opaque fill: the sidebar is system chrome and takes the system's material
+            // (edge to edge on macOS 27), per PRODUCT.md principle 6.
             .navigationTitle("GSD")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -320,24 +350,28 @@ private struct RegularRootView: View {
         }
     }
 
-    /// A top-level sidebar destination: graphite icon + ink label (de-blued chrome).
-    private func sidebarNavLabel(_ title: String, _ icon: String, _ item: RegularItem) -> some View {
+    /// A top-level sidebar destination: an ink label beside the given icon (de-blued chrome).
+    private func sidebarNavLabel(_ title: String, _ item: RegularItem,
+                                 @ViewBuilder icon: () -> some View) -> some View {
         Label {
             Text(title).foregroundStyle(sidebarInk(item, base: Surface.ink))
         } icon: {
-            Image(systemName: icon).foregroundStyle(sidebarInk(item, base: Surface.ink2))
+            icon()
         }
         .tag(item)
     }
 
-    /// The row's normal ink, or the on-accent glyph color when it is the selected row over the
-    /// opaque Catalyst selection fill. iPad's selection is translucent, so it keeps the graphite ink.
-    private func sidebarInk(_ item: RegularItem, base: Color) -> Color {
-        #if targetEnvironment(macCatalyst)
-        palette.regularSelection == item ? Surface.inkOnAccent : base
-        #else
-        base
-        #endif
+    /// A graphite SF Symbol for a sidebar row, flipped to the on-accent ink when selected.
+    private func sidebarSymbol(_ name: String, _ item: RegularItem) -> some View {
+        Image(systemName: name).foregroundStyle(sidebarInk(item, base: Surface.ink2))
+    }
+
+    /// The row's normal ink, or the system's selected-content color when it is the selected
+    /// row. The selection fill is not ours to predict: since the 27 SDK it is the opaque app
+    /// tint (ink) on iPad, and on the Mac it is the accent while the sidebar has focus and a
+    /// neutral fill when it does not. `.primary` follows whichever fill the system painted.
+    private func sidebarInk(_ item: RegularItem, base: Color) -> AnyShapeStyle {
+        palette.regularSelection == item ? AnyShapeStyle(.primary) : AnyShapeStyle(base)
     }
 
     @ViewBuilder private func sidebarRow(_ view: SmartView) -> some View {

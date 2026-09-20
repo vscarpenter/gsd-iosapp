@@ -25,14 +25,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         return configuration
     }
 
-    func application(
-        _ application: UIApplication,
-        performActionFor shortcutItem: UIApplicationShortcutItem,
-        completionHandler: @escaping (Bool) -> Void
-    ) {
-        completionHandler(Self.handle(shortcutItem))
-    }
-
+    /// Quick actions arrive through the window scene (`QuickActionSceneDelegate`), both on a
+    /// cold launch and while running. The app-delegate `performActionFor` variant is the
+    /// pre-scene path and UIKit never calls it in a scene-based app.
     static func handle(_ shortcutItem: UIApplicationShortcutItem) -> Bool {
         guard let quickAction = QuickAction(rawValue: shortcutItem.type) else { return false }
         DeepLinkHandoff.open(quickAction.route)
@@ -49,7 +44,11 @@ final class QuickActionSceneDelegate: NSObject, UIWindowSceneDelegate {
     ) {
         #if targetEnvironment(macCatalyst)
         if let windowScene = scene as? UIWindowScene {
-            windowScene.sizeRestrictions?.minimumSize = CGSize(width: 720, height: 560)
+            if let size = DemoWindow.requested {
+                DemoWindow.pin(windowScene, to: size)   // screenshot harness only
+            } else {
+                windowScene.sizeRestrictions?.minimumSize = CGSize(width: 720, height: 560)
+            }
         }
         #endif
         guard let shortcutItem = connectionOptions.shortcutItem else { return }

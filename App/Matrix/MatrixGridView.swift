@@ -25,7 +25,6 @@ private struct MatrixGridContent: View {
     @Environment(PaletteController.self) private var palette
     @Environment(SyncCoordinator.self) private var sync
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
-    @State private var editor: EditorRequest?
     @State private var actionFailure: TaskActionFailure?
     @State private var selection = Set<String>()
     @Environment(\.editMode) private var editMode
@@ -37,7 +36,7 @@ private struct MatrixGridContent: View {
     var body: some View {
         VStack(spacing: 0) {
             CaptureBar { parsed, ov in
-                editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
+                palette.editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
             }
             ScrollViewReader { proxy in
                 ScrollView {
@@ -52,14 +51,15 @@ private struct MatrixGridContent: View {
                                 ),
                                 selection: $selection,
                                 isSelecting: isSelecting,
-                                onEdit: { editor = .edit($0) },
-                                onAdd: { editor = .new(q, prefill: nil) }
+                                onEdit: { palette.editor = .edit($0) },
+                                onAdd: { palette.editor = .new(q, prefill: nil) }
                             )
                             .id(q)
                         }
                     }
                     .padding(12)
                 }
+                .swipeActionsContainerIfAvailable()
                 .refreshable { await sync.syncNow() }
                 .onChange(of: palette.focusedQuadrant) { _, _ in consumeQuadrantFocus(proxy) }
                 .onAppear { consumeQuadrantFocus(proxy) }
@@ -72,12 +72,11 @@ private struct MatrixGridContent: View {
         .toolbar {
             brandedNavigationTitle(String(localized: "Matrix"))
             showCompletedToggle($showCompleted)
-            ToolbarItem(placement: .topBarTrailing) { EditButton() }
+            ToolbarItem(placement: .topBarTrailing) { EditButton() }.overflowsFirst()
         }
         // Bar visual sits in a bottom safeAreaInset; its prompts present from the main
         // content (see BulkActionBar) so they don't get reparented out of existence.
         .bulkActionBar(selection: $selection, failure: $actionFailure)
-        .sheet(item: $editor) { TaskEditorView(request: $0).environment(store) }  // Catalyst: re-inject store across the sheet boundary
         .taskActionFailureAlert($actionFailure)
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }
@@ -89,5 +88,19 @@ private struct MatrixGridContent: View {
         guard let q = palette.focusedQuadrant else { return }
         palette.focusedQuadrant = nil
         withAnimation { proxy.scrollTo(q, anchor: .top) }
+    }
+}
+
+private extension View {
+    /// Coordinates the cards' system swipe actions across all four cells: one row open at a
+    /// time, and a scroll or an outside tap closes it (List does this on its own; a ScrollView
+    /// needs the modifier). iOS 27 only; on the 26 floor the cards use `SwipeRevealRow`, which
+    /// coordinates itself through `QuadrantCell.openTaskID`.
+    @ViewBuilder func swipeActionsContainerIfAvailable() -> some View {
+        if #available(iOS 27, macOS 27, *) {
+            swipeActionsContainer()
+        } else {
+            self
+        }
     }
 }

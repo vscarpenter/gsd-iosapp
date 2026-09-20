@@ -1,0 +1,180 @@
+{
+  "fill": {
+    "solid": "extended-srgb:0.95686,0.94510,0.91373,1.00000"
+  },
+  "fill-specializations": [
+    {
+      "appearance": "dark",
+      "value": {
+        "solid": "extended-srgb:0.09020,0.08235,0.05882,1.00000"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "name": "Check",
+      "layers": [
+        {
+          "name": "check",
+          "image-name": "check.svg",
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          },
+          "glass": false,
+          "specular": false,
+          "blend-mode": "normal",
+          "opacity": 1,
+          "hidden": false,
+          "fill": {
+            "solid": "extended-srgb:1.00000,1.00000,1.00000,1.00000"
+          }
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.35
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      },
+      "lighting": "individual",
+      "specular": false,
+      "blur-material": 0
+    },
+    {
+      "name": "Tiles",
+      "layers": [
+        {
+          "name": "rust",
+          "image-name": "tile-rust.svg",
+          "fill": {
+            "solid": "extended-srgb:0.69804,0.22745,0.18039,1.00000"
+          },
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "extended-srgb:0.87843,0.43922,0.37255,1.00000"
+              }
+            }
+          ],
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          },
+          "glass": true,
+          "specular": true,
+          "blend-mode": "normal",
+          "opacity": 1,
+          "hidden": false
+        },
+        {
+          "name": "tide",
+          "image-name": "tile-tide.svg",
+          "fill": {
+            "solid": "extended-srgb:0.17255,0.40000,0.50196,1.00000"
+          },
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "extended-srgb:0.43529,0.66667,0.79608,1.00000"
+              }
+            }
+          ],
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          },
+          "glass": true,
+          "specular": true,
+          "blend-mode": "normal",
+          "opacity": 1,
+          "hidden": false
+        },
+        {
+          "name": "ochre",
+          "image-name": "tile-ochre.svg",
+          "fill": {
+            "solid": "extended-srgb:0.54118,0.41569,0.13333,1.00000"
+          },
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "extended-srgb:0.81176,0.69804,0.40000,1.00000"
+              }
+            }
+          ],
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          },
+          "glass": true,
+          "specular": true,
+          "blend-mode": "normal",
+          "opacity": 1,
+          "hidden": false
+        },
+        {
+          "name": "slate",
+          "image-name": "tile-slate.svg",
+          "fill": {
+            "solid": "extended-srgb:0.43529,0.40784,0.37255,1.00000"
+          },
+          "fill-specializations": [
+            {
+              "appearance": "dark",
+              "value": {
+                "solid": "extended-srgb:0.66275,0.62745,0.58824,1.00000"
+              }
+            }
+          ],
+          "position": {
+            "scale": 1,
+            "translation-in-points": [
+              0,
+              0
+            ]
+          },
+          "glass": true,
+          "specular": true,
+          "blend-mode": "normal",
+          "opacity": 1,
+          "hidden": false
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0
+      },
+      "lighting": "individual",
+      "specular": true,
+      "blur-material": 0.5
+    }
+  ],
+  "supported-platforms": {
+    "circles": [
+      "watchOS"
+    ],
+    "squares": "shared"
+  }
+}
