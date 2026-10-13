@@ -64,4 +64,49 @@ struct EditorMergeTests {
         let merged = EditorMerge.merge(current: opened, original: opened, edited: edited)
         #expect(merged == edited)
     }
+
+    // MARK: The editor's tidy-ups are not edits
+
+    @Test func untouchedAppliesOnlyTheEditorsTidyUps() {
+        var task = opened
+        task.title = "  padded  "; task.estimatedMinutes = 0
+        task.notificationEnabled = true; task.notifyBefore = 30   // on, but no due date
+        let untouched = EditorMerge.untouched(task)
+        #expect(untouched.title == "padded")
+        #expect(untouched.estimatedMinutes == nil)
+        #expect(untouched.notificationEnabled == false)            // the editor shows no reminder without a date
+        #expect(untouched.notifyBefore == nil)
+    }
+
+    @Test func aTitleOnlyEditKeepsAReminderSetElsewhere() {
+        // Quick-add leaves reminders on with no due date; the editor shows that as off. Meanwhile
+        // another device gave the task a due date and a 30-minute reminder.
+        var original = opened; original.notificationEnabled = true
+        var current = original
+        current.dueDate = t0.addingTimeInterval(86_400); current.notifyBefore = 30
+        var edited = EditorMerge.untouched(original); edited.title = "retitled"
+        let merged = EditorMerge.merge(current: current, original: EditorMerge.untouched(original), edited: edited)
+        #expect(merged.title == "retitled")
+        #expect(merged.dueDate == t0.addingTimeInterval(86_400))
+        #expect(merged.notificationEnabled)
+        #expect(merged.notifyBefore == 30)
+    }
+
+    @Test func aTitleTheEditorOnlyTrimmedKeepsARenameFromElsewhere() {
+        var original = opened; original.title = "  opened  "
+        var current = original; current.title = "renamed elsewhere"
+        let edited = EditorMerge.untouched(original)
+        let merged = EditorMerge.merge(current: current, original: EditorMerge.untouched(original), edited: edited)
+        #expect(merged.title == "renamed elsewhere")
+    }
+
+    @Test func aDueDateSetInTheEditorSavesTheReminderAsTheEditorShowedIt() {
+        // The due date and its reminder move together, so the save matches what the sheet showed:
+        // a new date with the reminder still off.
+        var original = opened; original.notificationEnabled = true
+        var edited = EditorMerge.untouched(original); edited.dueDate = t0
+        let merged = EditorMerge.merge(current: original, original: EditorMerge.untouched(original), edited: edited)
+        #expect(merged.dueDate == t0)
+        #expect(merged.notificationEnabled == false)
+    }
 }

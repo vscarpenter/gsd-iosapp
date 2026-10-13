@@ -543,6 +543,8 @@ struct TaskEditorView: View {
         addSubtask()
         var task: Task
         if let original {
+            // Keep these tidy-ups in step with `EditorMerge.untouched`, which the merge compares
+            // against so they don't count as edits.
             task = original
             task.title = title.trimmingCharacters(in: .whitespaces)
             task.description = description
@@ -589,7 +591,7 @@ struct TaskEditorView: View {
                 if let original {
                     // Merge onto the row as it is now, so a completion or edit synced in while the
                     // sheet was open survives (parity C10).
-                    guard try await store.saveEdits(task, openedAs: original) else {
+                    guard try await store.saveEdits(task, openedAs: EditorMerge.untouched(original)) else {
                         saveError = String(localized: "That task no longer exists, so your changes weren't saved.")
                         return
                     }

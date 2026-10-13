@@ -282,8 +282,9 @@ public final class TaskStore {
 
     /// The editor's Save for an existing task (parity C10). Merges the fields the user changed onto
     /// the row as it is now, not the snapshot the editor opened with, so a completion, snooze, or
-    /// pulled edit that landed while the sheet was open survives. Returns false and writes nothing
-    /// when the task is no longer live (deleted, trashed, or archived meanwhile).
+    /// pulled edit that landed while the sheet was open survives. `original` is the opened task as
+    /// the editor would save it untouched (`EditorMerge.untouched`). Returns false and writes
+    /// nothing when the task is no longer live (deleted, trashed, or archived meanwhile).
     @discardableResult
     public func saveEdits(_ edited: Task, openedAs original: Task) async throws -> Bool {
         guard let current = try await repository.fetch(id: original.id) else { return false }
