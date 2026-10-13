@@ -1,3 +1,21 @@
+# Parity port: Apple sync safety and editor merge (2026-10-13)
+
+Source of truth: the claude.ai Project "GSD Task Manager Project", `parity/backlog.md`.
+
+Two branches off `main` (`21f51c7`), written without a Swift toolchain (the build
+session couldn't reach download.swift.org), then reviewed by hand twice:
+
+- `fix/sync-safety-port`: B-05 and B-06 (`b83a26e`, `aaadde3`), B-04 (`0710f35`)
+- `fix/editor-merge-current-row`: B-03 (`daa612c`, `abc62f1`)
+
+## Resuming From Here
+- [ ] On each branch: `cd GSDKit && swift test`, then build iPhone, iPad, and Catalyst
+- [ ] Push each branch and open one PR per branch
+- [ ] After merge, flip S9, S10, S11, and C10 for Apple in `parity/feature-matrix.md`
+- Follow-ups logged in the backlog, not started: B-42 (edit beats a queued delete),
+  B-43 (archive leaves the remote copy), B-44 (far-future clamp), B-45 (index after delete),
+  D-9, D-10
+
 # iOS 27 / macOS 27 refresh (3.0.0)
 
 Branch: `feat/ios27-refresh`. Brief: `../design_handoff_ios27_refresh/gsd-iosapp.md`
