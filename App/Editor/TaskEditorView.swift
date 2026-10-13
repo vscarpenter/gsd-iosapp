@@ -34,8 +34,9 @@ struct TaskEditorView: View {
     // C4 — dependencies
     @State private var dependencies: [String]
     @State private var showingDependencyPicker = false
-    /// The task being edited (nil = creating a new one). Saving an edit mutates
-    /// THIS value so non-edited (Phase-2) fields survive.
+    /// The task being edited (nil = creating a new one). Save applies the editor's fields to
+    /// this value, then `TaskStore.saveEdits` keeps only the fields that differ from it and
+    /// merges them onto the stored row, so changes made elsewhere while the sheet was open survive.
     private let original: Task?
     /// Stable id for this editing session. For new tasks, reserved once so
     /// the dependency graph the picker validates against matches the persisted task (C4).
@@ -585,7 +586,16 @@ struct TaskEditorView: View {
         }
         _Concurrency.Task { @MainActor in
             do {
-                if original == nil { try await store.create(task) } else { try await store.save(task) }
+                if let original {
+                    // Merge onto the row as it is now, so a completion or edit synced in while the
+                    // sheet was open survives (parity C10).
+                    guard try await store.saveEdits(task, openedAs: original) else {
+                        saveError = String(localized: "That task no longer exists, so your changes weren't saved.")
+                        return
+                    }
+                } else {
+                    try await store.create(task)
+                }
                 dismiss()
             } catch let error as ValidationError {
                 saveError = error.message
