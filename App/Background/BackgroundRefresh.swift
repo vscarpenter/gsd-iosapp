@@ -5,7 +5,8 @@ import GSDStore
 /// Background app-refresh (product spec §9.4): runs the trash and auto-archive sweeps + badge
 /// refresh so data is fresh on next open. The auto-archive sweep runs here only when signed out:
 /// this refresh doesn't sync, and archiving deletes the server copy (parity B-43), so a signed-in
-/// sweep waits for a foreground sync that has pulled (`SyncCoordinator.afterCleanSync`). NOT relied on for timely reminders (those are pre-scheduled, §9.1).
+/// sweep waits for a foreground sync that has pulled (`SyncCoordinator.afterCleanSync`).
+/// NOT relied on for timely reminders (those are pre-scheduled, §9.1).
 /// The identifier must match `project.yml`'s `BGTaskSchedulerPermittedIdentifiers`.
 enum BackgroundRefresh {
     static let taskIdentifier = "dev.vinny.gsd.refresh"

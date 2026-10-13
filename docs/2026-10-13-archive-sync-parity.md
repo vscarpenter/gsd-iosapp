@@ -41,8 +41,13 @@ The October 12 parity audit logged the gap as backlog B-43:
   sweep from a stale copy would delete a task someone reopened on another device. So the launch
   sweep and the background-refresh sweep (which never syncs) run only when signed out. Signed in,
   `SyncCoordinator.afterCleanSync` runs the sweep after every sync that pulled without an error.
-  The Archive now and settings actions still sweep directly. They run in the foreground, where the
-  2-minute cadence and realtime keep the local copy current.
+  Archive now in Settings and the auto-archive controls in Archive still sweep directly. That is
+  usually current in the foreground, through the 2-minute cadence and realtime, but not when the
+  device is offline, before the launch sync finishes, or with a session the server rejects.
+  Routing those actions through a sync first is a possible follow-up.
+- Two edges of the signed-in check: a session the server rejects makes every sync fail, so
+  auto-archive stops until the user signs in again. And the check reads the token from the
+  keychain, so a keychain read error in the background reads as signed out and lets that sweep run.
 - A realtime delete for a task with no live row, such as an archive's own delete echoing back, is
   now ignored. Before, it still scrubbed the task's id from other tasks' dependencies and
   restamped them with nothing queued.

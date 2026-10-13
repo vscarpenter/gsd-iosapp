@@ -52,8 +52,8 @@ public enum TaskStoreError: Error, LocalizedError {
     /// row is gone, so the next sync's seed cannot re-enqueue the lost delete). Surfaced so the
     /// user can retry, instead of a silent delete-then-resurrect.
     case deleteNotRecorded
-    /// An archive's server delete could not be queued, so the task was put back to active rather
-    /// than left archived here with a server copy every other device would keep showing.
+    /// An archive's server delete could not be queued. The task is put back to active when that
+    /// write succeeds, rather than left archived here with a server copy other devices keep showing.
     case archiveNotRecorded
 
     public var errorDescription: String? {
@@ -62,7 +62,8 @@ public enum TaskStoreError: Error, LocalizedError {
             String(localized: "Couldn't delete the task right now. Please try again.")
         case .archiveNotRecorded:
             // Shown after "Couldn't run auto-archive:" in Settings and Archive, so it doesn't repeat it.
-            String(localized: "A task couldn't be queued for sync. Please try again.")
+            // No mention of sync: signed out, nothing leaves the device (offline-first copy rule).
+            String(localized: "A task couldn't be archived. Please try again.")
         }
     }
 }
