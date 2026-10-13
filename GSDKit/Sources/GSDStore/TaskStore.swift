@@ -52,11 +52,16 @@ public enum TaskStoreError: Error, LocalizedError {
     /// row is gone, so the next sync's seed cannot re-enqueue the lost delete). Surfaced so the
     /// user can retry, instead of a silent delete-then-resurrect.
     case deleteNotRecorded
+    /// The same for archiving, which also deletes the server copy: the task stays active rather
+    /// than leaving a server copy that every other device would keep showing.
+    case archiveNotRecorded
 
     public var errorDescription: String? {
         switch self {
         case .deleteNotRecorded:
             String(localized: "Couldn't delete the task right now. Please try again.")
+        case .archiveNotRecorded:
+            String(localized: "Couldn't archive the task right now. Please try again.")
         }
     }
 }
@@ -601,18 +606,29 @@ public final class TaskStore {
 
     /// Move a task into the archive (removed from active). Goes through the archive
     /// repository's single-transaction move; the observers refresh `tasks`/`archivedTasks`.
-    /// Archive is device-local — NO enqueue (§7.1 has no `archived` column; the archive STATE never
-    /// syncs). Note `restore` DOES enqueue (it re-activates the task — see below).
+    /// Archiving also deletes the server copy, as web and Android do and product spec §6.12 says
+    /// (parity B-43): the archive row lives on this device only, other devices drop the task, and
+    /// `restore` re-uploads it. Until 2026-10-13 archive was device-local, which left an archived
+    /// task active on every other client. Like `delete`, the delete is recorded BEFORE the row moves;
+    /// if it can't be, the task stays active rather than leaving that server copy behind.
     public func archive(_ task: Task) async throws {
-        try await archiveRepository.archive(task)
+        guard let queueItemId = await enqueue(task.id, .delete, payload: nil) else {
+            throw TaskStoreError.archiveNotRecorded
+        }
+        do {
+            try await archiveRepository.archive(task)
+        } catch {
+            try? await syncQueue.remove(id: queueItemId)
+            throw error
+        }
         await reminders.cancel(taskID: task.id)   // an archived task must not fire a reminder
     }
 
     /// Restore an archived task to active, stamping `updatedAt` so it sorts fresh.
     /// Two writes: the repository re-inserts the stored row, then we upsert the freshened
     /// `updatedAt` (the active observer coalesces both into one snapshot). The task is active again,
-    /// so it enqueues `.update` — it's re-pushed and survives deletion-reconcile (closes the
-    /// archive-here / delete-remotely / restore-here edge; the archive STATE itself still never syncs).
+    /// so it enqueues `.update`, which re-uploads it after archiving deleted the server copy and
+    /// keeps deletion-reconcile from removing it. The archive membership itself never syncs.
     public func restore(_ task: Task) async throws {
         var t = task
         t.updatedAt = clock()
@@ -625,14 +641,15 @@ public final class TaskStore {
     }
 
     /// Archive every completed task older than the configured threshold — but only when
-    /// auto-archive is enabled. Pure selection via `AutoArchive`; gating lives here.
+    /// auto-archive is enabled. Pure selection via `AutoArchive`; gating lives here. Each task goes
+    /// through `archive`, so it also leaves the server.
     public func runAutoArchiveSweep() async throws {
         let settings = archiveSettings
         guard settings.autoEnabled else { return }
         let allTasks = try await repository.fetchAll()
         let toArchive = AutoArchive.tasksToArchive(allTasks, afterDays: settings.afterDays,
                                                    now: clock(), calendar: calendar)
-        for task in toArchive { try await archiveRepository.archive(task) }
+        for task in toArchive { try await archive(task) }
     }
 
     // MARK: Archive settings (App-Group UserDefaults; design-spec scope call)
