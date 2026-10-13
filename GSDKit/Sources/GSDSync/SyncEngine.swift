@@ -100,6 +100,13 @@ public actor SyncEngine {
         var pushed = 0, failed = 0
         for item in try await queue.pending() where isDue(item, nowMs: nowMs) {
             let remote = index[item.taskId]
+            // Parity S11 (Android `MalformedRemoteVersion`): a remote copy whose version is missing or
+            // unparseable can't be shown to be older, so an upsert must not overwrite it. Skip it and
+            // spend a retry, like any failed attempt. A delete carries no version to compare.
+            if item.operation != .delete, let remote, remote.clientUpdatedAt == nil {
+                try await recordFailedAttempt(item, reason: "Remote task version is missing or malformed", nowMs: nowMs)
+                failed += 1; continue
+            }
             // payload-LWW-guard (upserts only): remote strictly newer than what we'd write → drop, let pull win.
             if item.operation != .delete, let payload = item.payload, let remoteUpdated = remote?.clientUpdatedAt,
                Int(remoteUpdated.timeIntervalSince1970 * 1000) > Int(payload.updatedAt.timeIntervalSince1970 * 1000) {
@@ -125,19 +132,26 @@ public actor SyncEngine {
             } catch let e as PocketBaseError {
                 if case .http(429, _) = e { break }                    // 429 → abort
                 if case .pocketBase(429, _) = e { break }
-                var f = item; f.retryCount += 1; f.lastAttemptAt = nowMs; f.lastError = String("\(e)".prefix(200))
-                if f.retryCount >= 5 { f.status = .failed; f.failedAt = nowMs }
-                try await queue.update(f); failed += 1
+                try await recordFailedAttempt(item, reason: "\(e)", nowMs: nowMs); failed += 1
             }
         }
         return (pushed, failed)
+    }
+
+    /// Spend one retry on `item`: kept `.pending` for the next due sync, `.failed` after 5 (kept).
+    private func recordFailedAttempt(_ item: SyncQueueItem, reason: String, nowMs: Int) async throws {
+        var f = item; f.retryCount += 1; f.lastAttemptAt = nowMs; f.lastError = String(reason.prefix(200))
+        if f.retryCount >= 5 { f.status = .failed; f.failedAt = nowMs }
+        try await queue.update(f)
     }
 
     /// §7.4 step 5 (destructive — runs LAST, over a FRESH post-push remote index): delete local
     /// ACTIVE tasks absent remotely AND not in the queue. `fetchAll()` is the active table only
     /// (archived is a separate repo, out of scope). `allTaskIds()` = pending + failed (both
     /// protect) and is read AFTER `fetchAll` — TaskStore enqueues before it upserts, so any task
-    /// in the snapshot already has its protection visible to this later read (Fix E).
+    /// in the snapshot already has its protection visible to this later read (Fix E). The index
+    /// fails closed (parity S10): an incomplete or unidentifiable listing throws before anything
+    /// is deleted, instead of reading a record it couldn't decode as deleted on the server.
     func reconcileDeletions(token: String) async throws -> Int {
         let remoteIds = Set(try await client.remoteIndex(token: token).keys)
         let snapshot = try await tasks.fetchAll()
