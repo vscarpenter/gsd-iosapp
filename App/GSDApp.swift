@@ -101,6 +101,10 @@ struct GSDApp: App {
             signedIn: { tokenStore.load() != nil })
         _coordinator = State(initialValue: coordinator)
         store.onMutation = { coordinator.scheduleDebouncedPush() }
+        // Auto-archive deletes each archived task's server copy (parity B-43). Signed in, it runs
+        // only after a sync has pulled, so it never archives a stale local copy of a task that was
+        // reopened elsewhere. The launch task and BackgroundRefresh sweep directly only when signed out.
+        coordinator.afterCleanSync = { _ = try? await store.runAutoArchiveSweep() }
         // Widget snapshot refresher (Phase 6a): rebuilds the App-Group snapshot + reloads
         // widget timelines whenever the task set changes (local edits, remote sync, background).
         let widgetRefresher = WidgetSnapshotRefresher(store: store)
@@ -140,7 +144,7 @@ struct GSDApp: App {
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
         // and would trip "all launch handlers must be registered before application finishes
         // launching". `App.init()` is main-actor-isolated, so the @MainActor register is safe.
-        BackgroundRefresh.register(store: store)
+        BackgroundRefresh.register(store: store, signedIn: { coordinator.isSignedIn })
     }
 
     var body: some Scene {
@@ -180,7 +184,8 @@ struct GSDApp: App {
                         }
                     }
                     widgetRefresher.start()
-                    try? await store.runAutoArchiveSweep()
+                    // Signed in, the sweep waits for the launch sync below to pull (afterCleanSync).
+                    if !coordinator.isSignedIn { try? await store.runAutoArchiveSweep() }
                     _ = try? await store.runTrashRetentionSweep()
                     await store.refreshBadge()
                     coordinator.start(trigger: .launch)

@@ -388,6 +388,10 @@ public actor SyncEngine {
             try? await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
         case .delete:
             if pending.contains(where: { $0.taskId == record.taskId }) { return }   // queue-aware
+            // No live row: the task is archived or trashed here (an archive's own delete echoes
+            // back), or already gone. Deleting anyway would still scrub its id from other tasks'
+            // dependencies and restamp them with nothing queued, so they'd drift from the server.
+            guard (try? await tasks.fetch(id: record.taskId)) != nil else { return }
             try? await tasks.delete(id: record.taskId)
         }
     }

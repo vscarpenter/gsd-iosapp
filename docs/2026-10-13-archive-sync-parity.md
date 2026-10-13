@@ -28,11 +28,24 @@ The October 12 parity audit logged the gap as backlog B-43:
 
 **Archiving on Apple deletes the server copy, as on web and Android.**
 
-- `TaskStore.archive` queues a `.delete` before it moves the row, the same order `delete` uses.
-  If the delete can't be recorded, the task stays active and `archive` throws
-  `TaskStoreError.archiveNotRecorded`. If the move fails, the queued delete is removed.
+- `TaskStore.archive` moves the row first and then queues a `.delete`. That is the reverse of
+  `delete`, because the two are separate writes and the database can be suspended between them in
+  the background. Moving first means a failure can at worst leave an archived task whose server
+  copy survives. Queuing first could leave a delete pending for a task that is still live, which
+  deletion reconcile would then remove with no archive or trash copy. If the queue write fails,
+  the task goes back to active and `archive` throws `TaskStoreError.archiveNotRecorded`.
 - `runAutoArchiveSweep` archives through `TaskStore.archive`, so each swept task also leaves the
   server.
+- **While signed in, auto-archive runs only after a sync has pulled.** The sweep picks tasks from
+  the local copy, and its delete is newer than any edit made elsewhere since the last sync. A
+  sweep from a stale copy would delete a task someone reopened on another device. So the launch
+  sweep and the background-refresh sweep (which never syncs) run only when signed out. Signed in,
+  `SyncCoordinator.afterCleanSync` runs the sweep after every sync that pulled without an error.
+  The Archive now and settings actions still sweep directly. They run in the foreground, where the
+  2-minute cadence and realtime keep the local copy current.
+- A realtime delete for a task with no live row, such as an archive's own delete echoing back, is
+  now ignored. Before, it still scrubbed the task's id from other tasks' dependencies and
+  restamped them with nothing queued.
 - `restore` is unchanged. It already queued an `.update`, which now re-uploads the task.
 - Archive membership itself still doesn't sync. The archived row lives only on the device that
   archived it.
@@ -44,9 +57,16 @@ The October 12 parity audit logged the gap as backlog B-43:
   themselves. This is the existing cross-client behavior; Apple now takes part in it.
 - **Older archives stay as they are.** Tasks already in an Apple archive before this change keep
   their server copies (owner's call). Restoring one and archiving it again removes the copy.
-- **Edits made elsewhere can lose to the delete.** Apple's push has no edit-beats-delete guard
-  (backlog B-42; Android also lacks it, web has it). If another device edits an archived task
+- **Edits made elsewhere can lose to the delete.** If another device edits an archived task
   before this device pushes the delete, the delete still removes that edit from the server.
+  Apple's push has no edit-beats-delete guard (backlog B-42; Android also lacks it, web has it).
+  A guard on push alone wouldn't be enough. A queued delete also suppresses newer remote edits in
+  pull and realtime (the B-04 rule), and pull advances its cursor past what it suppressed. B-42
+  must lift those exemptions too, or the task ends up archived here and live everywhere else.
+- **Imported archive rows behave like older archives.** Restoring a backup writes its archived
+  rows without queuing deletes, as web's import does. For those rows and for tasks archived before
+  this change, the server copy stays active elsewhere. Delete permanently in Archive still brings
+  them back on the next full pull, because it removes the tombstone while the server copy survives.
 - **Archive then restore before a sync costs a retry.** Push doesn't drop a deleted task from its
   in-memory index (backlog B-45), so the restore's update PATCHes the deleted record and spends a
   retry. The next sync creates the task again.

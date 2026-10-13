@@ -120,6 +120,21 @@ struct SyncEngineRealtimeTests {
         #expect(try await tasks.fetch(id: "t1") != nil)   // queued → not dropped by realtime
     }
 
+    @Test func deleteOfATaskWithNoLiveRowChangesNothing() async throws {
+        // Archiving queues a server delete (parity B-43), and the delete echoes back over realtime
+        // while the task sits in this device's archive. Deleting anyway still scrubbed its id from
+        // other tasks' dependencies and restamped them, with nothing queued to push.
+        let db = try AppDatabase.inMemory(); let (eng, tasks, _) = make(db)
+        let stamp = Date(timeIntervalSince1970: 1)
+        try await tasks.upsert(Task(id: "b", title: "blocked", urgent: false, important: false,
+                                    createdAt: stamp, updatedAt: stamp, dependencies: ["a"]))
+        let json = #"{"action":"delete","record":{"task_id":"a","owner":"u1","device_id":"dev-A"}}"#
+        await eng.applyRealtime(rawData: json)
+        let blocked = try await tasks.fetch(id: "b")
+        #expect(blocked?.dependencies == ["a"])
+        #expect(blocked?.updatedAt == stamp)
+    }
+
     @Test func malformedDoesNotCrash() async throws {
         let db = try AppDatabase.inMemory(); let (eng, _, _) = make(db)
         await eng.applyRealtime(rawData: "not json")

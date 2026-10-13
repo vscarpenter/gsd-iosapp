@@ -52,8 +52,8 @@ public enum TaskStoreError: Error, LocalizedError {
     /// row is gone, so the next sync's seed cannot re-enqueue the lost delete). Surfaced so the
     /// user can retry, instead of a silent delete-then-resurrect.
     case deleteNotRecorded
-    /// The same for archiving, which also deletes the server copy: the task stays active rather
-    /// than leaving a server copy that every other device would keep showing.
+    /// An archive's server delete could not be queued, so the task was put back to active rather
+    /// than left archived here with a server copy every other device would keep showing.
     case archiveNotRecorded
 
     public var errorDescription: String? {
@@ -61,7 +61,8 @@ public enum TaskStoreError: Error, LocalizedError {
         case .deleteNotRecorded:
             String(localized: "Couldn't delete the task right now. Please try again.")
         case .archiveNotRecorded:
-            String(localized: "Couldn't archive the task right now. Please try again.")
+            // Shown after "Couldn't run auto-archive:" in Settings and Archive, so it doesn't repeat it.
+            String(localized: "A task couldn't be queued for sync. Please try again.")
         }
     }
 }
@@ -609,17 +610,19 @@ public final class TaskStore {
     /// Archiving also deletes the server copy, as web and Android do and product spec §6.12 says
     /// (parity B-43): the archive row lives on this device only, other devices drop the task, and
     /// `restore` re-uploads it. Until 2026-10-13 archive was device-local, which left an archived
-    /// task active on every other client. Like `delete`, the delete is recorded BEFORE the row moves;
-    /// if it can't be, the task stays active rather than leaving that server copy behind.
+    /// task active on every other client.
+    ///
+    /// Unlike `delete`, the row moves BEFORE the delete is queued. The two are separate writes, and
+    /// the database can be suspended between them in the background. Moving first means a failure
+    /// can at worst leave an archived task whose server copy survives. Queuing first could leave a
+    /// delete pending for a task that is still live, and once it pushed, deletion reconcile would
+    /// remove that task with no archive or trash copy. If the queue write fails, the task goes
+    /// back to active and nothing changes on the server.
     public func archive(_ task: Task) async throws {
-        guard let queueItemId = await enqueue(task.id, .delete, payload: nil) else {
+        try await archiveRepository.archive(task)
+        guard await enqueue(task.id, .delete, payload: nil) != nil else {
+            try? await archiveRepository.restore(id: task.id)
             throw TaskStoreError.archiveNotRecorded
-        }
-        do {
-            try await archiveRepository.archive(task)
-        } catch {
-            try? await syncQueue.remove(id: queueItemId)
-            throw error
         }
         await reminders.cancel(taskID: task.id)   // an archived task must not fire a reminder
     }

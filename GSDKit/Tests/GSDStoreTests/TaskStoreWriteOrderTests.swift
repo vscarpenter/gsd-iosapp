@@ -53,7 +53,7 @@ struct TaskStoreWriteOrderTests {
     }
 
     /// Archiving deletes the server copy too (parity B-43), so the move into the archive is
-    /// ordered against the delete's enqueue the same way the move into the trash is.
+    /// ordered against the delete's enqueue, like the move into the trash.
     final class LoggingArchive: ArchiveRepository, @unchecked Sendable {
         let log: EventLog
         var failArchive = false
@@ -64,7 +64,7 @@ struct TaskStoreWriteOrderTests {
             log.events.append("archive")
             if failArchive { throw Boom() }
         }
-        func restore(id: String) async throws {}
+        func restore(id: String) async throws { log.events.append("restore") }
         func deletePermanently(id: String) async throws {}
         func fetchAll() async throws -> [Task] { [] }
         func fetchAllStamped() async throws -> [ArchivedTask] { [] }
@@ -134,34 +134,36 @@ struct TaskStoreWriteOrderTests {
         #expect(queue.items.isEmpty)
     }
 
-    @Test func archiveEnqueuesADeleteBeforeMovingTheRowToTheArchive() async throws {
+    /// Archive is the reverse of delete: the row moves first, then the delete is queued. A
+    /// failure between the two can then at worst leave an archived task whose server copy
+    /// survives. Queuing first could leave a delete pending for a task that is still live, and
+    /// after it pushed, deletion reconcile would remove that task with no archive or trash copy.
+    @Test func archiveMovesTheRowBeforeQueuingTheDelete() async throws {
         let log = EventLog()
         let queue = LoggingQueue(log: log)
         let store = try makeStore(repo: LoggingRepository(log: log), queue: queue)
         try await store.archive(task("a"))
-        #expect(log.events == ["enqueue", "archive"])
+        #expect(log.events == ["archive", "enqueue"])
         #expect(queue.items.map(\.operation) == [.delete])
     }
 
-    /// Same reasoning as the delete above: an archive that moved the row without recording the
-    /// delete would leave the server copy active on every other device, with nothing queued to fix it.
-    @Test func archiveAbortsAndKeepsTheTaskActiveWhenEnqueueFails() async throws {
+    @Test func archivePutsTheTaskBackWhenTheDeleteCannotBeQueued() async throws {
         let log = EventLog()
         let queue = LoggingQueue(log: log); queue.failEnqueue = true
         let store = try makeStore(repo: LoggingRepository(log: log), queue: queue)
         await #expect(throws: TaskStoreError.archiveNotRecorded) { try await store.archive(self.task("a")) }
-        #expect(!log.events.contains("archive"))
+        #expect(log.events == ["archive", "restore"])                 // live again, server copy untouched
         #expect(queue.items.isEmpty)
     }
 
-    @Test func failedArchiveRemovesTheOrphanedDelete() async throws {
+    @Test func aFailedArchiveQueuesNothing() async throws {
         let log = EventLog()
         let archive = LoggingArchive(log: log); archive.failArchive = true
         let queue = LoggingQueue(log: log)
         let store = try makeStore(repo: LoggingRepository(log: log), queue: queue, archive: archive)
         await #expect(throws: LoggingArchive.Boom.self) { try await store.archive(self.task("a")) }
         #expect(queue.items.isEmpty)                                  // the task stayed live, so no delete
-        #expect(log.events == ["enqueue", "archive", "remove"])
+        #expect(log.events == ["archive"])
     }
 
     @Test func failedUpsertRemovesTheOrphanedQueueItem() async throws {
