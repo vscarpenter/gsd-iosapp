@@ -80,6 +80,25 @@ struct TaskStoreArchiveTests {
         #expect(store.archivedTasks.map(\.id) == ["old"])
         #expect(store.tasks.map(\.id) == ["recent"])
     }
+    @Test func sweepQueuesADeleteForEachTaskItArchives() async throws {
+        // Auto-archive goes through the same path as Archive, so each swept task also leaves the
+        // server (parity B-43). The task it keeps is not touched.
+        let db = try AppDatabase.inMemory()
+        let queue = GRDBSyncQueueRepository(db)
+        let fixed = now
+        let store = TaskStore(repository: GRDBTaskRepository(db, now: { fixed }),
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db, now: { fixed }),
+                              trashRepository: GRDBTrashRepository(db, now: { fixed }),
+                              defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
+                              clock: { fixed }, newID: { "id" }, calendar: cal, syncQueue: queue)
+        store.archiveSettings = ArchiveSettings(autoEnabled: true, afterDays: 30)
+        try await store.create(completed("old", at: day(2026, 1, 1)))
+        try await store.create(completed("recent", at: day(2026, 6, 14)))
+        try await store.runAutoArchiveSweep()
+        let deletes = try await queue.pending().filter { $0.operation == .delete }.map(\.taskId)
+        #expect(deletes == ["old"])
+    }
     @Test func archiveSettingsPersistToDefaults() async throws {
         let store = try makeStore()
         store.archiveSettings = ArchiveSettings(autoEnabled: true, afterDays: 60)

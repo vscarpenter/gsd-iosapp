@@ -52,6 +52,27 @@ struct TaskStoreWriteOrderTests {
         }
     }
 
+    /// Archiving deletes the server copy too (parity B-43), so the move into the archive is
+    /// ordered against the delete's enqueue, like the move into the trash.
+    final class LoggingArchive: ArchiveRepository, @unchecked Sendable {
+        let log: EventLog
+        var failArchive = false
+        struct Boom: Error {}
+        init(log: EventLog) { self.log = log }
+        func archive(_ task: Task) async throws { try await archive(task, at: Date()) }
+        func archive(_ task: Task, at archivedAt: Date) async throws {
+            log.events.append("archive")
+            if failArchive { throw Boom() }
+        }
+        func restore(id: String) async throws { log.events.append("restore") }
+        func deletePermanently(id: String) async throws {}
+        func fetchAll() async throws -> [Task] { [] }
+        func fetchAllStamped() async throws -> [ArchivedTask] { [] }
+        func observeAll() -> AsyncThrowingStream<[Task], Error> {
+            AsyncThrowingStream { $0.finish() }
+        }
+    }
+
     final class LoggingQueue: SyncQueueRepository, @unchecked Sendable {
         let log: EventLog
         var items: [SyncQueueItem] = []
@@ -70,11 +91,11 @@ struct TaskStoreWriteOrderTests {
     }
 
     private func makeStore(repo: LoggingRepository, queue: LoggingQueue,
-                           trash: LoggingTrash? = nil) throws -> TaskStore {
+                           trash: LoggingTrash? = nil, archive: LoggingArchive? = nil) throws -> TaskStore {
         let db = try AppDatabase.inMemory()
         return TaskStore(repository: repo,
                          smartViewRepository: GRDBSmartViewRepository(db),
-                         archiveRepository: GRDBArchiveRepository(db),
+                         archiveRepository: archive ?? LoggingArchive(log: repo.log),
                          trashRepository: trash ?? LoggingTrash(log: repo.log),
                          defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!,
                          clock: { Date(timeIntervalSince1970: 1000) },
@@ -111,6 +132,38 @@ struct TaskStoreWriteOrderTests {
         await #expect(throws: (any Error).self) { try await store.delete(self.task("a")) }
         #expect(!log.events.contains("trash"))    // row NOT moved → still active → cannot resurrect
         #expect(queue.items.isEmpty)
+    }
+
+    /// Archive is the reverse of delete: the row moves first, then the delete is queued. A
+    /// failure between the two can then at worst leave an archived task whose server copy
+    /// survives. Queuing first could leave a delete pending for a task that is still live, and
+    /// after it pushed, deletion reconcile would remove that task with no archive or trash copy.
+    @Test func archiveMovesTheRowBeforeQueuingTheDelete() async throws {
+        let log = EventLog()
+        let queue = LoggingQueue(log: log)
+        let store = try makeStore(repo: LoggingRepository(log: log), queue: queue)
+        try await store.archive(task("a"))
+        #expect(log.events == ["archive", "enqueue"])
+        #expect(queue.items.map(\.operation) == [.delete])
+    }
+
+    @Test func archivePutsTheTaskBackWhenTheDeleteCannotBeQueued() async throws {
+        let log = EventLog()
+        let queue = LoggingQueue(log: log); queue.failEnqueue = true
+        let store = try makeStore(repo: LoggingRepository(log: log), queue: queue)
+        await #expect(throws: TaskStoreError.archiveNotRecorded) { try await store.archive(self.task("a")) }
+        #expect(log.events == ["archive", "restore"])                 // live again, server copy untouched
+        #expect(queue.items.isEmpty)
+    }
+
+    @Test func aFailedArchiveQueuesNothing() async throws {
+        let log = EventLog()
+        let archive = LoggingArchive(log: log); archive.failArchive = true
+        let queue = LoggingQueue(log: log)
+        let store = try makeStore(repo: LoggingRepository(log: log), queue: queue, archive: archive)
+        await #expect(throws: LoggingArchive.Boom.self) { try await store.archive(self.task("a")) }
+        #expect(queue.items.isEmpty)                                  // the task stayed live, so no delete
+        #expect(log.events == ["archive"])
     }
 
     @Test func failedUpsertRemovesTheOrphanedQueueItem() async throws {

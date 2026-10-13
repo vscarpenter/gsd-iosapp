@@ -33,6 +33,14 @@ final class SyncCoordinator {
     @ObservationIgnored private var online = true
     @ObservationIgnored private var active = false
 
+    /// Runs after every sync that pulled cleanly. GSDApp hangs the auto-archive sweep here: archiving
+    /// deletes the server copy (parity B-43), so while signed in the sweep must decide from data at
+    /// least as fresh as the last pull, never from a stale local copy at launch or in the background.
+    @ObservationIgnored var afterCleanSync: (@MainActor () async -> Void)?
+
+    /// Whether a sync session exists, for callers that must not act on stale data while signed in.
+    var isSignedIn: Bool { signedIn() }
+
     init(engine: SyncEngine, realtime: PocketBaseRealtime,
          tokenProvider: @escaping @Sendable () async -> String?,
          signedIn: @escaping @MainActor () -> Bool) {
@@ -222,6 +230,7 @@ final class SyncCoordinator {
         phase = .syncing
         let result = await engine.sync(trigger: trigger)
         apply(result)
+        if !result.skipped, !result.notSignedIn, result.error == nil { await afterCleanSync?() }
     }
 
     private func runPush() async {

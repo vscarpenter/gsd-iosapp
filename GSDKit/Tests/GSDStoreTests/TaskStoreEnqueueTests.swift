@@ -103,11 +103,14 @@ struct TaskStoreEnqueueTests {
         #expect(q.ops.contains { $0.op == .create && $0.taskId != "r" })          // the spawned next instance
     }
 
-    @Test func archiveDoesNotEnqueueButRestoreEnqueuesUpdate() async throws {
+    @Test func archiveEnqueuesDeleteAndRestoreEnqueuesUpdate() async throws {
         let q = RecordingQueue(); let store = try makeStore(q)
         try await store.create(sample("a")); q.ops.removeAll()
         try await store.archive(sample("a"))
-        #expect(q.ops.isEmpty)   // archive is device-local (the archive state never syncs)
+        // Archiving deletes the server copy, as on web and Android (parity B-43). The archive row
+        // itself stays on this device.
+        #expect(q.ops.count == 1 && q.ops.contains { $0.taskId == "a" && $0.op == .delete })
+        q.ops.removeAll()
         try await store.restore(sample("a"))
         #expect(q.ops.count == 1 && q.ops.contains { $0.taskId == "a" && $0.op == .update })   // restore re-activates → push it
     }
