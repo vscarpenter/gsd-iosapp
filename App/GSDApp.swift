@@ -85,6 +85,7 @@ struct GSDApp: App {
         let syncEngine = SyncEngine(
             client: PocketBaseClient(baseURL: AuthConfig.live.baseURL),
             tasks: taskRepo, queue: queueRepo,
+            tombstones: GRDBTombstoneRepository(database),   // archive + trash block stale remote copies
             cursor: SyncCursor(),
             deviceId: DeviceIdentity.current(nameProvider: { deviceName }).deviceId,
             tokenProvider: { try await authService.validToken() },

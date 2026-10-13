@@ -15,6 +15,12 @@ public struct SyncResult: Equatable, Sendable {
 
 public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, periodic, networkRegained, mutation }
 
+/// What the internal test initializer passes for `tombstones`: no task is archived or trashed.
+private struct NoTombstones: TombstoneRepository {
+    func tombstoneDate(id: String) async throws -> Date? { nil }
+    func resurrect(_ task: Task) async throws {}
+}
+
 /// Bidirectional active-task sync (§7.4–7.5). Writes pulled tasks DIRECTLY via the repository
 /// (preserving the wire `client_updated_at`; never re-stamping; never enqueuing). `actor` for state
 /// safety; single-flight is an explicit `isSyncing` drop. The `sync()` orchestration is added in Group C.
@@ -22,6 +28,7 @@ public actor SyncEngine {
     private let client: PocketBaseClient
     private let tasks: any TaskRepository
     private let queue: any SyncQueueRepository
+    private let tombstones: any TombstoneRepository
     private let cursor: SyncCursor
     private let deviceId: String
     private let tokenProvider: @Sendable () async throws -> String?
@@ -34,17 +41,34 @@ public actor SyncEngine {
 
     /// `rawToken` reads the STORED token without validation/refresh — only `health()` uses it, so
     /// an expired-but-present session can still be reported as "session expired" (the validating
-    /// `tokenProvider` throws in that state and carries no expiry).
+    /// `tokenProvider` throws in that state and carries no expiry). `tombstones` is the archive and
+    /// trash, so pull and realtime don't bring back a task archived or trashed here (parity S9).
     public init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
+                tombstones: any TombstoneRepository,
                 cursor: SyncCursor, deviceId: String,
                 tokenProvider: @escaping @Sendable () async throws -> String?,
                 rawToken: @escaping @Sendable () -> String? = { nil },
                 now: @escaping @Sendable () -> Date = { Date() },
                 throttleMs: Int = 100,
                 history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
-        self.client = client; self.tasks = tasks; self.queue = queue; self.cursor = cursor
+        self.client = client; self.tasks = tasks; self.queue = queue; self.tombstones = tombstones
+        self.cursor = cursor
         self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.rawToken = rawToken
         self.now = now; self.throttleMs = throttleMs; self.history = history
+    }
+
+    /// Test seam for the many engine tests that never archive or trash a task. Internal, so the
+    /// App can't reach it and must pass real tombstones to the public initializer.
+    init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
+         cursor: SyncCursor, deviceId: String,
+         tokenProvider: @escaping @Sendable () async throws -> String?,
+         rawToken: @escaping @Sendable () -> String? = { nil },
+         now: @escaping @Sendable () -> Date = { Date() },
+         throttleMs: Int = 100,
+         history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
+        self.init(client: client, tasks: tasks, queue: queue, tombstones: NoTombstones(),
+                  cursor: cursor, deviceId: deviceId, tokenProvider: tokenProvider, rawToken: rawToken,
+                  now: now, throttleMs: throttleMs, history: history)
     }
 
     /// Pull remote → local (upsert-only; no deletes). LWW vs local; device-local preserved via the
@@ -63,6 +87,13 @@ public actor SyncEngine {
                 maxApplied = max(maxApplied ?? .distantPast, serverUpdated)
             }
             let local = try await tasks.fetch(id: record.taskId)
+            if local == nil {
+                switch try await applyOverTombstone(record, remoteUpdated: remoteUpdated) {
+                case .noTombstone: break
+                case .suppressed: continue
+                case .resurrected: applied += 1; continue
+                }
+            }
             // Upsert when there's no local copy, or the remote is strictly newer (LWW).
             let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
             guard local == nil || decision == .takeRemote else { continue }
@@ -347,6 +378,11 @@ public actor SyncEngine {
             if pending.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return }
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { return }
             let local = try? await tasks.fetch(id: record.taskId)
+            if local == nil {
+                // A failed archive or trash read skips the event (fail closed); the next pull retries.
+                guard let landing = try? await applyOverTombstone(record, remoteUpdated: remoteUpdated) else { return }
+                if landing != .noTombstone { return }
+            }
             let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
             guard local == nil || decision == .takeRemote else { return }
             try? await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
@@ -354,6 +390,26 @@ public actor SyncEngine {
             if pending.contains(where: { $0.taskId == record.taskId }) { return }   // queue-aware
             try? await tasks.delete(id: record.taskId)
         }
+    }
+
+    // MARK: Tombstones (parity S9)
+
+    private enum TombstoneLanding { case noTombstone, suppressed, resurrected }
+
+    /// A remote copy of a task with no live row here. If the task was archived or trashed on this
+    /// device, the archive or delete stands unless the remote edit is strictly newer (web
+    /// `isRemoteNewerThanArchive`, Android `resolveTombstone`). Even then a delete still queued here
+    /// wins, as on the realtime path: bringing the row back would let that delete, then reconcile,
+    /// remove the task and its Trash copy for good.
+    private func applyOverTombstone(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> TombstoneLanding {
+        guard let buriedAt = try await tombstones.tombstoneDate(id: record.taskId) else { return .noTombstone }
+        guard LWW.resolve(localUpdatedAt: buriedAt, remoteClientUpdatedAt: remoteUpdated) == .takeRemote else {
+            return .suppressed
+        }
+        let queued = try await queue.all()
+        if queued.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return .suppressed }
+        try await tombstones.resurrect(TaskWireMapper.toDomain(record, mergingInto: nil))
+        return .resurrected
     }
 
     // MARK: History (§7.7)
