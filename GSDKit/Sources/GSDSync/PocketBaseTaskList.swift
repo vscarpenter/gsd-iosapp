@@ -23,6 +23,14 @@ struct RemoteListing<T: Sendable>: Sendable {
     var undecodable = 0
 }
 
+/// A listed record's join key, so a listing can refuse the same task twice (parity S10).
+protocol RemoteTaskKeyed {
+    var taskId: String { get }
+}
+
+extension PocketBaseTaskRecord: RemoteTaskKeyed {}
+extension RemoteTaskIdentity: RemoteTaskKeyed {}
+
 extension PocketBaseClient {
     /// The most remote tasks one account may hold. Web and Android use the same cap (parity S10).
     static let maxRemoteTasks = 10_000
@@ -40,10 +48,13 @@ extension PocketBaseClient {
 
     /// Walk every page and return all of it, or throw `RemoteListingIncomplete`. A record that
     /// fails to decode still counts toward the server's `totalItems`, and the caller decides what
-    /// it means: pull skips it, while the push and reconcile index refuses to go on.
-    func listAll<T: Decodable & Sendable>(_ type: T.Type, updatedSince since: String, token: String,
-                                          perPage: Int = 200) async throws -> RemoteListing<T> {
+    /// it means: pull skips it, while the push and reconcile index refuses to go on. The same
+    /// task listed twice throws: under `sort=updated`, a record edited mid-listing moves to the
+    /// end, and the record it displaced is skipped while the counts still match.
+    func listAll<T: Decodable & Sendable & RemoteTaskKeyed>(_ type: T.Type, updatedSince since: String,
+                                                            token: String, perPage: Int = 200) async throws -> RemoteListing<T> {
         var listing = RemoteListing<T>()
+        var seen = Set<String>()
         var listed = 0
         var total: Int?
         var page = 1
@@ -53,6 +64,9 @@ extension PocketBaseClient {
             total = pg.totalItems
             listed += pg.items.count
             let decoded = pg.items.compactMap(\.value)
+            for record in decoded where !seen.insert(record.taskId).inserted {
+                throw RemoteListingIncomplete(reason: "task \(record.taskId) was listed twice")
+            }
             listing.items += decoded
             listing.undecodable += pg.items.count - decoded.count
             if page >= pg.totalPages { break }

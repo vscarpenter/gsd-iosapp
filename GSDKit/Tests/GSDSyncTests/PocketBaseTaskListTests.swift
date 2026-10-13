@@ -84,6 +84,15 @@ struct PocketBaseTaskListTests {
         await #expect(throws: RemoteListingIncomplete.self) { try await listing(exec) }
     }
 
+    @Test func listingRefusesTheSameTaskTwice() async throws {
+        // Under `sort=updated`, a record edited mid-listing moves to the end and can appear twice,
+        // while the record it displaced is skipped. The counts still match; the repeat gives it away.
+        let exec = PagingExecutor()
+        exec.pages[1] = #"{"page":1,"perPage":1,"totalItems":2,"totalPages":2,"items":[\#(rec("a"))]}"#
+        exec.pages[2] = #"{"page":2,"perPage":1,"totalItems":2,"totalPages":2,"items":[\#(rec("a"))]}"#
+        await #expect(throws: RemoteListingIncomplete.self) { try await listing(exec) }
+    }
+
     @Test func listingRefusesFewerRecordsThanTheServerPromised() async throws {
         let exec = PagingExecutor()
         exec.pages[1] = #"{"page":1,"perPage":1,"totalItems":2,"totalPages":1,"items":[\#(rec("a"))]}"#
