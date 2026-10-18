@@ -40,6 +40,7 @@ struct QuadrantSection: View {
         } header: {
             HStack(spacing: 8) {
                 Image(systemName: QuadrantStyle.symbol(quadrant))
+                    .accessibilityHidden(true)
                     .imageScale(.medium)
                     .frame(width: 26)   // one shared icon column so all four serif titles share a left edge
                     .foregroundStyle(QuadrantStyle.accent(quadrant))

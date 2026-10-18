@@ -152,3 +152,128 @@ final class ScreenshotTests: XCTestCase {
         }
     }
 }
+
+/// Opt-in functional smoke on a disposable simulator; never seeds or erases user data.
+@MainActor
+final class ReleaseReadinessTests: XCTestCase {
+    func testCaptureAndEditorAccessibility() throws {
+        guard ProcessInfo.processInfo.environment["RELEASE_QA"] == "1" else {
+            throw XCTSkip("Set TEST_RUNNER_RELEASE_QA=1 on a disposable QA simulator")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let skip = app.buttons["Skip"]
+        if skip.waitForExistence(timeout: 5) { skip.tap() }
+        let capture = app.textFields["capture-field"]
+        XCTAssertTrue(capture.waitForExistence(timeout: 20))
+        try app.performAccessibilityAudit(for: [.sufficientElementDescription, .hitRegion])
+        capture.tap()
+        capture.typeText("Accessibility draft *")
+        app.buttons["capture-details"].tap()
+        XCTAssertTrue(app.textFields["Title"].waitForExistence(timeout: 5))
+        try app.performAccessibilityAudit(for: [.sufficientElementDescription, .hitRegion])
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Accessible editor"
+        shot.lifetime = .keepAlways
+        add(shot)
+        app.buttons["editor-cancel"].tap()
+    }
+
+    func testLargeTypeEditorHasRoomForContent() throws {
+        guard ProcessInfo.processInfo.environment["RELEASE_QA"] == "1",
+              ProcessInfo.processInfo.environment["LARGE_TYPE_QA"] == "1" else {
+            throw XCTSkip("Run on a disposable simulator with accessibility text sizes enabled")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let skip = app.buttons["Skip"]
+        if skip.waitForExistence(timeout: 5) { skip.tap() }
+        let capture = app.textFields["capture-field"]
+        XCTAssertTrue(capture.waitForExistence(timeout: 20))
+        capture.tap()
+        capture.typeText("Large type draft !!")
+        app.buttons["capture-details"].tap()
+        let cancel = app.buttons["editor-cancel"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        XCTAssertLessThan(cancel.frame.minY, app.frame.height / 3,
+                          "Large text needs a full-height editor")
+        XCTAssertFalse(app.buttons["Show all details"].exists,
+                       "The expansion prompt must not cover the form at accessibility sizes")
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Large-text editor presentation"
+        shot.lifetime = .keepAlways
+        add(shot)
+        let schedule = app.buttons["Schedule"]
+        for _ in 0..<4 where !schedule.isHittable { app.swipeUp() }
+        XCTAssertTrue(schedule.isHittable, "Quadrants must remain reachable at large text sizes")
+        schedule.tap()
+        XCTAssertTrue(schedule.isSelected)
+        cancel.tap()
+    }
+
+    func testLocalTaskLifecycle() throws {
+        guard ProcessInfo.processInfo.environment["RELEASE_QA"] == "1" else {
+            throw XCTSkip("Set TEST_RUNNER_RELEASE_QA=1 on a disposable QA simulator")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let skip = app.buttons["Skip"]
+        if skip.waitForExistence(timeout: 5) { skip.tap() }
+        let capture = app.textFields["capture-field"]
+        XCTAssertTrue(capture.waitForExistence(timeout: 20))
+        let showCompleted = app.buttons["Show Completed"]
+        XCTAssertTrue(showCompleted.waitForExistence(timeout: 5))
+        let initiallyShowingCompleted = showCompleted.isSelected || showCompleted.value as? String == "1"
+        if initiallyShowingCompleted { showCompleted.tap() }
+        let title = "Release QA " + String(UUID().uuidString.prefix(8))
+        capture.tap()
+        capture.typeText(title + " !!\n")
+        func card(_ text: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(NSPredicate(
+                format: "identifier BEGINSWITH 'task-card-' AND label CONTAINS %@", text)).firstMatch
+        }
+        XCTAssertTrue(card(title).waitForExistence(timeout: 10))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(card(title).waitForExistence(timeout: 15), "capture did not persist")
+        card(title).tap()
+        let titleField = app.textFields["Title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 5))
+        titleField.tap()
+        titleField.typeText(" cancelled")
+        app.buttons["editor-cancel"].tap()
+        XCTAssertTrue(card(title).waitForExistence(timeout: 5))
+        card(title).tap()
+        XCTAssertEqual(titleField.value as? String, title, "Cancel saved the draft")
+        titleField.tap()
+        titleField.typeText(" edited")
+        app.buttons["editor-save"].tap()
+        XCTAssertTrue(card(title + " edited").waitForExistence(timeout: 5))
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(card(title + " edited").waitForExistence(timeout: 15), "edit did not persist")
+        card(title + " edited").press(forDuration: 1)
+        let complete = app.buttons["Complete"]
+        XCTAssertTrue(complete.waitForExistence(timeout: 5))
+        complete.tap()
+        XCTAssertTrue(card(title + " edited").waitForNonExistence(timeout: 5))
+        showCompleted.tap()
+        XCTAssertTrue(card(title + " edited").waitForExistence(timeout: 5))
+        card(title + " edited").press(forDuration: 1)
+        let delete = app.buttons["Delete"]
+        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        delete.tap()
+        let undo = app.buttons["Undo"]
+        XCTAssertTrue(undo.waitForExistence(timeout: 3))
+        undo.tap()
+        XCTAssertTrue(card(title + " edited").waitForExistence(timeout: 5))
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "Local task persisted after relaunch"
+        shot.lifetime = .keepAlways
+        add(shot)
+        if !initiallyShowingCompleted { showCompleted.tap() }
+    }
+}

@@ -27,8 +27,8 @@ struct GSDMenuCommands: Commands {
             }
             .keyboardShortcut("n", modifiers: .command)
         }
-        // Top-level "View" menu mirroring the quadrant/navigation shortcuts.
-        CommandMenu(String(localized: "View")) {
+        // Keep navigation shortcuts in the system View menu instead of adding a second one.
+        CommandGroup(after: .sidebar) {
             Button(String(localized: "Find…")) {
                 NotificationCenter.default.post(name: .gsdShowCommandPalette, object: nil)
             }
@@ -117,6 +117,7 @@ struct AboutView: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.cancelAction)
+            .accessibilityLabel(String(localized: "Close About GSD"))
             .padding(12)
         }
     }

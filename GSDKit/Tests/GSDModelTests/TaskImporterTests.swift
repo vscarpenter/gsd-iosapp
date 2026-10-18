@@ -56,6 +56,29 @@ struct TaskImporterTests {
         #expect(result.skipped == 1)
     }
 
+    @Test func parseValidatesAndCountsSkippedArchiveAndTrashRows() throws {
+        let stamp = Date(timeIntervalSince1970: 0)
+        var invalid = task("invalid")
+        invalid.title = String(repeating: "x", count: 81)
+        let backup = TaskExport(tasks: [task("active")], exportedAt: stamp,
+            archivedTasks: [ArchivedTask(task: task("archived"), stampedAt: stamp),
+                            ArchivedTask(task: invalid, stampedAt: stamp)],
+            deletedTasks: [ArchivedTask(task: task("trashed"), stampedAt: stamp, stampKey: .deletedAt),
+                           ArchivedTask(task: invalid, stampedAt: stamp, stampKey: .deletedAt)])
+        let result = try TaskImporter.replace(from: TaskExport.encode(backup))
+        #expect(result.archivedTasks?.map(\.task.id) == ["archived"])
+        #expect(result.deletedTasks?.map(\.task.id) == ["trashed"])
+        #expect(result.skipped == 2)
+    }
+
+    @Test func parseCountsMalformedCompanionRowsAndPreservesAbsentStores() throws {
+        let bytes = Data(#"{"tasks":[],"archivedTasks":[{"title":42}]}"#.utf8)
+        let result = try TaskImporter.replace(from: bytes)
+        #expect(result.archivedTasks == [])
+        #expect(result.deletedTasks == nil)
+        #expect(result.skipped == 1)
+    }
+
     // MARK: lenient decode
     @Test func lenientDecodeIgnoresUnknownKeysAndFillsMissing() throws {
         // A hand-rolled envelope: one task with ONLY the 6 required keys (every defaulted
