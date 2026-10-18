@@ -12,9 +12,9 @@ struct ListPage<T: Decodable>: Decodable {
 /// A remote listing that can't be trusted end to end (parity S10): more records than the cap,
 /// pages out of order, a total that moved mid-listing, or fewer records than the server promised.
 /// Nothing destructive may act on it, so push, reconcile, and erase stop and report it.
-struct RemoteListingIncomplete: Error, Equatable, CustomStringConvertible {
-    let reason: String
-    var description: String { "Remote task listing incomplete: \(reason)" }
+package struct RemoteListingIncomplete: Error, Equatable, CustomStringConvertible {
+    package let reason: String
+    package var description: String { "Remote task listing incomplete: \(reason)" }
 }
 
 /// The records one listing decoded, plus a count of the ones it couldn't.
@@ -42,7 +42,7 @@ extension PocketBaseClient {
     /// updates, so a record it can't read waits for a later pull. A listing whose pages don't
     /// add up still throws. The `owner` API rule auto-scopes to the authed user. (Live gate:
     /// confirm the collection has the autodate `updated` field — owner confirmed 2026-06-10.)
-    func listTasks(updatedSince since: String, token: String, perPage: Int = 200) async throws -> [PocketBaseTaskRecord] {
+    package func listTasks(updatedSince since: String, token: String, perPage: Int = 200) async throws -> [PocketBaseTaskRecord] {
         try await listAll(PocketBaseTaskRecord.self, updatedSince: since, token: token, perPage: perPage).items
     }
 

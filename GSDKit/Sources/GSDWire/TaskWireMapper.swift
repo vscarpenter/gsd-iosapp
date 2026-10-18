@@ -4,11 +4,11 @@ import GSDModel
 /// Bidirectional mapper between the local `Task` (camelCase, rich `timeEntries`) and the PocketBase
 /// wire record (snake_case, flattened `time_entries`) — product spec §7.2. Pure: `owner`/`deviceId`/
 /// `recordId` are parameters (the 5c push engine supplies them); no I/O, no identity lookup.
-enum TaskWireMapper {
+package enum TaskWireMapper {
 
     // MARK: Local → Wire (push)
 
-    static func toWire(_ task: Task, owner: String, deviceId: String, recordId: String = "") -> PocketBaseTaskRecord {
+    package static func toWire(_ task: Task, owner: String, deviceId: String, recordId: String = "") -> PocketBaseTaskRecord {
         PocketBaseTaskRecord(
             id: recordId,
             taskId: task.id,
@@ -53,7 +53,7 @@ enum TaskWireMapper {
 
     /// `local == nil` → reconstruct best-effort; `local != nil` → merge (remote wins for synced
     /// fields, device-local + derived fields preserved from `local`). `quadrant` is always recomputed.
-    static func toDomain(_ record: PocketBaseTaskRecord, mergingInto local: Task?) -> Task {
+    package static func toDomain(_ record: PocketBaseTaskRecord, mergingInto local: Task?) -> Task {
         guard let local else { return reconstructed(from: record) }
         return merged(record, into: local)
     }

@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 import GSDStore   // AppGroupDefaults
 
 /// The pull cursor — the max SERVER-stamped `updated` seen, persisted in PocketBase's space

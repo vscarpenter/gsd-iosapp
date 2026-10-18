@@ -1,15 +1,16 @@
 import Foundation
 
 /// Executes a `URLRequest` → (data, HTTP response). The seam that lets tests drive responses from
-/// fixtures without a network. Internal.
-protocol RequestExecuting: Sendable {
+/// fixtures without a network. `package`: GSDSync's FeedbackClient and the sync tests use it.
+package protocol RequestExecuting: Sendable {
     func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse)
 }
 
-/// Live executor over `URLSession`. Internal.
-struct URLSessionExecutor: RequestExecuting {
+/// Live executor over `URLSession`. `package`.
+package struct URLSessionExecutor: RequestExecuting {
     let session: URLSession
-    func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+    package init(session: URLSession) { self.session = session }
+    package func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         do {
             let (data, response) = try await session.data(for: request)
             guard let http = response as? HTTPURLResponse else { throw PocketBaseError.network("non-HTTP response") }
@@ -19,42 +20,22 @@ struct URLSessionExecutor: RequestExecuting {
     }
 }
 
-/// Minimal hand-built PocketBase REST client over `URLSession` (§7.0). Auth endpoints for 5b; the
-/// generic `authedRequest` helper is consumed by 5c's CRUD. `public` — the App constructs it. Token
-/// header is the raw JWT.
+/// Minimal hand-built PocketBase REST client over `URLSession` (§7.0). The generic request/send
+/// core lives here in `GSDWire` (GSDModel-only, GRDB-free) so the Share Extension can push a task
+/// without the store; the auth endpoints are a `GSDSync` extension (`PocketBaseClient+Auth`) and
+/// the task CRUD is in `PocketBaseTaskWrite` / `PocketBaseTaskList`. `public` — the App and the
+/// extension construct it. Token header is the raw JWT.
 public final class PocketBaseClient: Sendable {
-    private let baseURL: String
+    package let baseURL: String            // `package`: the GSDSync auth extension builds URLs from it
     private let executor: RequestExecuting
 
     public init(baseURL: String, session: URLSession = .shared) {
         self.baseURL = baseURL
         self.executor = URLSessionExecutor(session: session)
     }
-    init(baseURL: String, executor: RequestExecuting) {
+    package init(baseURL: String, executor: RequestExecuting) {
         self.baseURL = baseURL
         self.executor = executor
-    }
-
-    func authMethods() async throws -> AuthMethods {
-        var req = URLRequest(url: URL(string: baseURL + "/api/collections/users/auth-methods")!)
-        req.httpMethod = "GET"
-        return try await send(req, as: AuthMethods.self)
-    }
-
-    func authWithOAuth2(provider: String, code: String, codeVerifier: String, redirectURL: String) async throws -> AuthResult {
-        var req = URLRequest(url: URL(string: baseURL + "/api/collections/users/auth-with-oauth2")!)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try JSONEncoder().encode(
-            ["provider": provider, "code": code, "codeVerifier": codeVerifier, "redirectURL": redirectURL])
-        return try await send(req, as: AuthResult.self)
-    }
-
-    func authRefresh(token: String) async throws -> AuthResult {
-        var req = URLRequest(url: URL(string: baseURL + "/api/collections/users/auth-refresh")!)
-        req.httpMethod = "POST"
-        req.setValue(token, forHTTPHeaderField: "Authorization")
-        return try await send(req, as: AuthResult.self)
     }
 
     /// Authed request builder for 5c CRUD (raw token in Authorization). `public`.
@@ -69,7 +50,7 @@ public final class PocketBaseClient: Sendable {
         return req
     }
 
-    func send<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
+    package func send<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
         let (data, http) = try await executor.execute(request)
         guard (200..<300).contains(http.statusCode) else {
             if let env = try? JSONDecoder().decode(PBErrorEnvelope.self, from: data) {
@@ -82,7 +63,7 @@ public final class PocketBaseClient: Sendable {
     }
 
     /// Send a request expecting no body (204 DELETE). Maps non-2xx to `PocketBaseError` like `send`.
-    func sendNoContent(_ request: URLRequest) async throws {
+    package func sendNoContent(_ request: URLRequest) async throws {
         let (data, http) = try await executor.execute(request)
         guard (200..<300).contains(http.statusCode) else {
             if let env = try? JSONDecoder().decode(PBErrorEnvelope.self, from: data) {

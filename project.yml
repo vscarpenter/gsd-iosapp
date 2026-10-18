@@ -86,6 +86,8 @@ targets:
       - package: GSDKit
         product: GSDStore
       - package: GSDKit
+        product: GSDWire
+      - package: GSDKit
         product: GSDSync
       - package: GSDKit
         product: GSDSnapshot
@@ -170,6 +172,8 @@ targets:
         product: GSDModel
       - package: GSDKit
         product: GSDSnapshot
+      - package: GSDKit
+        product: GSDWire   # direct push from the compose sheet; GRDB-free
   # App Store screenshot runner (not a correctness test target — the app's logic gate
   # remains `swift test` + a clean build). Drives the live app through its main screens
   # and writes full-res PNGs; see ScreenshotTests/ScreenshotTests.swift for the env vars.

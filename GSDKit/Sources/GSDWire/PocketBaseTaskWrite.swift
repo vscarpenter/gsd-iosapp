@@ -32,7 +32,7 @@ extension PocketBaseClient {
     /// client_updated_at)`. One fetch per push. Fails closed (parity S10): a record it can't
     /// identify throws, as does a listing that repeats a task (`listAll`), instead of returning an
     /// index that would let reconcile delete a local task the server still holds.
-    func remoteIndex(token: String) async throws -> [String: (recordId: String, clientUpdatedAt: Date?)] {
+    package func remoteIndex(token: String) async throws -> [String: (recordId: String, clientUpdatedAt: Date?)] {
         let listing = try await listAll(RemoteTaskIdentity.self, updatedSince: "1970-01-01T00:00:00.000Z", token: token)
         if listing.undecodable > 0 {
             throw RemoteListingIncomplete(reason: "\(listing.undecodable) records could not be identified")
@@ -43,19 +43,19 @@ extension PocketBaseClient {
     }
 
     /// Create a `tasks` record; returns the new PocketBase record id.
-    func createTask(_ record: PocketBaseTaskRecord, token: String) async throws -> String {
+    package func createTask(_ record: PocketBaseTaskRecord, token: String) async throws -> String {
         let req = authedRequest(path: "/api/collections/tasks/records", method: "POST",
                                 token: token, body: try JSONEncoder().encode(record))
         return try await send(req, as: PocketBaseTaskRecord.self).id
     }
     /// Update by record id (PATCH).
-    func updateTask(recordId: String, record: PocketBaseTaskRecord, token: String) async throws {
+    package func updateTask(recordId: String, record: PocketBaseTaskRecord, token: String) async throws {
         let req = authedRequest(path: "/api/collections/tasks/records/\(recordId)", method: "PATCH",
                                 token: token, body: try JSONEncoder().encode(record))
         _ = try await send(req, as: PocketBaseTaskRecord.self)
     }
     /// Delete by record id (204, no body).
-    func deleteTask(recordId: String, token: String) async throws {
+    package func deleteTask(recordId: String, token: String) async throws {
         try await sendNoContent(authedRequest(path: "/api/collections/tasks/records/\(recordId)", method: "DELETE", token: token))
     }
 }

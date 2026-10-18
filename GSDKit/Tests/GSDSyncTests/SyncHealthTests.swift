@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct SyncHealthTests {
     private let now = Date(timeIntervalSince1970: 1_000_000)

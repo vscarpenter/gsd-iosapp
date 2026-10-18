@@ -38,7 +38,8 @@ A layered SwiftPM package (`GSDKit/`) holds all testable logic; the app and two 
 
 - **`GSDModel`** — pure domain, **zero dependencies** (manifest-enforced; never `import GRDB` here). `Task`, `Quadrant`, `CaptureParser`, `RecurrenceEngine`, `DependencyGraph`, `TaskFilter`/`FilterCriteria`, `TaskValidator`, analytics, import/export. Also home to the `AppGroup.id` constant (single source of truth).
 - **`GSDStore`** — GRDB persistence (depends on GSDModel + GRDB). `AppDatabase` + numbered migrations (v1–v5), per-entity `*Repository` types over `ValueObservation`→`AsyncStream`, and the `@MainActor @Observable TaskStore` — the **single mutation path** for tasks, which stamps `updatedAt` via an injected clock and enqueues to the sync queue. Embedded `tags`/`subtasks`/`dependencies`/`timeEntries` are stored as **JSON columns** (matching the web Dexie + PocketBase shapes), not child tables.
-- **`GSDSync`** — Foundation-only PocketBase REST + SSE sync (depends on GSDModel + GSDStore). The core is a **pure `actor SyncEngine`** (pull / push / deletion-reconcile / last-write-wins, fully unit-tested). Plus OAuth2-PKCE auth, JWT, and the wire mappers.
+- **`GSDWire`** — the GRDB-free PocketBase wire layer (depends on GSDModel *only*): `PocketBaseClient` request/send core, the §7.1 `PocketBaseTaskRecord`, `TaskWireMapper`, `WireDate`, `JWT`, `DirectTaskPush` (one bounded create, for the Share Extension), and `SharedTokenKeychain` (the session token in the App-Group access group). Exists so the Share Extension can push a task without linking the store. Cross-module-but-in-package symbols are `package`, not `public`.
+- **`GSDSync`** — Foundation-only PocketBase sync (depends on GSDModel + GSDStore + GSDWire). The core is a **pure `actor SyncEngine`** (pull / push / deletion-reconcile / last-write-wins, fully unit-tested). Plus OAuth2-PKCE auth (`AuthService`, the `PocketBaseClient+Auth` endpoints) and SSE realtime.
 - **`GSDSnapshot`** — the **GRDB-free app↔extension contract** (depends on GSDModel *only*). `WidgetSnapshot` + atomic App-Group store, the Share-Extension outbox/`ShareInbox`, and `gsd://` `DeepLinkParser`. This is why the extensions can share logic without pulling the database into their process.
 
 The **App layer** (`App/`) is SwiftUI, organized by feature folder (`Matrix/`, `Editor/`, `Browse/`, `Dashboard/`, `Sync/`, `Auth/`, …). Two pieces tie it together:
@@ -47,7 +48,7 @@ The **App layer** (`App/`) is SwiftUI, organized by feature folder (`Matrix/`, `
 - **`ContentView.swift`** is the adaptive root: iPhone = `TabView` (Matrix · Browse · Dashboard · Settings); iPad = `NavigationSplitView` (sidebar → detail). It also hosts the ⌘K command palette and `onOpenURL` deep-link routing.
 - **`App/Sync/SyncCoordinator.swift`** — an app-layer `@MainActor @Observable` that owns *when* sync fires (cadence timer, `NWPathMonitor`, scenePhase, debounced post-mutation push, SSE lifecycle) and the status surface. The pure `SyncEngine` stays the tested core; this is the untestable glue, deliberately separated.
 
-**Extensions** (`Widgets/`, `ShareExtension/`) are GRDB-free, embedded in the app bundle, and talk to it only through `GSDSnapshot` + the shared App Group.
+**Extensions** (`Widgets/`, `ShareExtension/`) are GRDB-free, embedded in the app bundle, and talk to the app only through `GSDSnapshot` + the shared App Group. The Share Extension additionally links `GSDWire` to push a shared task straight to PocketBase after Save (`DirectTaskPush`, a few seconds' budget); it writes the outbox either way, with the record id when the push landed, and `ShareInboxDrainer` in the app lands that capture through `TaskStore.ingestSynced` (no second push) instead of `create`.
 
 ## Project-specific gotchas
 

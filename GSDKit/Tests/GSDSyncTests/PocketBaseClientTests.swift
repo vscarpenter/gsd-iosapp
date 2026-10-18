@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct PocketBaseClientTests {
     final class FakeExecutor: RequestExecuting, @unchecked Sendable {

@@ -36,6 +36,30 @@ struct TaskStoreEnqueueTests {
         #expect(q.ops.filter { $0.op == .create }.count == 1)   // enqueued for push (else deletion-reconcile wipes it)
     }
 
+    @Test func ingestSyncedPersistsWithoutEnqueueing() async throws {   // share-extension direct push: the server already has it
+        let q = RecordingQueue(); let store = try makeStore(q)
+        final class Counter: @unchecked Sendable { var n = 0 }
+        let counter = Counter()
+        store.onMutation = { counter.n += 1 }
+        let when = Date(timeIntervalSince1970: 1_700_000_000)
+        var t = sample("pushed-1"); t.createdAt = when; t.updatedAt = when; t.tags = ["Read", "read"]
+        try await store.ingestSynced(t)
+        #expect(q.ops.isEmpty)                                   // no push for a record the server holds
+        #expect(counter.n == 0)                                  // nothing to debounce either
+        let fetched = try await store.fetchTask(id: "pushed-1")
+        let stored = try #require(fetched)
+        #expect(stored.createdAt == when && stored.updatedAt == when)   // timestamps kept, not restamped
+        #expect(stored.tags == ["read"])                         // same canonical tags as create()
+    }
+
+    @Test func ingestSyncedRejectsAnInvalidTask() async throws {
+        let q = RecordingQueue(); let store = try makeStore(q)
+        var t = sample("bad"); t.title = ""
+        await #expect(throws: (any Error).self) { try await store.ingestSynced(t) }
+        let fetched = try await store.fetchTask(id: "bad")
+        #expect(fetched == nil)
+    }
+
     @Test func mutationFiresOnMutationHook() async throws {
         let q = RecordingQueue(); let store = try makeStore(q)
         final class Counter: @unchecked Sendable { var n = 0 }

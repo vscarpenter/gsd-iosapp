@@ -4,10 +4,11 @@ import GSDSnapshot
 
 /// The compose sheet: editable title, quadrant picker (default Eliminate/Q4), comma tags, the
 /// captured URL(s) shown read-only, Add / Cancel (spec §4.2). On Add it builds a SharedCapture
-/// and calls `save`; a write failure surfaces inline (no container) — the sheet does not dismiss.
+/// and awaits `save` (the direct push, bounded to a few seconds, then the outbox write); the Add
+/// button shows a spinner meanwhile. A write failure surfaces inline — the sheet does not dismiss.
 struct ShareComposeView: View {
     let urls: [String]
-    let save: (SharedCapture) throws -> Void
+    let save: (SharedCapture) async throws -> Void
     let onComplete: () -> Void
     let onCancel: () -> Void
 
@@ -15,9 +16,10 @@ struct ShareComposeView: View {
     @State private var quadrant: Quadrant = .notUrgentNotImportant   // default Eliminate/Q4
     @State private var tagsText = ""
     @State private var errorMessage: String?
+    @State private var isSaving = false
 
     init(initialTitle: String, urls: [String],
-         save: @escaping (SharedCapture) throws -> Void,
+         save: @escaping (SharedCapture) async throws -> Void,
          onComplete: @escaping () -> Void, onCancel: @escaping () -> Void) {
         self.urls = urls
         self.save = save
@@ -77,9 +79,15 @@ struct ShareComposeView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "Cancel"), action: onCancel)
+                        .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(String(localized: "Add"), action: add)
+                    if isSaving {
+                        ProgressView()
+                            .accessibilityLabel(String(localized: "Adding to GSD"))
+                    } else {
+                        Button(String(localized: "Add"), action: add)
+                    }
                 }
             }
         }
@@ -94,11 +102,16 @@ struct ShareComposeView: View {
             tags: tagsText.split(separator: ",").map(String.init),   // raw; builder normalizes
             capturedAt: Date()
         )
-        do {
-            try save(capture)
-            onComplete()
-        } catch {
-            errorMessage = String(localized: "Couldn't save to GSD. Please try again.")
+        isSaving = true
+        errorMessage = nil
+        _Concurrency.Task {
+            do {
+                try await save(capture)
+                onComplete()
+            } catch {
+                isSaving = false
+                errorMessage = String(localized: "Couldn't save to GSD. Please try again.")
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct AuthModelsTests {
     private func fixture(_ name: String) throws -> Data {

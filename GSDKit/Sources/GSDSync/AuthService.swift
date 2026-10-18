@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 
 /// Stateful-PKCE auth orchestration over the seams (§8). Stateless across calls — per-attempt
 /// `{state, codeVerifier}` are LOCAL to `signIn`, never cached. `public`. PROBE-VERIFIED (17/17).

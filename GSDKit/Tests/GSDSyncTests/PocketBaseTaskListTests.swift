@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct PocketBaseTaskListTests {
     final class PagingExecutor: RequestExecuting, @unchecked Sendable {

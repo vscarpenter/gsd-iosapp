@@ -20,16 +20,29 @@ public final class ShareInbox {
     }
 
     /// Single-flight (`isDraining` set synchronously before any `await`). Each pending capture
-    /// is built into a valid `Task` and handed to `create`; the file is removed only after
-    /// `create` succeeds. A transient `create` throw keeps the file for the next drain.
-    public func drain(create: (Task) async throws -> Void) async {
+    /// is built into a valid `Task` and handed on; the file is removed only after the handler
+    /// succeeds. A transient throw keeps the file for the next drain.
+    ///
+    /// - `create`: the normal path (the store's `create`, which enqueues a sync push). Used for
+    ///   captures the extension did not push — under the extension's `taskID` when it chose one,
+    ///   so a push that timed out but still landed becomes an update, not a duplicate.
+    /// - `ingestPushed`: captures the extension already pushed (`remoteRecordID` set). The task is
+    ///   rebuilt exactly as pushed (`SharedCapture.pushedTask`) and must land locally WITHOUT a
+    ///   sync item — the server already has it.
+    public func drain(create: (Task) async throws -> Void,
+                      ingestPushed: (Task) async throws -> Void) async {
         guard !isDraining else { return }
         isDraining = true
         defer { isDraining = false }
         for item in store.pending() {
-            let task = SharedCaptureBuilder.task(from: item.capture, id: newID(), now: now())
+            let capture = item.capture
             do {
-                try await create(task)
+                if capture.remoteRecordID != nil, let pushed = capture.pushedTask() {
+                    try await ingestPushed(pushed)
+                } else {
+                    let task = SharedCaptureBuilder.task(from: capture, id: capture.taskID ?? newID(), now: now())
+                    try await create(task)
+                }
                 store.remove(id: item.id)        // only after success
             } catch {
                 continue                          // transient failure → keep file, retry next drain

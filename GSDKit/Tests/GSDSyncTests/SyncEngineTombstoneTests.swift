@@ -3,6 +3,7 @@ import Foundation
 import GSDModel
 import GSDStore
 @testable import GSDSync
+@testable import GSDWire
 
 /// Parity S9 (backlog B-04). Archived and trashed tasks used to come back: pull and realtime looked
 /// only at the live table, so a cursor reset or an edit on another device made them active again.

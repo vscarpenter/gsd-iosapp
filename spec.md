@@ -688,7 +688,7 @@ Expose tasks to the system so users can act without opening the app. This is the
 Replaces the web app's PWA share-target. Accept **URLs and text** shared from other apps and create a task:
 - Default to the **Eliminate (Q4)** quadrant (`urgent=false, important=false`), matching the web share-capture default.
 - Clamp the title to a sane max (web clamps shared titles to 300 chars); parse comma-separated tags if provided (unique, lowercased, max 20); sanitize URLs (§6.2) into the description.
-- Write through `GSDKit` into the shared store and enqueue sync.
+- The extension has no store. On Add it chooses the `Task.id`, pushes one `create` straight to PocketBase when it can (signed in via the App-Group keychain, online, bounded to a few seconds), and then writes a `SharedCapture` to the App-Group outbox either way — with the PocketBase record id when the push landed. The app drains the outbox on launch, foreground, the Darwin signal, and background refresh (§9.4): a pushed capture lands locally without a sync item; an unpushed one goes through `create` under the extension's id, so a push that timed out but still reached the server becomes an update on the next sync, never a duplicate.
 
 ### 10.4 Other system integrations (baseline)
 

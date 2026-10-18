@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import GSDModel
 @testable import GSDSync
+@testable import GSDWire
 
 struct PocketBaseTaskRecordTests {
     private func fixture(_ name: String) throws -> Data {

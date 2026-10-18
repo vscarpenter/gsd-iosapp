@@ -3,10 +3,13 @@ import GSDModel
 
 /// The flattened wire form of a `TimeEntry` (§7.1): the wire drops `endedAt`/`notes` and carries
 /// a whole-minute `minutes` duration. `startedAt` is a raw ISO-8601 string (parsed via `WireDate`).
-struct WireTimeEntry: Codable, Equatable {
-    var id: String
-    var startedAt: String
-    var minutes: Int
+package struct WireTimeEntry: Codable, Equatable {
+    package var id: String
+    package var startedAt: String
+    package var minutes: Int
+    package init(id: String, startedAt: String, minutes: Int) {
+        self.id = id; self.startedAt = startedAt; self.minutes = minutes
+    }
 }
 
 /// Faithful §7.1 PocketBase `tasks` record (snake_case wire model). Date fields are raw `String`s —
@@ -16,36 +19,36 @@ struct WireTimeEntry: Codable, Equatable {
 /// every other field defaults so empty-string, JSON-null, and key-absent all decode without
 /// throwing (mirrors the `Task.init(from:)` lenient-decode precedent). `Subtask` is reused from
 /// `GSDModel` because it already matches the §7.1 `{id,title,completed}` shape.
-struct PocketBaseTaskRecord: Codable, Equatable {
-    var id: String                 // PocketBase record id (system) — distinct from task_id
-    var taskId: String             // the app's Task.id — the join key
-    var owner: String
-    var title: String
-    var description: String
-    var urgent: Bool
-    var important: Bool
-    var quadrant: String
-    var dueDate: String
-    var completed: Bool
-    var completedAt: String
-    var recurrence: String
-    var tags: [String]
-    var subtasks: [Subtask]
-    var dependencies: [String]
-    var notificationEnabled: Bool
-    var notificationSent: Bool
-    var notifyBefore: Int?
-    var lastNotificationAt: String
-    var estimatedMinutes: Int?
-    var timeSpent: Int
-    var timeEntries: [WireTimeEntry]
-    var snoozedUntil: String
-    var clientUpdatedAt: String
-    var clientCreatedAt: String
-    var deviceId: String
+package struct PocketBaseTaskRecord: Codable, Equatable {
+    package var id: String                 // PocketBase record id (system) — distinct from task_id
+    package var taskId: String             // the app's Task.id — the join key
+    package var owner: String
+    package var title: String
+    package var description: String
+    package var urgent: Bool
+    package var important: Bool
+    package var quadrant: String
+    package var dueDate: String
+    package var completed: Bool
+    package var completedAt: String
+    package var recurrence: String
+    package var tags: [String]
+    package var subtasks: [Subtask]
+    package var dependencies: [String]
+    package var notificationEnabled: Bool
+    package var notificationSent: Bool
+    package var notifyBefore: Int?
+    package var lastNotificationAt: String
+    package var estimatedMinutes: Int?
+    package var timeSpent: Int
+    package var timeEntries: [WireTimeEntry]
+    package var snoozedUntil: String
+    package var clientUpdatedAt: String
+    package var clientCreatedAt: String
+    package var deviceId: String
     /// PocketBase's server-stamped `updated` autodate (raw wire string). Deliberately absent
     /// from `CodingKeys`, so the synthesized encoder never sends it — PB owns its system fields.
-    var updated: String
+    package var updated: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -72,7 +75,7 @@ struct PocketBaseTaskRecord: Codable, Equatable {
 
     /// Defensive decode (§7.1): `task_id` required; everything else defaults. `encode(to:)` stays
     /// synthesized (uses the snake_case `CodingKeys`; nil optionals are omitted via `encodeIfPresent`).
-    init(from decoder: Decoder) throws {
+    package init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         taskId = try c.decode(String.self, forKey: .taskId)
         id = try c.decodeIfPresent(String.self, forKey: .id) ?? ""
@@ -106,7 +109,7 @@ struct PocketBaseTaskRecord: Codable, Equatable {
 
     /// Memberwise init (the synthesized one is suppressed by the custom `init(from:)`); used by
     /// `TaskWireMapper.toWire`.
-    init(id: String, taskId: String, owner: String, title: String, description: String,
+    package init(id: String, taskId: String, owner: String, title: String, description: String,
          urgent: Bool, important: Bool, quadrant: String, dueDate: String, completed: Bool,
          completedAt: String, recurrence: String, tags: [String], subtasks: [Subtask],
          dependencies: [String], notificationEnabled: Bool, notificationSent: Bool,
@@ -131,13 +134,13 @@ struct PocketBaseTaskRecord: Codable, Equatable {
 /// malformed record yields `nil` rather than aborting the whole batch (§7.4 skip-malformed).
 struct Failable<T: Decodable>: Decodable {
     let value: T?
-    init(from decoder: Decoder) throws { value = try? T(from: decoder) }
+    package init(from decoder: Decoder) throws { value = try? T(from: decoder) }
 }
 
 extension PocketBaseTaskRecord {
     /// Decode a PocketBase list payload, SKIPPING malformed records (§7.4) rather than failing the
     /// whole batch. Each element is decoded independently via `Failable`.
-    static func decodeList(_ data: Data, decoder: JSONDecoder = JSONDecoder()) throws -> [PocketBaseTaskRecord] {
+    package static func decodeList(_ data: Data, decoder: JSONDecoder = JSONDecoder()) throws -> [PocketBaseTaskRecord] {
         try decoder.decode([Failable<PocketBaseTaskRecord>].self, from: data).compactMap(\.value)
     }
 }

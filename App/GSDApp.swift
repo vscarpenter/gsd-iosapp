@@ -4,6 +4,7 @@ import UIKit
 import GSDStore
 import GSDSync
 import GSDSnapshot
+import GSDWire
 
 @main
 struct GSDApp: App {
@@ -15,8 +16,7 @@ struct GSDApp: App {
     @State private var widgetRefresher: WidgetSnapshotRefresher
     @State private var reminderResyncer: ReminderResyncer
     @State private var spotlightIndexer: SpotlightIndexer
-    @State private var shareInbox: ShareInbox
-    @State private var titleEnricher: ShareTitleEnricher
+    @State private var shareDrainer: ShareInboxDrainer
     /// True when the local database couldn't be opened even after recovery — the app shows a
     /// recovery screen instead of the main UI (so no edits hit a throwaway store).
     @State private var databaseUnavailable: Bool
@@ -120,12 +120,14 @@ struct GSDApp: App {
             reminderResyncer.schedule()
             spotlightIndexer.schedule(tasks: store.tasks)
         }
-        // Share Extension inbox (Phase 6d): drains the App-Group outbox through the SAME
-        // create() path on launch + foreground. Trivial glue; the logic is the tested ShareInbox.
-        let shareInbox = ShareInbox(store: ShareOutboxStore())
-        _shareInbox = State(initialValue: shareInbox)
+        // Share Extension inbox (Phase 6d): drains the App-Group outbox on launch, foreground, the
+        // Darwin signal, and background refresh — all through ShareInboxDrainer so the landings
+        // never diverge. Trivial glue; the logic is the tested ShareInbox + TaskStore.
         let fetcher = PageTitleFetcher()
-        _titleEnricher = State(initialValue: ShareTitleEnricher(store: store, fetch: fetcher.title))
+        let shareDrainer = ShareInboxDrainer(
+            inbox: ShareInbox(store: ShareOutboxStore()), store: store,
+            titleEnricher: ShareTitleEnricher(store: store, fetch: fetcher.title))
+        _shareDrainer = State(initialValue: shareDrainer)
         _session = State(initialValue: SessionStore(
             auth: authService, tokenStore: tokenStore, coordinator: coordinator,
             hasLocalActiveTasks: { !store.tasks.isEmpty },
@@ -147,10 +149,10 @@ struct GSDApp: App {
         BackgroundRefresh.register(
             store: store,
             signedIn: { coordinator.isSignedIn },
-            // Same create() path as the launch/foreground drains below, minus title enrichment:
+            // Same landings as the launch/foreground drains below, minus title enrichment:
             // that fetch is fire-and-forget and the window closes (database re-suspended) before
             // it would land, so the URL-derived title stands until the user edits it.
-            drainShareInbox: { await shareInbox.drain { task in try await store.create(task) } },
+            drainShareInbox: { await shareDrainer.drain(enrichTitles: false) },
             sync: { await coordinator.backgroundSync() })
     }
 
@@ -175,20 +177,12 @@ struct GSDApp: App {
                 .task {
                     store.start()
                     await DemoSeed.seedIfRequested(store, now: demoClock ?? .now)
-                    await shareInbox.drain { task in
-                        try await store.create(task)
-                        titleEnricher.schedule(for: task)   // background: upgrade a URL-derived title
-                    }
+                    await shareDrainer.drain()
                     // Drain the instant a share lands while the app is already running. On Mac
                     // Catalyst the extension never foregrounds the app and scenePhase `.active`
                     // is unreliable, so the launch/foreground drains alone leave captures stranded.
                     ShareOutboxSignal.observe {
-                        _Concurrency.Task {
-                            await shareInbox.drain { task in
-                                try await store.create(task)
-                                titleEnricher.schedule(for: task)
-                            }
-                        }
+                        _Concurrency.Task { await shareDrainer.drain() }
                     }
                     widgetRefresher.start()
                     // Signed in, the sweep waits for the launch sync below to pull (afterCleanSync).
@@ -203,12 +197,7 @@ struct GSDApp: App {
                         AppDatabase.resume()   // restore writes before any foreground sync runs
                         coordinator.enteredForeground()
                         _Concurrency.Task { await store.refreshBadge() }
-                        _Concurrency.Task {
-                            await shareInbox.drain { task in
-                                try await store.create(task)
-                                titleEnricher.schedule(for: task)
-                            }
-                        }
+                        _Concurrency.Task { await shareDrainer.drain() }
                     case .background:
                         coordinator.enteredBackground()
                         BackgroundRefresh.schedule()

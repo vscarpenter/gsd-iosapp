@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct RealtimeEventTests {
     private func decode(_ s: String) -> RealtimeEvent? {

@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import GSDModel   // GSDModel.Task — else `Task` resolves to _Concurrency.Task
 @testable import GSDSync
+@testable import GSDWire
 
 struct PocketBaseTaskWriteTests {
     final class CapturingExecutor: RequestExecuting, @unchecked Sendable {
