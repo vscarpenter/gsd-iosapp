@@ -3,12 +3,17 @@ import Foundation
 /// Cross-process "a capture was written" push so a *running* app drains the share
 /// outbox immediately, instead of waiting for the next cold launch.
 ///
-/// Why this exists: on iOS, sharing foregrounds the host app, so the app's
-/// `scenePhase → .active` drain fires. On Mac Catalyst the Share Extension is a
-/// separate process that never brings the app forward, and Catalyst's `scenePhase`
-/// does not reliably re-fire `.active` on re-focus — so captures sat in the outbox
-/// until a manual relaunch. The Darwin notify center is the one app↔extension push
-/// that works identically on iOS and Catalyst (and isn't a wasteful poll).
+/// Why this exists: the Share Extension runs in the *sending* app's context and never
+/// brings GSD forward, so the app's `scenePhase → .active` drain only fires when the
+/// user next opens it. On Mac Catalyst (and iPad multitasking) the app is often still
+/// running when a share lands, yet Catalyst's `scenePhase` does not reliably re-fire
+/// `.active` on re-focus — so captures sat in the outbox until a manual relaunch. The
+/// Darwin notify center is the one app↔extension push that works identically on iOS
+/// and Catalyst (and isn't a wasteful poll).
+///
+/// Limits: a suspended iOS app runs no code, so this cannot wake a backgrounded phone;
+/// the handler fires once the app resumes, alongside the `.active` drain. Between
+/// shares and the next open, `BackgroundRefresh` is what drains and syncs (§9.4).
 ///
 /// Foundation-only / GRDB-free, like the rest of the app↔extension contract here.
 public enum ShareOutboxSignal {

@@ -144,7 +144,14 @@ struct GSDApp: App {
         // `init()` (pre-launch) is the correct window; a view's `.task` runs after launch
         // and would trip "all launch handlers must be registered before application finishes
         // launching". `App.init()` is main-actor-isolated, so the @MainActor register is safe.
-        BackgroundRefresh.register(store: store, signedIn: { coordinator.isSignedIn })
+        BackgroundRefresh.register(
+            store: store,
+            signedIn: { coordinator.isSignedIn },
+            // Same create() path as the launch/foreground drains below, minus title enrichment:
+            // that fetch is fire-and-forget and the window closes (database re-suspended) before
+            // it would land, so the URL-derived title stands until the user edits it.
+            drainShareInbox: { await shareInbox.drain { task in try await store.create(task) } },
+            sync: { await coordinator.backgroundSync() })
     }
 
     var body: some Scene {

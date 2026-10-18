@@ -13,7 +13,10 @@ public struct SyncResult: Equatable, Sendable {
     public var error: String?
 }
 
-public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, periodic, networkRegained, mutation }
+/// `.background` is the BGAppRefreshTask window (§9.4): a full sync so a share-captured task
+/// reaches the server before the app is next opened. Like `.periodic`, it never revives `.failed`
+/// items — a background loop must not hammer a persistently-rejecting server.
+public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, periodic, networkRegained, mutation, background }
 
 /// What the internal test initializer passes for `tombstones`: no task is archived or trashed.
 private struct NoTombstones: TombstoneRepository {
@@ -243,7 +246,7 @@ public actor SyncEngine {
             // (kept, never dropped) and re-surfaces in the sync-health warning between attempts.
             switch trigger {
             case .manual, .networkRegained, .launch, .foreground: try await requeueFailed()
-            case .signIn, .periodic, .mutation: break
+            case .signIn, .periodic, .mutation, .background: break
             }
             let since = cursor.load() ?? "1970-01-01 00:00:00.000Z"
             let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since)
