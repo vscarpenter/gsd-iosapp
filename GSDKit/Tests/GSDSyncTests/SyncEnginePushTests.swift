@@ -114,6 +114,33 @@ struct SyncEnginePushTests {
         #expect(all.count == 1 && all[0].status == .failed)
     }
 
+    @Test func backgroundSyncPushesPendingItems() async throws {   // a share-captured task reaches the server before the app is next opened
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let t = Task(id: "a", title: "shared from Safari", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
+        let exec = CRUDExecutor()
+        let engine = makeSyncEngine(tasks: tasks, queue: queue, exec: exec)
+        let result = await engine.sync(trigger: .background)
+        #expect(result.pushed == 1)
+        #expect(exec.writes.map { $0.method } == ["POST"])
+        #expect(try await queue.all().isEmpty)
+    }
+
+    @Test func backgroundSyncLeavesFailedItemsTerminal() async throws {   // a background loop must not hammer a rejecting server
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let t = Task(id: "a", title: "x", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
+                                              retryCount: 5, payload: t, status: .failed,
+                                              lastAttemptAt: 1, failedAt: 1))
+        let engine = makeSyncEngine(tasks: tasks, queue: queue, exec: CRUDExecutor())
+        let result = await engine.sync(trigger: .background)
+        #expect(result.pushed == 0)
+        let all = try await queue.all()
+        #expect(all.count == 1 && all[0].status == .failed)
+    }
+
     @Test func foregroundSyncRevivesFailedItems() async throws {   // reopening the app retries failed edits
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         let t = Task(id: "a", title: "x", urgent: false, important: false,

@@ -103,6 +103,17 @@ final class SyncCoordinator {
     /// Manual "Sync Now" + pull-to-refresh.
     func syncNow() async { await runSync(trigger: .manual) }
 
+    /// One full sync inside a `BGAppRefreshTask` window (§9.4), so a share-captured task reaches the
+    /// server before the app is next opened. The window is short and the database is re-suspended
+    /// when it ends, so this cancels any debounced push the drain just scheduled (its 1.5 s timer
+    /// would otherwise fire against a suspended store) and runs the sync inline instead. Cadence,
+    /// SSE and reachability stay down: they are foreground-only. No-op when signed out.
+    func backgroundSync() async {
+        guard signedIn() else { return }
+        debounceTask?.cancel(); debounceTask = nil
+        await runSync(trigger: .background)
+    }
+
     /// §3.4 erase everywhere: wipe remote (pull suppressed) THEN clear local. Returns whether the erase
     /// completed. Wipes local ONLY when the remote side is handled — signed-out (local-only erase is the
     /// intent) or a clean signed-in wipe — so a remote wipe dropped by single-flight (a cadence/SSE/
