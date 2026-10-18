@@ -72,3 +72,41 @@ lives in git history at `388d7ef`.
 - Blocked: Mac captures (`phase2 mac`, `phase3 mac`, `widths`) need an unlocked GUI session; the glass slider extremes need a device
 - Assumptions: `xcode-select` points at the Command Line Tools on this machine; every
   xcodebuild call sets `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
+
+
+# Local App Store readiness pass (2026-10-17)
+
+Scope: inspect release configuration and existing behavior, fix confirmed issues, verify locally.
+Preserve architecture, identity, capabilities, and privacy declarations. No commits or uploads.
+
+- [x] Discover project: shared SwiftUI iOS app with Mac Catalyst, GRDB 7.10.0, optional PocketBase sync.
+- [x] Baseline: 281 package tests; iOS Simulator and Catalyst Release builds.
+- [x] Reproduce backup-validation/counting bug with two failing regression tests, then fix.
+- [x] Full suite after fix: 283 tests, 31 suites.
+- [x] First-launch capture, cancellation, editing, and relaunch persistence: iPhone and iPad Release UI tests.
+- [x] Confirm duplicate View menus at runtime; consolidate commands into the system menu.
+- [x] Unsigned iOS device archive; inspect versions, device families, extensions, privacy manifests.
+- [x] Expanded iPhone lifecycle: iOS 27.0 and 26.5; final-source iOS 26.5 rerun passed.
+- [x] Final unsigned iOS device and Catalyst archives, and final 283-test package suite.
+- [x] Dark iPhone screen walk: 14 captures; inspected editor/dashboard/settings/capture.
+- [x] Stop the celebration timeline after its burst and when Reduce Motion is enabled.
+- [x] Closed October 18: original iPad context-menu lifecycle passed in about five minutes; XCTest idle waits caused the apparent stall.
+- [x] Save final evidence ledger with blockers and exact owner validation steps.
+
+Resuming from here: see docs/2026-10-17-release-readiness.md and build/release-readiness/.
+Signed Catalyst Debug/Release builds and normal matrix startup were verified on October 18; see the evidence ledger for runtime coverage and remaining distribution gates.
+The live privacy policy omits optional third-party shared-link title requests; owner review is required.
+
+
+# Release-readiness follow-up (2026-10-18)
+
+Owner is handling certificate/profile reconciliation. Continue locally without commits or publication.
+
+- [x] Prepare shared-link title disclosure in the marketing site's privacy policy; static build and edited-file lint pass. Preserve its existing bun.lock and gallery work.
+- [x] Diagnose the iPad context-menu automation wait with process samples; original UI passes. Discard ineffective preview experiment.
+- [x] Fix reproduced large-text editor crowding: expanded presentation, one-column quadrant picker, and UI regression.
+- [x] Final accessibility audits pass after hiding decorative quadrant heading icons flagged on iOS 26.5; iOS 27 iPhone/iPad largest-text reruns also pass.
+- [x] Reverify affected app builds/unsigned archives, 283 package tests, and update the evidence ledger.
+- [x] Owner resolved certificate profiles; signed Catalyst Debug/Release builds, signatures, matrix startup/relaunch, menus, and Delete/Undo verified.
+- [x] Owner authorized committing readiness fixes and opening a PR on October 18.
+- Account/provider flows, physical-device VoiceOver, distribution validation, and App Store Connect state remain separate checks.

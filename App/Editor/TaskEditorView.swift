@@ -6,6 +6,7 @@ import GSDStore
 struct TaskEditorView: View {
     @Environment(TaskStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// iPhone-only: which detent the sheet is at. Drives the "Show all details"
     /// affordance — 10 of the editor's 12 sections live below the medium fold.
@@ -84,11 +85,16 @@ struct TaskEditorView: View {
 
     var body: some View {
         // Compact presenter (iPhone, a narrow iPad or Mac window): the half-height quick edit
-        // with an explicit path to the full form. Regular: a page-sized sheet, since the medium
+        // with an explicit path to the full form. Accessibility sizes start expanded so the
+        // expansion prompt cannot crowd out the form. Regular: a page-sized sheet, since the medium
         // detent cut the quadrant picker mid-tile. The presenter's size class, not the device
         // idiom, decides, so a resized window gets a sheet that fits it.
         if compactPresenter {
-            editorStack.presentationDetents([.medium, .large], selection: $detent)
+            if typeSize.isAccessibilitySize {
+                editorStack.presentationDetents([.large])
+            } else {
+                editorStack.presentationDetents([.medium, .large], selection: $detent)
+            }
         } else {
             editorStack.presentationSizing(.page)
         }
@@ -129,7 +135,7 @@ struct TaskEditorView: View {
             .tint(Surface.tint)   // baseline calm action tint (carets + true actions, never system blue); picker values → ink3 by role
             .environment(\.editMode, $subtaskEditMode)
             .safeAreaInset(edge: .bottom) {
-                if compactPresenter && detent == .medium {
+                if compactPresenter && !typeSize.isAccessibilitySize && detent == .medium {
                     showAllDetailsButton
                 }
             }
@@ -182,7 +188,7 @@ struct TaskEditorView: View {
     /// the quadrant accent; the selected cell fills with the quadrant wash + a full
     /// accent border, unselected cells carry only a faint accent-tinted border (§3).
     private var quadrantPicker: some View {
-        LazyVGrid(columns: [GridItem(), GridItem()], spacing: 10) {
+        LazyVGrid(columns: typeSize.isAccessibilitySize ? [GridItem()] : [GridItem(), GridItem()], spacing: 10) {
             ForEach(Quadrant.allCases, id: \.self) { q in
                 let selected = quadrant == q
                 Button { quadrant = q } label: {

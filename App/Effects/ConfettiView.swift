@@ -29,12 +29,27 @@ struct ConfettiView: View {
         }
         .allowsHitTesting(false)
         .onChange(of: trigger) { _, _ in fire() }
+        .onChange(of: reduceMotion) { _, enabled in
+            if enabled { stop() }
+        }
+        .task(id: startDate) {
+            guard startDate != nil else { return }
+            do {
+                try await _Concurrency.Task.sleep(for: .seconds(Self.duration))
+            } catch { return }
+            stop()
+        }
     }
 
     private func fire() {
         guard !reduceMotion else { return }
         particles = (0..<160).map { _ in Particle.random() }
         startDate = .now
+    }
+
+    private func stop() {
+        startDate = nil
+        particles.removeAll()
     }
 
     struct Particle {

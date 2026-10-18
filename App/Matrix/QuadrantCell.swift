@@ -25,6 +25,7 @@ struct QuadrantCell: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: QuadrantStyle.symbol(quadrant))
+                    .accessibilityHidden(true)
                     .font(.title3).foregroundStyle(QuadrantStyle.accent(quadrant))
                 Text(quadrant.title)
                     .font(.serif(.title3).weight(.semibold))

@@ -6,9 +6,9 @@ public enum ImportError: Error, Equatable {
     case malformed(String)
 }
 
-/// The outcome of a pure import parse: the tasks the store should write, how many raw
-/// task entries were skipped (failed lenient decode), and every other user-owned store
-/// the envelope carried.
+/// The outcome of a pure import parse: tasks to write, the count of active, archived,
+/// or trashed rows skipped during decoding or validation, and every other user-owned
+/// store the envelope carried.
 ///
 /// Each extra store is OPTIONAL and nil means "the backup said nothing about it" — the
 /// store must leave that table alone rather than clearing it. An empty array is a
@@ -134,10 +134,23 @@ public enum TaskImporter {
                 skipped += 1
             }
         }
+        // Companion stores are restored directly by the store, so validate their tasks
+        // here too and include every dropped row in the import feedback.
+        func validated(_ rows: [LenientArchived]?) -> [ArchivedTask]? {
+            rows?.compactMap { raw in
+                guard let row = raw.decoded, (try? TaskValidator.validate(row.task)) != nil else {
+                    skipped += 1
+                    return nil
+                }
+                return row
+            }
+        }
+        let archived = validated(envelope.archivedTasks)
+        let deleted = validated(envelope.deletedTasks)
         return ImportResult(
             tasks: tasks, skipped: skipped,
-            archivedTasks: envelope.archivedTasks?.compactMap(\.decoded),
-            deletedTasks: envelope.deletedTasks?.compactMap(\.decoded),
+            archivedTasks: archived,
+            deletedTasks: deleted,
             smartViews: envelope.smartViews,
             notificationSettings: envelope.notificationSettings?.settings,
             archiveSettings: envelope.archiveSettings.map { ($0.enabled, $0.archiveAfterDays) },
