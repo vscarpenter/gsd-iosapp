@@ -174,3 +174,16 @@ The October 18 follow-up additionally changes the marketing repository's `app/pr
 ### Undo clarification and runtime follow-up
 
 The reported missing deletion message was clarified by the owner: the action was Complete, not Delete. Completion has no deletion Undo toast; use Show Completed and toggle completion again. Individual task-menu deletion was visually verified on the original signed Release build, including clicking Undo and finding the restored QA task after relaunch. An initial capture caught the entrance transition and was incorrectly interpreted as persistent clipping; a settled capture corrected that interpretation. The experimental safe-area change was removed completely. QA tasks were deleted after testing; normal Trash retention applies. No product code change was retained from this investigation. Edit/select bulk deletion is a separate path without this notification; it was not established as the owner's issue or changed here.
+
+
+## App Store distribution preparation — October 18
+
+Owner authorized distribution archiving, validation, and upload to App Store Connect after deploying the privacy update. A fresh uncached policy fetch confirms the October 18 shared-link title disclosure is live. The marketing version was already 3.0.0; build 34 was incremented to 35 via the version script, regenerating the Xcode project. All app and extension versions match.
+
+- iOS archive: `/tmp/gsd-appstore-ios-35.xcarchive`; distribution IPA: `/tmp/gsd-appstore-ios-35-export/GSD.ipa`.
+- Mac Catalyst universal archive: `/tmp/gsd-appstore-mac-35.xcarchive`; distribution installer: `/tmp/gsd-appstore-mac-35-export/GSD.pkg`.
+- Both archives and App Store distribution exports succeeded. Distribution summaries confirm Apple Distribution certificates, expected extension versions and entitlements, and `get-task-allow=false`. Mac installer signature and nested archive code signatures verified.
+- Apple validation: both artifacts returned `VERIFY SUCCEEDED with no errors`. Logs: `/tmp/gsd-appstore-ios-35-validation.log` and `/tmp/gsd-appstore-mac-35-validation.log`.
+- Both uploads returned `UPLOAD SUCCEEDED with no errors`. iOS delivery UUID: `bd715725-5efc-4eec-a9ec-599f731dd420`; Mac delivery UUID: `0d39fac2-1d19-4899-b47d-40971ba58bf9`. Upload logs: `/tmp/gsd-appstore-ios-35-upload.log` and `/tmp/gsd-appstore-mac-35-upload.log`.
+- The initial App Store Connect API read did not yet list build 35. The owner subsequently confirmed that both iOS and Mac apps finished processing in App Store Connect. This processing completion is owner-confirmed; no additional API verification was performed. Neither app was submitted for review or released during this work.
+- The owner authorized committing the version bump and this release report and opening a pull request. Remaining gates are final device/account checks and App Store Connect listing, build selection, and review submission.

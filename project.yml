@@ -15,7 +15,7 @@ settings:
     # CFBundleShortVersionString/CFBundleVersion (App Store rule). Bump these two lines
     # per release — never per-target (that's how the app/extension versions drifted apart).
     MARKETING_VERSION: "3.0.0"
-    CURRENT_PROJECT_VERSION: "34"
+    CURRENT_PROJECT_VERSION: "35"
     # Xcode 26 "recommended settings" — declared here so they survive `xcodegen
     # generate` (clicking "Perform Changes" in Xcode would edit the generated pbxproj
     # and be wiped). These are already the SDK-default resolved values; made explicit
