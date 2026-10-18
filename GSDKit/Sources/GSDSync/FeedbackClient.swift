@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 import GSDModel
 
 /// How a feedback submission ended. Never an exception at the UI: the caller

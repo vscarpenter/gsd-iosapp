@@ -3,6 +3,7 @@ import Foundation
 import GSDModel
 import GSDStore
 @testable import GSDSync
+@testable import GSDWire
 
 /// Parity S10 and S11 (backlog B-05, B-06). A remote listing the engine can't trust must never
 /// delete a local task, and a remote version it can't read must never authorize an overwrite.

@@ -1,10 +1,10 @@
 import Foundation
 
 /// Decodes the `exp` claim from a PocketBase JWT and answers the proactive-refresh question. Pure;
-/// does NOT verify the signature (the server does). Internal.
-enum JWT {
+/// does NOT verify the signature (the server does). `package`.
+package enum JWT {
     /// The `exp` (expiry) as a `Date`, or nil if the token is malformed or has no numeric `exp`.
-    static func expiry(_ token: String) -> Date? {
+    package static func expiry(_ token: String) -> Date? {
         let parts = token.split(separator: ".")
         guard parts.count == 3,
               let payload = base64urlDecode(String(parts[1])),
@@ -14,13 +14,13 @@ enum JWT {
     }
 
     /// True when `token` expires within `skew` of `now`, OR is unparseable (treat as needs-refresh).
-    static func expiresWithin(_ skew: TimeInterval, of token: String, now: Date) -> Bool {
+    package static func expiresWithin(_ skew: TimeInterval, of token: String, now: Date) -> Bool {
         guard let exp = expiry(token) else { return true }
         return exp.timeIntervalSince(now) <= skew
     }
 
     /// The PocketBase user record id (`id` claim) — the `owner` for pushed records.
-    static func userId(_ token: String) -> String? {
+    package static func userId(_ token: String) -> String? {
         let parts = token.split(separator: ".")
         guard parts.count == 3, let payload = base64urlDecode(String(parts[1])),
               let obj = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],

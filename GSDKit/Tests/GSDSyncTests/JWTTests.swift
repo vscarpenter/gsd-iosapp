@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct JWTTests {
     private func makeJWT(_ payloadJSON: String) -> String {

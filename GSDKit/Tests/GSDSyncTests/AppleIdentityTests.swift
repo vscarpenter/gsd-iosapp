@@ -1,5 +1,6 @@
 import Testing
 @testable import GSDSync
+@testable import GSDWire
 
 struct AppleIdentityTests {
     @Test func relayAddressIsDetected() {

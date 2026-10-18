@@ -256,6 +256,19 @@ public final class TaskStore {
         await reminders.schedule(t)
     }
 
+    /// Land a task the server ALREADY holds — the Share Extension pushed it directly and the app
+    /// is catching up (`ShareInbox` → `ingestPushed`). Same validation and tag canonicalization as
+    /// `create`, but the timestamps are kept as given (they are the server copy's, so LWW sees one
+    /// write, not two) and NO sync item is enqueued: a queued create would only re-PATCH the record.
+    /// `onMutation` stays quiet for the same reason; the observer still fires `onTasksChanged`.
+    public func ingestSynced(_ task: Task) async throws {
+        var t = task
+        t.tags = Self.canonicalTags(task.tags)
+        try TaskValidator.validate(t)
+        try await repository.upsert(t)
+        await reminders.schedule(t)
+    }
+
     public func duplicate(_ task: Task) async throws -> Task {
         let now = clock()
         var copy = task

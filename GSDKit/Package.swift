@@ -7,6 +7,7 @@ let package = Package(
     products: [
         .library(name: "GSDModel", targets: ["GSDModel"]),
         .library(name: "GSDStore", targets: ["GSDStore"]),
+        .library(name: "GSDWire", targets: ["GSDWire"]),
         .library(name: "GSDSync", targets: ["GSDSync"]),
         .library(name: "GSDSnapshot", targets: ["GSDSnapshot"]),
     ],
@@ -22,7 +23,10 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift"),
             ]
         ),
-        .target(name: "GSDSync", dependencies: ["GSDModel", "GSDStore"]),
+        // GRDB-free PocketBase wire layer (client, records, mapper, JWT, shared token) — what the
+        // Share Extension links to push a task without the store. GSDSync builds on it.
+        .target(name: "GSDWire", dependencies: ["GSDModel"]),
+        .target(name: "GSDSync", dependencies: ["GSDModel", "GSDStore", "GSDWire"]),
         .target(name: "GSDSnapshot", dependencies: ["GSDModel"]),
         .testTarget(
             name: "GSDModelTests",
@@ -46,5 +50,6 @@ let package = Package(
             resources: [.copy("Fixtures")]
         ),
         .testTarget(name: "GSDSnapshotTests", dependencies: ["GSDSnapshot"]),
+        .testTarget(name: "GSDWireTests", dependencies: ["GSDWire"]),
     ]
 )

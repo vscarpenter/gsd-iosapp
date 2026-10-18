@@ -2,6 +2,7 @@ import Foundation
 import Testing
 import GSDModel
 @testable import GSDSync
+@testable import GSDWire
 
 /// The one network call the feedback feature makes. Anonymity is asserted, not
 /// assumed: the no-Authorization test fails if this path ever grows a token.

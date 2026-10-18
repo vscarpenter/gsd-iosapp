@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct SyncCursorTests {
     private func freshDefaults() -> UserDefaults {

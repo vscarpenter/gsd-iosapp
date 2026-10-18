@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 
 /// Minimal PocketBase realtime (SSE) client over `URLSession.bytes` (§7.6). Foundation-only.
 /// Protocol (connect CONFIRMED at Probe P1, 2026-06-03; subscribe/envelope verify at the A74 gate):

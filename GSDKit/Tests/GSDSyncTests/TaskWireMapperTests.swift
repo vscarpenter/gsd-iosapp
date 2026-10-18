@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import GSDModel
 @testable import GSDSync
+@testable import GSDWire
 
 struct TaskWireMapperTests {
     private func date(_ s: String) -> Date { WireDate.parse(s)! }

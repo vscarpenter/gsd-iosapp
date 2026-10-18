@@ -3,6 +3,7 @@ import Foundation
 import GSDModel
 import GSDStore
 @testable import GSDSync
+@testable import GSDWire
 
 struct SyncEnginePullTests {
     final class ListExecutor: RequestExecuting, @unchecked Sendable {

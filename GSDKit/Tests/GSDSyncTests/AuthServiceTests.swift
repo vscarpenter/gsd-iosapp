@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct AuthServiceTests {
     final class FakePresenter: WebAuthPresenting, @unchecked Sendable {

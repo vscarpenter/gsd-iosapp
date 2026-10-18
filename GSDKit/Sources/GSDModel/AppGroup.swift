@@ -5,4 +5,7 @@ import Foundation
 /// `com.apple.security.application-groups` entitlement in every target.
 public enum AppGroup {
     public static let id = "group.dev.vinny.gsd"
+    /// `UserDefaults(suiteName: id)` key for the stable per-device sync identity (`DeviceIdentity`
+    /// in GSDStore writes it; the GRDB-free Share Extension reads it to stamp a direct push).
+    public static let deviceIDKey = "deviceId"
 }

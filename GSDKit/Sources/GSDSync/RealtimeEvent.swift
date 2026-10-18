@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 
 /// One PocketBase realtime message (§7.6): `{action, record}`. The `record` decodes leniently via
 /// `PocketBaseTaskRecord` (only `task_id` required) — a delete payload that carries only the PB

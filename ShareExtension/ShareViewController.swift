@@ -3,13 +3,42 @@ import SwiftUI
 import UniformTypeIdentifiers
 import GSDModel
 import GSDSnapshot
+import GSDWire
 
 /// The share-extension entry point (NSExtensionPrincipalClass). Extracts the shared URL or text
-/// from the NSItemProvider, then hosts the SwiftUI compose sheet. GRDB-free: it only writes a
-/// SharedCapture to the App-Group outbox; the app materializes it later (spec §4.2).
+/// from the NSItemProvider, then hosts the SwiftUI compose sheet. GRDB-free. On Add it pushes
+/// the task straight to PocketBase when it can (signed in, online, a few seconds' budget) and
+/// then writes the SharedCapture to the App-Group outbox either way; the app lands it on its next
+/// drain — without a second push when the record id is already there (spec §10.3).
 @objc(ShareViewController)
 final class ShareViewController: UIViewController {
     private let outbox = ShareOutboxStore()
+    /// The extension's whole lifetime after Add is a few seconds, so the push gets a hard budget:
+    /// a slow or absent network falls through to the outbox rather than a hung sheet.
+    private let push = DirectTaskPush(
+        client: PocketBaseClient(baseURL: PocketBaseEndpoint.liveBaseURL, session: ShareViewController.shortBudgetSession()),
+        token: { SharedTokenKeychain.load() },
+        deviceID: { UserDefaults(suiteName: AppGroup.id)?.string(forKey: AppGroup.deviceIDKey) })
+
+    private static func shortBudgetSession() -> URLSession {
+        let config = URLSessionConfiguration.ephemeral
+        config.timeoutIntervalForRequest = 5
+        config.timeoutIntervalForResource = 6
+        config.waitsForConnectivity = false       // offline → fail now, take the outbox path
+        return URLSession(configuration: config)
+    }
+
+    /// Choose the task id here so both outcomes share it: pushed → the app lands the same task
+    /// without re-pushing; not pushed (or timed out but landed) → the app's queued create resolves
+    /// to an update of the server copy, never a duplicate.
+    private func saveAndPush(_ capture: SharedCapture) async throws {
+        var capture = capture
+        capture.taskID = IDGenerator.generate(size: IDGenerator.Size.task)
+        if let task = capture.pushedTask(), case .pushed(let recordID) = await push.attempt(task) {
+            capture.remoteRecordID = recordID
+        }
+        try outbox.write(capture)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -63,7 +92,7 @@ final class ShareViewController: UIViewController {
         let composeView = ShareComposeView(
             initialTitle: prefilledTitle,
             urls: urls,
-            save: { [weak self] capture in try self?.outbox.write(capture) },
+            save: { [weak self] capture in try await self?.saveAndPush(capture) },
             onComplete: { [weak self] in self?.extensionContext?.completeRequest(returningItems: nil) },
             onCancel: { [weak self] in
                 self?.extensionContext?.cancelRequest(

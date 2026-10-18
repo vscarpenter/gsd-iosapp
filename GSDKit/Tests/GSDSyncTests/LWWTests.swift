@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import GSDSync
+@testable import GSDWire
 
 struct LWWTests {
     private let t0 = Date(timeIntervalSince1970: 1000.000)

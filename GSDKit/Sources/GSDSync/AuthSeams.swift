@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 
 /// Injected config for the auth flow (not hardcoded). `public`.
 public struct AuthConfig: Sendable {
@@ -10,7 +11,7 @@ public struct AuthConfig: Sendable {
     }
     /// The owner's live backend + the configured bounce redirect (set up + tested).
     public static let live = AuthConfig(
-        baseURL: "https://api.vinny.io",
+        baseURL: PocketBaseEndpoint.liveBaseURL,
         redirectURI: "https://api.vinny.io/ios-oauth-redirect/",
         callbackScheme: "gsd")
 }

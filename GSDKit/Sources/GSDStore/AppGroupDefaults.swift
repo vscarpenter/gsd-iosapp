@@ -1,4 +1,5 @@
 import Foundation
+import GSDModel
 
 /// Store-layer App-Group `UserDefaults` for small UI/config state that is NOT task data
 /// (pinning + archive settings — design-spec scope call). Falls back to `.standard` if
@@ -18,7 +19,7 @@ public enum AppGroupDefaults {
         public static let notificationQuietHoursStart = "notificationQuietHoursStart"
         public static let notificationQuietHoursEnd = "notificationQuietHoursEnd"
         public static let notificationPermissionAsked = "notificationPermissionAsked"
-        public static let deviceId = "deviceId"
+        public static let deviceId = AppGroup.deviceIDKey   // shared with the extension
         public static let deviceName = "deviceName"
         public static let fetchShareTitles = "fetchShareTitles"
     }

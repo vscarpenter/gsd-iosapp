@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 import GSDModel
 import GSDStore
 
