@@ -67,8 +67,8 @@ private struct MatrixListContent: View {
         .navigationTitle("Matrix")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .brandedNavigationTitle(String(localized: "Matrix"))
         .toolbar {
-            brandedNavigationTitle(String(localized: "Matrix"))
             paletteButton(palette)
             showCompletedToggle($showCompleted)
             ToolbarItem(placement: .topBarTrailing) { EditButton() }.overflowsFirst()

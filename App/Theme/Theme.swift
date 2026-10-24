@@ -107,11 +107,50 @@ struct BrandedNavigationTitle: View {
     }
 }
 
-@MainActor @ToolbarContentBuilder
-func brandedNavigationTitle(_ screen: String) -> some ToolbarContent {
-    ToolbarItem(placement: .principal) {
-        BrandedNavigationTitle(screen: screen)
+extension View {
+    /// The "GSD · Screen" principal title. Omitted while the system draws this navigation
+    /// context's bars on the side (iPhone Duo's outer display, and split-view detail columns on
+    /// its inner display): vertical bars take symbols only, so a custom title view would force a
+    /// second, horizontal bar just to hold it. The tab bar or the sidebar names the screen there.
+    func brandedNavigationTitle(_ screen: String) -> some View {
+        VerticalBarsReader { vertical in
+            toolbar {
+                if !vertical {
+                    ToolbarItem(placement: .principal) { BrandedNavigationTitle(screen: screen) }
+                }
+            }
+        }
     }
+}
+
+/// Tells its content whether the system presents the enclosing navigation context's bars
+/// vertically. Reads `toolbarVerticalEdge` on iOS 27.1; false on the iOS 26 floor and on every
+/// other device, where bars are always horizontal. Mac Catalyst never draws vertical bars, and
+/// its SDK does not expose the value, so it reports false without reading anything.
+struct VerticalBarsReader<Content: View>: View {
+    @ViewBuilder let content: (Bool) -> Content
+
+    var body: some View {
+        #if targetEnvironment(macCatalyst)
+        content(false)
+        #else
+        if #available(iOS 27.1, *) {
+            Reader(content: content)
+        } else {
+            content(false)
+        }
+        #endif
+    }
+
+    #if !targetEnvironment(macCatalyst)
+    @available(iOS 27.1, *)
+    private struct Reader: View {
+        @Environment(\.toolbarVerticalEdge) private var edge
+        let content: (Bool) -> Content
+
+        var body: some View { content(edge != nil) }
+    }
+    #endif
 }
 
 /// One-time UIKit appearance setup so every `navigationTitle` renders in the

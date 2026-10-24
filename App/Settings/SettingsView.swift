@@ -50,8 +50,8 @@ struct SettingsView: View {
             .navigationTitle(String(localized: "Settings"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarTitleDisplayMode(.inline)
+            .brandedNavigationTitle(String(localized: "Settings"))
             .toolbar {
-                brandedNavigationTitle(String(localized: "Settings"))
                 paletteButton(palette)
             }
             .navigationDestination(isPresented: $showFeedback) { FeedbackView() }

@@ -85,8 +85,8 @@ struct FilteredTaskListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: String(localized: "Search \(view.name)"))
+        .brandedNavigationTitle(view.name)
         .toolbar {
-            brandedNavigationTitle(view.name)
             ToolbarItem(placement: .topBarTrailing) { EditButton() }
         }
         // Bar visual sits in a bottom safeAreaInset; its prompts present from the main
