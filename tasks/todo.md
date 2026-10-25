@@ -1,3 +1,20 @@
+# iPhone Duo: upside-down portrait (2026-10-25)
+
+Branch: `fix/duo-upside-down` off `main` (`67d28d0`). Decisions: `docs/2026-10-25-iphone-duo-upside-down.md`.
+Source: finding 5 of the iPhone Duo, iOS 27, and new-device readiness review of 2026-10-24.
+
+- [x] Evidence: iPhone list has three orientations, iPad list four; nothing in the app reads orientation
+- [x] Fix: `UIInterfaceOrientationPortraitUpsideDown` added to the iPhone list in `project.yml`; `xcodegen generate`; plist checked (only the spec and the plist changed)
+- [x] Verify: Duo, iPad, and Mac Catalyst builds clean; launched on the Duo; `swift test` 283 green; probe: iPhone 18 Pro refuses upside-down with the list, the Duo simulator ignores programmatic turns (owner-run)
+- [x] Docs, lessons, memory; committed on this branch
+- [ ] Owner's go-ahead for push and PR
+
+## Resuming From Here
+- Done: the change, its verification, the probe, and the decision record, committed on this branch.
+- Next: the owner gates (push and PR), then the owner's Device Hub turn on `main` first; close the PR if the open phone already follows.
+- Blockers: the Duo simulator ignores programmatic turns, so the only Duo measurement is the owner's.
+- Assumptions: shipped under stated doubt (Apple says the inner display ignores the list); the one certain effect is on Home-button iPhones.
+
 # DemoSeed isolation (2026-10-25)
 
 Branch: `fix/demo-seed-isolation`, in the worktree `../.worktrees/gsd-iosapp-demo-seed` (another
