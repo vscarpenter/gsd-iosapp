@@ -66,6 +66,9 @@ All on 2026-10-25, on this branch:
 - `scripts/capture-screens.sh editor-bar duo`: 14 light and 14 dark screens of the outer display,
   zero test failures, every PNG 1398x2034 with no alpha, in 4 minutes 13 seconds. The editor capture
   shows the bar with Cancel and Save, which the capture in PR #27 lacked.
+- `scripts/capture-screens.sh editor-bar iphone ipad`: iPhone 18 Pro 14 light and 14 dark,
+  iPad Air 13-inch (M4) 12 and 12, zero test failures, in 7 minutes 36 seconds. The editor
+  reads as before on both.
 - `cd GSDKit && swift test`: 283 tests in 31 suites pass (no package source changed).
 - `xcodebuild build` for the iPad Air 13-inch (M4) simulator and for Mac Catalyst
   (`CODE_SIGNING_ALLOWED=NO`): both clean. The iPhone simulator build is the test build above.

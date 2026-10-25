@@ -7,7 +7,7 @@ Source: the new finding in PR #27. Once the task editor's form scrolls on the Du
 - [x] Red: `ReleaseReadinessTests.testEditorBarSurvivesScroll` fails on the closed Duo (title, Cancel, and Save gone after one scroll; back after scrolling up) and passes on iPhone 18 Pro
 - [x] Root cause confirmed by a one-variable test: iOS 27 bar minimization on scroll; `toolbarMinimizationBehavior(.never, for: .navigationBar)` alone turned the Duo test green
 - [x] Fix in `TaskEditorView`, guarded for iOS 27; the test is green on the Duo and still green on iPhone 18 Pro
-- [x] Verify: `swift test` 283 green; iPhone, iPad, and Mac Catalyst builds clean; the `duo` harness walk 14 + 14 with zero failures
+- [x] Verify: `swift test` 283 green; iPhone, iPad, and Mac Catalyst builds clean; the `duo` walk 14 + 14, the iPhone walk 14 + 14, and the iPad walk 12 + 12, all with zero failures
 - [x] Docs, lessons, memory; committed on this branch
 - [ ] Owner's go-ahead for push and PR (rebase onto `main` once PR #27 merges)
 
