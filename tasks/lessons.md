@@ -42,6 +42,18 @@ would have shown the bug.
 .navigationBar)`. And when a bar keeps its frame but loses its children in a hierarchy dump,
 suspect minimization before suspecting the toolbar items.
 
+## The Duo simulator ignores programmatic turns (2026-10-25)
+
+`XCUIDevice.shared.orientation` turns an iPhone 18 Pro simulator (the window went to 874x402 on
+a landscape turn) and does nothing on the iPhone Duo, closed or open, for any orientation.
+Turning the Duo is a Device Hub action, so every orientation question on it is owner-run. The
+same probe showed the iPhone 18 Pro refusing upside-down portrait with that orientation listed,
+which is the Face ID rule, in the simulator too.
+
+**Rule:** to learn whether a turn was honored, save `XCUIScreen.main.screenshot()` before and
+after and compare the pixels. Identical means refused. The window frame alone misses the
+upside-down case, where the size does not change.
+
 ## A vertical-bar fix is measured against the title row, not the bar (2026-10-24)
 
 The Duo review assumed the text-only Edit button forced a second, horizontal bar on the
