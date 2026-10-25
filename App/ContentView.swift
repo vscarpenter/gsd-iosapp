@@ -64,7 +64,7 @@ struct ContentView: View {
                 TaskEditorView(request: $0, compactPresenter: sizeClass == .compact).environment(store)
             }
             .sheet(isPresented: $showAbout) { AboutView().presentationSizing(.fitted) }
-            .sheet(isPresented: $showHelp) { HelpView() }
+            .sheet(isPresented: $showHelp) { HelpView(compactPresenter: sizeClass == .compact) }
             .onOpenURL { handleDeepLink($0) }
             .onContinueUserActivity(CSSearchableItemActionType, perform: handleSpotlightActivity)
             .onReceive(NotificationCenter.default.publisher(for: .gsdOpenDeepLink)) { notification in

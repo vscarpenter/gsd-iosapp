@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import GSDModel
 
 /// The cross-platform "Field Guide" — a static reference sheet mirroring the web
@@ -9,6 +8,14 @@ import GSDModel
 /// by `ContentView` via the `.gsdShowHelp` notification.
 struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
+
+    /// Whether the presenting root is compact. Passed in, as for the editor, because a sheet's
+    /// own environment reads compact even on a full-width iPad.
+    private let compactPresenter: Bool
+
+    init(compactPresenter: Bool = false) {
+        self.compactPresenter = compactPresenter
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -152,7 +159,7 @@ struct HelpView: View {
         .padding(.top, 2)
     }
 
-    // MARK: §4 keyboard shortcuts (Mac / iPad only)
+    // MARK: §4 keyboard shortcuts (Mac and regular-width presenters)
 
     private var shortcutsSection: some View {
         section(String(localized: "KEYBOARD SHORTCUTS"), icon: "keyboard") {
@@ -281,12 +288,14 @@ struct HelpView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// True where a hardware keyboard is realistic: Mac always; iPad yes; iPhone no.
+    /// True where a hardware keyboard is realistic: the Mac always, and any regular-width
+    /// presenter (an iPad, an open iPhone Duo). The device idiom decided this before, which
+    /// hid the section on the Duo's inner display: phone idiom, regular width.
     private var showsKeyboardShortcuts: Bool {
         #if targetEnvironment(macCatalyst)
         return true
         #else
-        return UIDevice.current.userInterfaceIdiom == .pad
+        return !compactPresenter
         #endif
     }
 }
