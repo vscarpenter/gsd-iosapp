@@ -45,7 +45,11 @@ struct GSDApp: App {
         let database: AppDatabase
         let databaseUnavailable: Bool
         do {
-            database = try AppDatabase.liveWithRecovery()
+            // A demo-seed launch (the screenshot and video harness) never opens the shared store.
+            // A dev-signed Catalyst build shares the App Group container and the keychain session
+            // with the installed app, and on 2026-10-24 the seed trashed the owner's 166 real tasks
+            // and pushed their deletes to the server. In memory here, signed out below.
+            database = try (DemoSeed.isRequested ? AppDatabase.inMemory() : AppDatabase.liveWithRecovery())
             databaseUnavailable = false
         } catch {
             database = try! AppDatabase.inMemory()
@@ -73,7 +77,7 @@ struct GSDApp: App {
         )
         _store = State(initialValue: store)
         // Auth + transport (Phase 5b). Live seams; the pure AuthService logic is unit-tested.
-        let tokenStore = KeychainTokenStore()
+        let tokenStore: any TokenStore = DemoSeed.isRequested ? SignedOutTokenStore() : KeychainTokenStore()
         let authService = AuthService(
             client: PocketBaseClient(baseURL: AuthConfig.live.baseURL),
             presenter: LiveWebAuthPresenter(),
