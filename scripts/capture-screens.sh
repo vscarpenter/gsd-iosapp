@@ -1,24 +1,34 @@
 #!/usr/bin/env bash
-# Captures one PNG per screen, light and dark, on iPhone, iPad, and Mac Catalyst, by running the
-# RefreshBaseline UI test (ScreenshotTests/RefreshBaseline.swift). Used for the iOS 27 refresh:
-# a "baseline" run before any visual change, then one run per phase to compare against it.
+# Captures one PNG per screen, light and dark, on iPhone, iPad, iPhone Duo, and Mac Catalyst, by
+# running the RefreshBaseline UI test (ScreenshotTests/RefreshBaseline.swift). Used for the iOS 27
+# refresh: a "baseline" run before any visual change, then one run per phase to compare against it.
 #
-#   scripts/capture-screens.sh <label> [iphone|ipad|mac|widths ...]   # default: iphone ipad mac
+#   scripts/capture-screens.sh <label> [iphone|ipad|mac|widths|duo|duo-open ...]   # default: iphone ipad mac
 #
 # `widths` (Mac only) pins the window to three widths and crosses the compact/regular boundary
 # with the editor open (RefreshBaseline.testCaptureWidths).
 #
+# `duo` walks the iPhone Duo's outer display: the script reboots the simulator, which is the one
+# headless way to the closed pose (a pose set in Device Hub survives a detach). `duo-open` walks
+# the inner display: no CLI unfolds the phone, so the script waits (DUO_WAIT seconds, default
+# 600) for you to open it in Device Hub, in portrait. The walk captures whichever display is
+# live at its native size, 1398x2034 outer and 2007x2853 inner, which are the App Store Connect
+# screenshot sizes for the Duo; both Duo runs check every PNG for that size and for no alpha.
+#
 # Output: build/screens/<label>/<platform>-<appearance>-NN-name.png (build/ is gitignored).
 # The Mac run needs a GUI session and signing for the host (the same as the reel-mac demo).
+# The Duo runs need `timeout` (coreutils) and `magick` (ImageMagick) from Homebrew.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-LABEL="${1:?usage: capture-screens.sh <label> [iphone|ipad|mac ...]}"; shift
+LABEL="${1:?usage: capture-screens.sh <label> [iphone|ipad|mac|widths|duo|duo-open ...]}"; shift
 PLATFORMS=("$@")
 if [ ${#PLATFORMS[@]} -eq 0 ]; then PLATFORMS=(iphone ipad mac); fi
 
 IPHONE_UDID="${IPHONE_UDID:-CC926802-7D1D-4AF1-9BDA-BCD4B4C4B768}"   # iPhone 18 Pro, iOS 27.0
-IPAD_UDID="${IPAD_UDID:-83963D05-D43E-4103-9772-37EA4A81EFA9}"       # iPad Pro 13-inch (M5), iOS 27.0
+IPAD_UDID="${IPAD_UDID:-2481EF71-D468-40E6-B9AF-F36E9CEFA2B7}"       # iPad Air 13-inch (M4), iOS 27.0
+DUO_UDID="${DUO_UDID:-22BC0A9F-090C-47EB-81EA-290802AA3E22}"         # iPhone Duo, iOS 27.1
+DUO_WAIT="${DUO_WAIT:-600}"
 SCHEME=GSDScreenshots
 ONLY=-only-testing:GSDScreenshotTests/RefreshBaseline/testCaptureEveryScreen
 DD="${DD:-build/dd}"
@@ -94,13 +104,90 @@ run_mac() {
   done
 }
 
+# MARK: iPhone Duo
+
+require_duo_tools() {
+  local tool
+  for tool in timeout magick; do
+    command -v "$tool" >/dev/null 2>&1 \
+      || { echo "the Duo runs need '$tool' (brew install coreutils imagemagick)" >&2; return 1; }
+  done
+}
+
+# The port UUID of one of the Duo's framebuffers, found by its width. The UUIDs change on
+# every boot, so they are never hard-coded.
+duo_display() {   # outer|inner
+  local width
+  case "$1" in outer) width=1398 ;; inner) width=2007 ;; esac
+  xcrun simctl io "$DUO_UDID" enumerate \
+    | awk -v w="$width" '/UUID:/ { uuid = $2 } /Default width:/ && $3 == w { print uuid; exit }'
+}
+
+# True when the display is drawing something. A dark framebuffer is a flat image (standard
+# deviation 0; its mean is not 0, so brightness is no test), and a screenshot of a powered-off
+# display can hang, hence the timeout.
+duo_display_is_live() {   # outer|inner
+  local uuid png spread
+  uuid="$(duo_display "$1")"
+  [ -n "$uuid" ] || return 1
+  png="$(mktemp -t gsd-duo).png"
+  timeout 20 xcrun simctl io "$DUO_UDID" screenshot --display="$uuid" --mask=ignored "$png" \
+    >/dev/null 2>&1 || { rm -f "$png"; return 1; }
+  spread="$(magick "$png" -colorspace Gray -format '%[fx:standard_deviation]' info:)"
+  rm -f "$png"
+  awk -v s="$spread" 'BEGIN { exit !(s > 0.01) }'
+}
+
+# App Store Connect accepts these files as they are only at the exact size with no alpha.
+verify_pngs() {   # <prefix> <width> <height>
+  local png dims bad=0
+  for png in "$OUT/$1-"*.png; do
+    [ -f "$png" ] || continue
+    dims="$(sips -g pixelWidth -g pixelHeight -g hasAlpha "$png" \
+      | awk '/pixelWidth/ { w = $2 } /pixelHeight/ { h = $2 } /hasAlpha/ { a = $2 } END { print w "x" h " alpha=" a }')"
+    if [ "$dims" != "$2x$3 alpha=no" ]; then
+      echo "   $(basename "$png"): $dims (want $2x$3 alpha=no)"; bad=1
+    fi
+  done
+  if [ "$bad" -eq 0 ]; then echo "   $1: every PNG is $2x$3 with no alpha"; else return 1; fi
+}
+
+run_duo() {
+  require_duo_tools
+  echo "=== duo: rebooting into the closed pose ==="
+  xcrun simctl shutdown "$DUO_UDID" 2>/dev/null || true
+  xcrun simctl boot "$DUO_UDID"
+  xcrun simctl bootstatus "$DUO_UDID" -b >/dev/null 2>&1 || true
+  duo_display_is_live outer || { echo "duo: the outer display is dark after the reboot" >&2; return 1; }
+  run_sim duo-outer "$DUO_UDID"
+  verify_pngs duo-outer 1398 2034
+}
+
+run_duo_open() {
+  require_duo_tools
+  xcrun simctl boot "$DUO_UDID" 2>/dev/null || true
+  xcrun simctl bootstatus "$DUO_UDID" -b >/dev/null 2>&1 || true
+  local waited=0
+  until duo_display_is_live inner; do
+    if [ "$waited" -eq 0 ]; then
+      echo "duo-open: open the iPhone Duo in Device Hub (portrait) and leave it open; waiting up to ${DUO_WAIT}s"
+    fi
+    if [ "$waited" -ge "$DUO_WAIT" ]; then echo "duo-open: the inner display never came on" >&2; return 1; fi
+    sleep 5; waited=$((waited + 5))
+  done
+  run_sim duo-inner "$DUO_UDID"
+  verify_pngs duo-inner 2007 2853
+}
+
 for platform in "${PLATFORMS[@]}"; do
   case "$platform" in
-    iphone) run_sim iphone "$IPHONE_UDID" ;;
-    ipad)   run_sim ipad "$IPAD_UDID" ;;
-    mac)    run_mac ;;
-    widths) run_widths ;;
-    *) echo "unknown platform '$platform' (iphone|ipad|mac|widths)" >&2; exit 1 ;;
+    iphone)   run_sim iphone "$IPHONE_UDID" ;;
+    ipad)     run_sim ipad "$IPAD_UDID" ;;
+    mac)      run_mac ;;
+    widths)   run_widths ;;
+    duo)      run_duo ;;
+    duo-open) run_duo_open ;;
+    *) echo "unknown platform '$platform' (iphone|ipad|mac|widths|duo|duo-open)" >&2; exit 1 ;;
   esac
 done
 echo "Done. Screens in $OUT"
