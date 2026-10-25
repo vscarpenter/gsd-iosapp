@@ -1,5 +1,35 @@
 # Lessons
 
+## A capture is only as fresh as the test bundle behind it (2026-10-25)
+
+The first Duo diagnostic run showed the branded title back on the outer display and looked like
+a regression of PR #26. It was not: `xcodebuild test-without-building` ran the `GSD.app` that
+`build-for-testing` had produced at 16:09, 85 minutes before the fix landed. The screenshots were
+true, of the wrong build.
+
+**Rule:** before reading anything into a `test-without-building` capture, compare the mtime of
+`build/dd/Build/Products/*/GSD.app/GSD` with the commit under test, or run `build-for-testing`
+again. It costs seconds when nothing changed.
+
+## The Duo's display UUIDs change on every boot (2026-10-25)
+
+The port UUIDs that `simctl io screenshot --display=` takes were saved from one boot and failed
+on the next with "does not have a display port." `simctl io enumerate` lists the live ports with
+their default width, and the two Duo framebuffers are the only ones at 1398 and 2007 pixels wide.
+
+**Rule:** never hard-code a Duo display UUID. Look it up by width at run time, and wrap the
+screenshot in `timeout`: a screenshot of a dark display can hang.
+
+## The in-test screenshot is the App Store Connect capture (2026-10-25)
+
+`XCUIScreen.main.screenshot()` on the Duo writes the live display at its native pixel size with
+no alpha channel, which is exactly what App Store Connect accepts. The host-side
+`simctl io screenshot` of the same display carries an alpha channel, `sips -s hasAlpha no` leaves
+it in place, and stripping it means another tool in the path.
+
+**Rule:** for a screenshot that may be uploaded, capture inside the walk and pixel-verify the
+file (`sips -g pixelWidth -g pixelHeight -g hasAlpha`) instead of post-processing a host capture.
+
 ## A vertical-bar fix is measured against the title row, not the bar (2026-10-24)
 
 The Duo review assumed the text-only Edit button forced a second, horizontal bar on the

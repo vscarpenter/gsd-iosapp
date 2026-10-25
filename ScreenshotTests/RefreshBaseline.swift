@@ -2,8 +2,9 @@ import UIKit
 import XCTest
 
 /// Visual baseline for the iOS 27 refresh: one PNG per screen, light and dark, on iPhone, iPad,
-/// and Mac Catalyst. Launches the seeded app with a frozen clock so every run shows the same
-/// cards and relative dates. NOT a correctness test. Driven by `scripts/capture-screens.sh`.
+/// iPhone Duo (either display), and Mac Catalyst. Launches the seeded app with a frozen clock so
+/// every run shows the same cards and relative dates. NOT a correctness test. Driven by
+/// `scripts/capture-screens.sh`.
 ///
 /// Env (TEST_RUNNER_-prefixed on the xcodebuild side):
 ///   BASELINE=1             run at all (a plain GSDScreenshots run skips this class)
@@ -50,20 +51,32 @@ final class RefreshBaseline: XCTestCase {
         if UIDevice.current.userInterfaceIdiom == .pad {
             XCUIDevice.shared.orientation = .landscapeLeft
             pause(1.5)   // launching sooner trips a transient accessibility error on the springboard
-            app.launch()
-            try walkRegular(app)
-        } else {
-            app.launch()
+        }
+        app.launch()
+        // The app picks its root by size class, not idiom: an unfolded iPhone Duo reports the
+        // phone idiom and shows the regular root. Ask the screen which root it is showing.
+        if compactRootIsShowing(app) {
             try walkCompact(app)
+        } else {
+            try walkRegular(app)
         }
         #endif
+    }
+
+    /// True when the compact TabView root is on screen. Both roots show the capture field, so
+    /// wait for it, then look for the Browse tab, which only the compact root has (the regular
+    /// sidebar lists Matrix, Dashboard, Archive, Settings, and the smart views).
+    private func compactRootIsShowing(_ app: XCUIApplication) -> Bool {
+        XCTAssertTrue(app.textFields["capture-field"].waitForExistence(timeout: 25), "matrix never appeared")
+        let window = app.windows.firstMatch.frame.size
+        print("RefreshBaseline window \(Int(window.width))x\(Int(window.height)) pt")
+        return app.tabBars.firstMatch.exists || app.buttons["Browse"].exists
     }
 
     // MARK: - iPhone (compact TabView)
 
     private func walkCompact(_ app: XCUIApplication) throws {
-        let tabs = app.tabBars.firstMatch
-        XCTAssertTrue(tabs.waitForExistence(timeout: 25), "tab bar never appeared")
+        XCTAssertTrue(tabButton(app, "Matrix").waitForExistence(timeout: 25), "tab bar never appeared")
         selectTab(app, "Matrix")
         XCTAssertTrue(card(app, "demo-investor").waitForExistence(timeout: 45), "seeded cards never appeared")   // a cold first launch seeds slowly
         pause(1.5)
@@ -157,14 +170,29 @@ final class RefreshBaseline: XCTestCase {
         }
         guard editor.waitForExistence(timeout: 5) else { XCTFail("editor never opened"); return }
         pause(0.8)
-        if dragToTop {
-            // The iPhone editor opens at the medium detent; drag it to large so the whole form is in frame.
-            let grab = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.56))
+        if dragToTop, !sheetIsExpanded(app) {
+            // The iPhone editor opens at the medium detent; drag the grabber to the top so the
+            // whole form is in frame. A drag that starts below the grabber reaches the form on the
+            // iPhone Duo's outer display and scrolls it, which empties the sheet's bar there.
             let top = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12))
-            grab.press(forDuration: 0.1, thenDragTo: top); pause(1.0)
+            grabber(app).press(forDuration: 0.1, thenDragTo: top); pause(1.0)
         }
         save(app, "04-editor")
-        if dismiss { _ = tap(app.buttons["editor-cancel"].firstMatch, "editor Cancel") }
+        if dismiss, !tap(app.buttons["editor-cancel"].firstMatch, "editor Cancel") {
+            // Leave the sheet anyway so the rest of the walk is not stuck behind it.
+            let bottom = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.98))
+            for _ in 0..<2 where element(app, "task-editor").exists {
+                grabber(app).press(forDuration: 0.1, thenDragTo: bottom); pause(1.0)
+            }
+        }
+    }
+
+    /// The sheet's drag handle, or the point where it sits on an iPhone's medium sheet.
+    private func grabber(_ app: XCUIApplication) -> XCUICoordinate {
+        let handle = app.buttons["Sheet Grabber"].firstMatch
+        return handle.exists
+            ? handle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            : app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.56))
     }
 
     // MARK: - Widths (Mac)
@@ -281,15 +309,32 @@ final class RefreshBaseline: XCTestCase {
 
     // MARK: - Navigation helpers
 
+    private static let tabNames = ["Matrix", "Browse", "Dashboard", "Settings"]
+
+    /// A tab button. A plain iPhone exposes a `tabBars` element; the iPhone Duo lays the tabs
+    /// out as a vertical column of plain buttons with no bar element, so fall back to the label.
+    private func tabButton(_ app: XCUIApplication, _ name: String) -> XCUIElement {
+        let bar = app.tabBars.firstMatch
+        return bar.exists ? bar.buttons[name] : app.buttons[name]
+    }
+
     /// Switches tabs. After a scroll the floating tab bar minimizes to the active tab and the
     /// other tab buttons leave the accessibility tree; a tap on the minimized bar expands it.
     private func selectTab(_ app: XCUIApplication, _ name: String) {
-        let bar = app.tabBars.firstMatch
-        let button = bar.buttons[name]
-        if !button.exists, bar.buttons.firstMatch.exists {
-            bar.buttons.firstMatch.tap(); pause(0.8)
+        var button = tabButton(app, name)
+        if !button.exists, let active = Self.tabNames.lazy.map({ self.tabButton(app, $0) }).first(where: \.exists) {
+            active.tap(); pause(0.8)
+            button = tabButton(app, name)
         }
         guard tap(button, "\(name) tab") else { return }
+    }
+
+    /// The sheet grabber reports `Expanded` at the large detent.
+    private func sheetIsExpanded(_ app: XCUIApplication) -> Bool {
+        let grabber = app.buttons["Sheet Grabber"].firstMatch
+        let value = grabber.exists ? (grabber.value as? String ?? "") : "none"
+        print("RefreshBaseline sheet grabber: \(value)")
+        return value == "Expanded"
     }
 
     /// Waits for `element`, taps it (unless `tapping` is false), and pauses. A miss records a
@@ -320,8 +365,12 @@ final class RefreshBaseline: XCTestCase {
         return element
     }
 
+    /// Pops the stack. The system back button carries the `BackButton` identifier wherever the
+    /// layout puts it: the navigation bar on iPhone and iPad, or the vertical strip on the iPhone
+    /// Duo, where the bar's first button is Edit instead. The position fallback is for the Mac.
     private func goBack(_ app: XCUIApplication) {
-        let back = app.navigationBars.buttons.element(boundBy: 0)
+        var back = app.buttons["BackButton"].firstMatch
+        if !back.waitForExistence(timeout: 3) { back = app.navigationBars.buttons.element(boundBy: 0) }
         if back.waitForExistence(timeout: 3) { back.tap() }
         pause(1.0)
     }
