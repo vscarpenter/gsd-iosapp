@@ -213,6 +213,63 @@ final class ReleaseReadinessTests: XCTestCase {
         cancel.tap()
     }
 
+    /// Regression for the iPhone Duo's outer display (follow-up to the harness PR, 2026-10-25):
+    /// once the editor's form scrolled, the sheet's title, Cancel, and Save left both the pixels
+    /// and the accessibility tree. The test opens the editor from the capture bar, expands it,
+    /// scrolls the form, and expects the bar to still be there. It passes on a plain iPhone.
+    func testEditorBarSurvivesScroll() throws {
+        guard ProcessInfo.processInfo.environment["RELEASE_QA"] == "1" else {
+            throw XCTSkip("Set TEST_RUNNER_RELEASE_QA=1 on a disposable QA simulator")
+        }
+        continueAfterFailure = true
+        let app = XCUIApplication()
+        app.launch()
+        let skip = app.buttons["Skip"]
+        if skip.waitForExistence(timeout: 5) { skip.tap() }
+        let capture = app.textFields["capture-field"]
+        XCTAssertTrue(capture.waitForExistence(timeout: 20))
+        capture.tap()
+        capture.typeText("Editor bar draft")
+        app.buttons["capture-details"].tap()
+        let cancel = app.buttons["editor-cancel"]
+        let save = app.buttons["editor-save"]
+        let title = app.staticTexts["New Task"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        XCTAssertTrue(save.exists)
+        XCTAssertTrue(title.exists)
+        // A compact presenter opens at the medium detent; expand it the way a user would.
+        let showAll = app.buttons["Show all details"]
+        if showAll.exists {
+            showAll.tap()
+            Thread.sleep(forTimeInterval: 1)
+            XCTAssertTrue(cancel.exists, "Cancel left after the sheet expanded")
+        }
+        let form = app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
+        XCTAssertTrue(form.exists)
+        form.swipeUp()
+        Thread.sleep(forTimeInterval: 1)
+        attach(app, "Editor after one scroll")
+        XCTAssertTrue(cancel.exists, "Cancel left after the form scrolled")
+        XCTAssertTrue(save.exists, "Save left after the form scrolled")
+        XCTAssertTrue(title.exists, "The title left after the form scrolled")
+        form.swipeDown()
+        Thread.sleep(forTimeInterval: 1)
+        attach(app, "Editor scrolled back to the top")
+        XCTAssertTrue(cancel.exists, "Cancel did not come back after scrolling to the top")
+        if cancel.exists { cancel.tap() }
+    }
+
+    private func attach(_ app: XCUIApplication, _ name: String) {
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = name
+        shot.lifetime = .keepAlways
+        add(shot)
+        let tree = XCTAttachment(string: app.debugDescription)
+        tree.name = name + " (hierarchy)"
+        tree.lifetime = .keepAlways
+        add(tree)
+    }
+
     func testLocalTaskLifecycle() throws {
         guard ProcessInfo.processInfo.environment["RELEASE_QA"] == "1" else {
             throw XCTSkip("Set TEST_RUNNER_RELEASE_QA=1 on a disposable QA simulator")

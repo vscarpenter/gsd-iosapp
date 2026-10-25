@@ -1,3 +1,22 @@
+# iPhone Duo: the editor bar on the outer display (2026-10-25)
+
+Branch: `fix/duo-editor-bar`, stacked on `fix/duo-screenshot-harness` (PR #27 was still open on GitHub when this started; rebase onto `main` once it merges). Decisions: `docs/2026-10-25-iphone-duo-editor-bar.md`.
+Source: the new finding in PR #27. Once the task editor's form scrolls on the Duo's outer display, the sheet's title, Cancel, and Save vanish.
+
+- [x] Evidence: every failure dump shows the sheet's `NavigationBar` keeping its frame with no children; the iOS 27.1 SwiftUI interface and Apple's docs read (toolbar minimization, vertical bars)
+- [x] Red: `ReleaseReadinessTests.testEditorBarSurvivesScroll` fails on the closed Duo (title, Cancel, and Save gone after one scroll; back after scrolling up) and passes on iPhone 18 Pro
+- [x] Root cause confirmed by a one-variable test: iOS 27 bar minimization on scroll; `toolbarMinimizationBehavior(.never, for: .navigationBar)` alone turned the Duo test green
+- [x] Fix in `TaskEditorView`, guarded for iOS 27; the test is green on the Duo and still green on iPhone 18 Pro
+- [x] Verify: `swift test` 283 green; iPhone, iPad, and Mac Catalyst builds clean; the `duo` walk 14 + 14, the iPhone walk 14 + 14, and the iPad walk 12 + 12, all with zero failures
+- [x] Docs, lessons, memory; committed on this branch
+- [ ] Owner's go-ahead for push and PR (rebase onto `main` once PR #27 merges)
+
+## Resuming From Here
+- Done: root cause confirmed, fix applied and committed, every verification run green.
+- Next: on the owner's go-ahead, rebase onto `main` (after PR #27 merges) and open the PR.
+- Blockers: the owner gates only (push and PR; the PR #27 merge for the rebase).
+- Assumptions: the fix lives in `TaskEditorView` only; the empty vertical strip the sheet reserves on the outer display is a separate follow-up.
+
 # iPhone Duo: screenshot harness (2026-10-25)
 
 Branch: `fix/duo-screenshot-harness`. Decisions: `docs/2026-10-25-iphone-duo-screenshot-harness.md`.

@@ -30,6 +30,18 @@ it in place, and stripping it means another tool in the path.
 **Rule:** for a screenshot that may be uploaded, capture inside the walk and pixel-verify the
 file (`sips -g pixelWidth -g pixelHeight -g hasAlpha`) instead of post-processing a host capture.
 
+## A sheet's bar can minimize to nothing on the iPhone Duo (2026-10-25)
+
+iOS 27 minimizes a navigation bar on scroll when its automatic behavior says so, and on the
+Duo's outer display that includes a sheet's horizontal bar. The task editor's bar holds only
+text items, which have no vertical form, so one scroll left the sheet with no title, Cancel,
+or Save until the scroll reversed. A plain iPhone never minimized it, so no iPhone capture
+would have shown the bug.
+
+**Rule:** a modal form pins its bar with `toolbarMinimizationBehavior(.never, for:
+.navigationBar)`. And when a bar keeps its frame but loses its children in a hierarchy dump,
+suspect minimization before suspecting the toolbar items.
+
 ## A vertical-bar fix is measured against the title row, not the bar (2026-10-24)
 
 The Duo review assumed the text-only Edit button forced a second, horizontal bar on the
