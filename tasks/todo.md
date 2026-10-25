@@ -13,10 +13,11 @@ the next day.
 - [x] Smoke: `RefreshBaseline.testCaptureEveryScreen` on the iPhone 17 Pro simulator, light and dark, 14 screens each, both passed; the simulator's on-disk `gsd.sqlite` kept its Sept 7 timestamp, so the demo launch never opened it
 - [x] Docs and lessons written; code committed as `32063ed`, docs in the commit after it
 - [x] Pushed; PR #30 open against main
+- [x] Review of PR #30 (12 findings) resolved 2026-10-25: `HarnessLaunch.isIsolated` (any `--demo-` argument) swaps every shared seam (defaults suite, reminders, Spotlight, share outbox, widget snapshot); the seed refuses any non-empty store and lost its delete loop; failures are loud; the legacy screenshot runner launches isolated
 
 ## Resuming From Here
-- Done: tests, package type, app wiring, three builds, the simulator smoke, decision doc, lesson, and both commits.
-- Next: merge PR #30 once its checks pass, then remove the worktree (`git worktree remove ../.worktrees/gsd-iosapp-demo-seed`).
+- Done: tests, package type, app wiring, three builds, the simulator smoke, decision doc, lesson, both commits, the main merge, and the review fixes.
+- Next: merge PR #30, then remove the worktree (`git worktree remove ../.worktrees/gsd-iosapp-demo-seed`).
 - Blockers: none; the merge is the owner's call.
 - Assumptions: the guard reads live tasks only (the set the seed deletes); the Mac harness is not re-run on this Mac until the owner chooses to.
 

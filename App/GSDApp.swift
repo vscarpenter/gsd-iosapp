@@ -42,14 +42,20 @@ struct GSDApp: App {
         // store so the app launches into a recovery screen rather than crashing; the on-disk data
         // is untouched and a relaunch retries. (A fresh in-memory open has no file I/O; only a
         // broken migration could fail it, which the test suite catches before shipping.)
+        // A harness launch (any --demo- argument) never touches what the real app owns. A
+        // dev-signed Catalyst build shares the App Group container, the keychain session, the
+        // notification center, Spotlight, and the widget snapshot with the installed app, and on
+        // 2026-10-24 the seed trashed the owner's 166 real tasks and pushed their deletes to the
+        // server. Isolated: in-memory store, signed out, a defaults suite that starts empty
+        // (AppGroupDefaults.shared resolves it), no reminders, no Spotlight, and the share outbox
+        // and widget snapshot in a scratch folder. The onboarding flag is set in that suite so the
+        // harness never meets the onboarding cover.
+        let isolated = HarnessLaunch.isIsolated
+        if isolated { AppGroupDefaults.shared.set(true, forKey: "hasOnboarded") }
         let database: AppDatabase
         let databaseUnavailable: Bool
         do {
-            // A demo-seed launch (the screenshot and video harness) never opens the shared store.
-            // A dev-signed Catalyst build shares the App Group container and the keychain session
-            // with the installed app, and on 2026-10-24 the seed trashed the owner's 166 real tasks
-            // and pushed their deletes to the server. In memory here, signed out below.
-            database = try (DemoSeed.isRequested ? AppDatabase.inMemory() : AppDatabase.liveWithRecovery())
+            database = try (isolated ? AppDatabase.inMemory() : AppDatabase.liveWithRecovery())
             databaseUnavailable = false
         } catch {
             database = try! AppDatabase.inMemory()
@@ -58,9 +64,9 @@ struct GSDApp: App {
         _databaseUnavailable = State(initialValue: databaseUnavailable)
         // The live scheduler reads NotificationSettings straight from App-Group defaults
         // (the same suite the store persists to) — avoids a store-construction cycle.
-        let scheduler = LiveReminderScheduler(settingsProvider: {
-            TaskStore.readNotificationSettings(from: .shared)
-        })
+        let scheduler: any ReminderScheduling = isolated
+            ? NoopReminderScheduler()
+            : LiveReminderScheduler(settingsProvider: { TaskStore.readNotificationSettings(from: .shared) })
         // Repos shared by the store and the sync engine (Phase 5c): pulled writes reach the store's
         // observer, and the store's enqueues reach the engine's drain — same GRDB instances.
         let taskRepo = GRDBTaskRepository(database, now: now)
@@ -77,7 +83,7 @@ struct GSDApp: App {
         )
         _store = State(initialValue: store)
         // Auth + transport (Phase 5b). Live seams; the pure AuthService logic is unit-tested.
-        let tokenStore: any TokenStore = DemoSeed.isRequested ? SignedOutTokenStore() : KeychainTokenStore()
+        let tokenStore: any TokenStore = isolated ? SignedOutTokenStore() : KeychainTokenStore()
         let authService = AuthService(
             client: PocketBaseClient(baseURL: AuthConfig.live.baseURL),
             presenter: LiveWebAuthPresenter(),
@@ -111,7 +117,10 @@ struct GSDApp: App {
         coordinator.afterCleanSync = { _ = try? await store.runAutoArchiveSweep() }
         // Widget snapshot refresher (Phase 6a): rebuilds the App-Group snapshot + reloads
         // widget timelines whenever the task set changes (local edits, remote sync, background).
-        let widgetRefresher = WidgetSnapshotRefresher(store: store)
+        let widgetRefresher = WidgetSnapshotRefresher(
+            store: store,
+            snapshotStore: isolated ? WidgetSnapshotStore(containerURL: HarnessLaunch.scratchDirectory)
+                                    : WidgetSnapshotStore())
         _widgetRefresher = State(initialValue: widgetRefresher)
         // Reminder resync (Fix A): remote writes (pull/SSE/reconcile) bypass the §9.1 mutation
         // hooks; this rebuilds reminders+badge from the snapshot on every observed change.
@@ -122,14 +131,16 @@ struct GSDApp: App {
         store.onTasksChanged = {
             widgetRefresher.schedule()
             reminderResyncer.schedule()
-            spotlightIndexer.schedule(tasks: store.tasks)
+            if !isolated { spotlightIndexer.schedule(tasks: store.tasks) }   // Spotlight is the real app's
         }
         // Share Extension inbox (Phase 6d): drains the App-Group outbox on launch, foreground, the
         // Darwin signal, and background refresh — all through ShareInboxDrainer so the landings
         // never diverge. Trivial glue; the logic is the tested ShareInbox + TaskStore.
         let fetcher = PageTitleFetcher()
         let shareDrainer = ShareInboxDrainer(
-            inbox: ShareInbox(store: ShareOutboxStore()), store: store,
+            inbox: ShareInbox(store: isolated ? ShareOutboxStore(directoryURL: HarnessLaunch.scratchDirectory)
+                                              : ShareOutboxStore()),
+            store: store,
             titleEnricher: ShareTitleEnricher(store: store, fetch: fetcher.title))
         _shareDrainer = State(initialValue: shareDrainer)
         _session = State(initialValue: SessionStore(

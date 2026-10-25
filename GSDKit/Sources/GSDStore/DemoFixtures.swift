@@ -5,28 +5,27 @@ import GSDModel
 /// four quadrants, 14 of them completed over the two weeks before `now`, so the dashboard trend
 /// reads like real history. They live in the package so the seed's one safety rule is testable.
 ///
-/// The rule: `seed` may only clear tasks it created itself. On 2026-10-24 the Mac widths harness
-/// ran the seed against the owner's real store. A dev-signed Catalyst build shares the App Group
-/// container and the keychain session with the installed app, so the seed trashed 166 real tasks
-/// and pushed their deletes to PocketBase. A store that holds any other task is now refused
-/// untouched. The App adds the outer fence: a demo-seed launch opens an in-memory database and
-/// runs signed out (`GSDApp.init`), so even a seed that passes this check cannot reach the server.
+/// The rule: `seed` fills an empty store and refuses any other. On 2026-10-24 the Mac widths
+/// harness ran the seed against the owner's real store. A dev-signed Catalyst build shares the
+/// App Group container and the keychain session with the installed app, so the seed trashed 166
+/// real tasks and pushed their deletes to PocketBase. The seed has no delete path any more, and
+/// the App adds the outer fence: a harness launch (`HarnessLaunch`) opens an in-memory database,
+/// runs signed out, and points every shared seam at scratch, so even a seed that passes this
+/// check cannot reach the server or the real app.
 public enum DemoFixtures {
     public enum SeedError: Error, Equatable {
-        /// The store holds at least one task the fixtures did not create. Nothing was changed.
-        case storeHoldsRealTasks
+        /// The store holds at least one task, fixture or real. Nothing was changed.
+        case storeNotEmpty
     }
 
-    /// Every fixture id, so a store can be checked before anything is deleted.
+    /// Every fixture id, for tests that check a seeded store.
     public static let ids: Set<String> = Set(tasks(now: Date(timeIntervalSince1970: 0)).map(\.id))
 
-    /// Replace a prior run's fixtures with a fresh set. Refuses a store that holds any other task.
+    /// Fill an empty store. Every harness launch opens a fresh in-memory store, so a non-empty one
+    /// means the seed is somewhere it must not be, and it is refused untouched.
     @MainActor
     public static func seed(into store: TaskStore, now: Date) async throws {
-        let existing = try await store.fetchAllTasks()
-        guard existing.allSatisfy({ ids.contains($0.id) }) else { throw SeedError.storeHoldsRealTasks }
-        // Idempotent: clear the prior run so re-records are deterministic.
-        for task in existing { try await store.delete(task) }
+        guard try await store.fetchAllTasks().isEmpty else { throw SeedError.storeNotEmpty }
         for task in tasks(now: now) {
             try await store.create(task)
             // create() stamps createdAt with "now"; save() keeps the task's own. The second

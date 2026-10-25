@@ -30,34 +30,52 @@ tasks were rebuilt from the Mac's Trash table and merge-imported on the web.
 
 ## Decision
 
-Two fences, either of which would have prevented the incident.
+Two fences, either of which would have prevented the incident. The first was widened after the
+review of PR #30 on 2026-10-25, which found the demo launch still driving every out-of-process
+writer against the real App Group (the share outbox drain, reminders and the badge, Spotlight,
+the widget snapshot, and the App Group defaults) and the isolation keyed on one flag while other
+harness launches opened the real store.
 
-- **A demo-seed launch never opens the shared store and never has a session.** `GSDApp.init`
-  reads the flag before it builds anything. With the flag set, the database is
-  `AppDatabase.inMemory()` and the token store is `SignedOutTokenStore`, so
-  `SyncCoordinator.start` returns at its signed-in guard, SSE never connects, and the queue has
-  nowhere to go. Every harness launch seeds a fresh, empty store and leaves nothing behind.
-- **The seed may only clear tasks it created itself.** The fixtures moved into the package as
-  `DemoFixtures`, with `seed(into:now:)` guarded by `DemoFixtures.ids`. A store that holds any
-  other task is refused untouched (`SeedError.storeHoldsRealTasks`), and
-  `GSDStoreTests/DemoFixturesTests` pins that: the real task stays, and nothing is queued. The
-  guard reads the live table only, which is the set the seed deletes.
+- **A harness launch never touches what the real app owns.** One switch,
+  `HarnessLaunch.isIsolated` in GSDStore, is true for any `--demo-` argument (`--demo-seed`,
+  `--demo-home`, `--demo-clock`, `--demo-appearance`, `--demo-window`), so every XCUITest launch
+  flips it. `GSDApp.init` reads it before it builds anything. Isolated, the database is
+  `AppDatabase.inMemory()`; the token store is `SignedOutTokenStore`, so `SyncCoordinator.start`
+  returns at its signed-in guard, SSE never connects, and the queue has nowhere to go; the
+  reminder scheduler is the no-op one; Spotlight is never indexed; and the share outbox and the
+  widget snapshot live in a per-process scratch folder. `AppGroupDefaults.shared`, which
+  `UserDefaults.shared` and every `@AppStorage(store: .shared)` resolve, is a suite that starts
+  empty on each launch and is not the App Group's. The onboarding flag is set there in `init`,
+  so the harness never meets the onboarding cover. The legacy `ScreenshotTests` runner now
+  launches with `--demo-seed` too. `ReleaseReadinessTests` stay on the live store on purpose,
+  since they test persistence across relaunches, behind their `RELEASE_QA` gate for a
+  disposable simulator.
+- **The seed fills an empty store and refuses any other.** The fixtures live in the package as
+  `DemoFixtures`. `seed(into:now:)` throws `SeedError.storeNotEmpty` on a store that holds
+  anything, fixture or real, and has no delete path at all, so it cannot clear a store even by
+  mistake. `GSDStoreTests/DemoFixturesTests` pins the incident's shape, fixtures beside a real
+  task: both rows stay and nothing is queued. The guard reads the live table. Archived and
+  trashed rows were never in the seed's reach, and the first fence keeps a seed with a session
+  from running at all.
 
-`App/Support/DemoSeed.swift` keeps the launch argument and the `hasOnboarded` write and calls
-the package seed.
+A refused or failed seed stops the launch with `fatalError` at the reason instead of printing and
+carrying on. A sign-in completed during a harness run trips an assertion in
+`SignedOutTokenStore.save` rather than vanishing. `App/Support/DemoSeed.swift` keeps the launch
+argument and calls the package seed.
 
 ## Consequences
 
 - The Mac harness is safe to run while signed in. It seeds an in-memory store and shows Settings
   signed out, which is what the simulator walks already showed.
-- Each launch starts empty, so the seed's "clear the prior run" step is a no-op in practice.
-  `DemoChoreography`'s multi-launch scenes get the same fixtures every time, which is what the
-  frozen clock was for.
-- The widget snapshot still refreshes from the seeded store, so the faux Home Screen scene
-  (`--demo-home`) keeps its data. As before, a Mac harness run overwrites the snapshot file in
-  the App Group with fixture data.
-- A refused seed prints to the console and leaves the matrix as it was. The harness then fails
-  loudly on "seeded cards never appeared" instead of destroying data.
+- Each launch starts empty, and the seed has no clear step any more. `DemoChoreography`'s
+  multi-launch scenes get the same fixtures every time, which is what the frozen clock was for.
+- The widget snapshot refreshes into the scratch folder, so a Mac harness run no longer
+  overwrites the App Group snapshot. The faux Home Screen scene (`--demo-home`) never read the
+  snapshot: `DemoHomeScreen` builds its own entry inline.
+- A refused or failed seed stops the launch at the reason. The harness fails on the crash
+  instead of capturing whatever store it found.
+- Pending real shares survive a harness run, because the drain reads the scratch outbox, not
+  the App Group's. Real reminders, the badge, and Spotlight are left alone.
 - Not changed here: the Apple push still has no edit-beats-delete guard (backlog B-42),
   deletion reconcile on web and iOS still hard-deletes local copies, and the web's import pushes
   a task's original `client_updated_at`, which other clients' cursor pulls never fetch.

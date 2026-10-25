@@ -178,8 +178,9 @@ and app group, so it opened the installed app's database in
 shared keychain. The seed trashed 166 real tasks and the launch sync pushed the deletes.
 Simulators had hidden this for months, because they are never signed in.
 
-**Rule:** anything that erases or replaces a store must run against a store it owns. A launch
-flag that seeds data gets its own in-memory database and no session, decided in `GSDApp.init`
-before anything else is built, and the seed refuses a store holding data it did not create.
+**Rule:** anything that erases or replaces a store must run against a store it owns. A harness
+launch gets its own in-memory database, no session, its own defaults suite, and scratch files
+for every shared seam, decided once in `GSDApp.init` by one switch that any harness argument
+flips, and the seed refuses any non-empty store. The database is one seam of six.
 "Unreachable in normal launches" is not a safety property when the abnormal launch runs on the
 owner's Mac.
