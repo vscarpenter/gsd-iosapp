@@ -1,3 +1,25 @@
+# DemoSeed isolation (2026-10-25)
+
+Branch: `fix/demo-seed-isolation`, in the worktree `../.worktrees/gsd-iosapp-demo-seed` (another
+session owns the main checkout). Decisions: `docs/2026-10-25-demo-seed-isolation.md`. Source: the
+2026-10-24 account wipe by the Mac widths harness; the tasks were restored from the Mac's Trash
+the next day.
+
+- [x] Red: `DemoFixturesTests` fails to compile on the missing type (refuses a store with a real task, nothing deleted or queued; seeds 24 into an empty store; a second seed leaves 24)
+- [x] Green: `GSDStore/DemoFixtures.swift` holds the fixtures and the guarded `seed(into:now:)`; `App/Support/DemoSeed.swift` is the launch wrapper
+- [x] `GSDApp.init`: a `--demo-seed` launch opens `AppDatabase.inMemory()` and uses `SignedOutTokenStore`
+- [x] `swift test`: 283 tests, 31 suites green
+- [x] `xcodegen generate`; iPhone 18 Pro, iPad Air 13-inch (M4), and Mac Catalyst builds pass
+- [x] Smoke: `RefreshBaseline.testCaptureEveryScreen` on the iPhone 17 Pro simulator, light and dark, 14 screens each, both passed; the simulator's on-disk `gsd.sqlite` kept its Sept 7 timestamp, so the demo launch never opened it
+- [x] Docs and lessons written; code committed as `32063ed`, docs in the commit after it
+- [ ] Owner's go-ahead for push and PR
+
+## Resuming From Here
+- Done: tests, package type, app wiring, three builds, the simulator smoke, decision doc, lesson, and both commits.
+- Next: push and open the PR on the owner's go-ahead, then remove the worktree.
+- Blockers: push and PR wait for the owner.
+- Assumptions: the guard reads live tasks only (the set the seed deletes); the Mac harness is not re-run on this Mac until the owner chooses to.
+
 # iPhone Duo: the editor bar on the outer display (2026-10-25)
 
 Branch: `fix/duo-editor-bar`, stacked on `fix/duo-screenshot-harness` (PR #27 was still open on GitHub when this started; rebase onto `main` once it merges). Decisions: `docs/2026-10-25-iphone-duo-editor-bar.md`.
