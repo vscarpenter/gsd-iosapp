@@ -11,13 +11,14 @@ not fixed here, if it reproduces on a fresh build.
 - [x] `capture-screens.sh`: `duo` reboots into the closed pose; `duo-open` waits for the inner display (variation, not brightness); display UUIDs discovered per boot; every Duo PNG pixel-verified (size, no alpha); iPad default moved to the 27.0 iPad Air 13-inch (M4)
 - [x] Green: fresh build, `duo` light and dark clean (14 + 14, verified 1398x2034, no alpha); iPhone 18 Pro 14 + 14 and iPad Air 12 + 12, zero failures
 - [x] Editor bar re-checked on the fresh build: reproduced (scrolling the form empties the sheet's bar on the outer display); reported in the doc, fix deferred to a follow-up
-- [ ] `duo-open`: inner display captured at 2007x2853 after the owner unfolds
-- [ ] Docs, lessons, memory; commit; owner's go-ahead for push and PR
+- [ ] `duo-open`: inner display captured at 2007x2853 after the owner unfolds (the first run waited an hour with the phone closed and timed out, as designed)
+- [x] Docs, lessons, memory; harness committed as `c2110ae`
+- [ ] Owner's go-ahead for push and PR
 
 ## Resuming From Here
-- Done: design approved; diagnostic run on the stale bundle (scratchpad `diag1`) gave the red.
-- Next: implement, then the green runs above.
-- Blockers: `duo-open` needs the owner at Device Hub; push and PR wait for the owner.
+- Done: harness committed (`c2110ae`); outer display, iPhone 18 Pro, and iPad Air walks are green; the editor-bar finding is in the doc; `duo-open` ran once with `DUO_WAIT=3600` and timed out because the phone stayed closed.
+- Next: when the owner opens the Duo in Device Hub (portrait), re-run `bash scripts/capture-screens.sh duo-harness duo-open`, check for 2007x2853 PNGs with no alpha, and record the result in the doc. Then push and open the PR on the owner's go-ahead.
+- Blockers: the inner-display walk and the push both wait for the owner.
 - Assumptions: portrait for the inner display; the raw captures are the App Store Connect set, composites stay in the launch kit.
 
 # iPhone Duo: fold state and vertical bars (2026-10-24)

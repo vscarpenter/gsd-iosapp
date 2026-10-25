@@ -101,10 +101,11 @@ All on the fresh build of this branch, 2026-10-25:
   13-inch iPad Pro that does exist runs iOS 26.5, where the sidebar's Archive icon is the first
   element with that label and is not tappable. The default now names the 27.0 Air.
 - `cd GSDKit && swift test` is untouched by this change (no package source changed).
-- `scripts/capture-screens.sh duo-harness duo-open`: started with `DUO_WAIT=3600`; it printed
-  its instruction and polled the dark inner display, as designed. The inner walk itself runs the
-  first time the owner opens the phone in Device Hub, and its result is recorded here when it
-  does.
+- `scripts/capture-screens.sh duo-harness duo-open`: run with `DUO_WAIT=3600`. It printed its
+  instruction, polled the dark inner display for the full hour, then stopped with "the inner
+  display never came on" and exit code 1, which is the timeout path working as designed. Nobody
+  opened the phone during the run, so the inner walk has not run yet. Its result is recorded here
+  the first time the owner opens the phone in Device Hub and re-runs `duo-open`.
 - `xcodebuild build-for-testing` of the GSDScreenshots scheme for Mac Catalyst: compiles. The
   only warnings are pre-existing ones in `ScreenshotTests/ScreenshotTests.swift`.
 
