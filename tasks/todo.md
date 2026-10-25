@@ -1,3 +1,22 @@
+# iPhone Duo: matrix rows in landscape and a large widget (2026-10-25)
+
+Branch: `fix/duo-matrix-rows-and-large-widget` off `main` (`62f868f`). Decisions: `docs/2026-10-25-iphone-duo-matrix-rows-and-large-widget.md`.
+Source: findings 6 and 7 of the iPhone Duo, iOS 27, and new-device readiness review of 2026-10-24.
+
+- [x] Evidence: content-sized cells (220 pt minimum) in one scrolling page; widget families small and medium; snapshot limit 8
+- [x] Finding 6: `MatrixGridView` pins two rows below 760 pt of viewport height; `QuadrantCell(pinnedHeight:)` scrolls its own list
+- [x] Finding 7: `systemLarge` added; large shows eight rows at subheadline size
+- [x] Finding 6 guard: the pinned cell's inner scroll view takes `scrollBounceBehavior(.basedOnSize)`, so a short list leaves the pull to the page's refresh
+- [x] Verify: iPad mini (iOS 27.0, landscape) matrix before (`build/screens/duo-matrix-before`, second row below the fold) and after (`duo-matrix-after`, full 2x2 in view); iPad Air unchanged (`duo-matrix-after-air`, 0 px dark and 82 px light against `editor-bar`); `swift test` 283 green; `xcodegen generate` no project change; iPhone 18 Pro, iPad Air 13-inch (M4), and Mac Catalyst builds clean
+- [x] Docs, memory; three commits on this branch (finding 6, finding 7, docs)
+- [ ] Owner's go-ahead for push and PR
+
+## Resuming From Here
+- Done: both fixes, the bounce guard, every verification run, the decision record, and memory; committed on this branch.
+- Next: the owner gates (push and PR), then the owner's Device Hub look at the open Duo in landscape and the large widget on a Home Screen.
+- Blockers: the Duo inner display and the widget render are owner-checked; the iPad mini walk misses the sidebar's Archive and Settings rows (harness, out of scope).
+- Assumptions: a 760 pt threshold; the large widget shows the snapshot's eight rows; no snapshot cap change; pull-to-refresh on a pinned cell is reasoned from Apple's bounce default, not measured.
+
 # iPhone Duo: upside-down portrait (2026-10-25)
 
 Branch: `fix/duo-upside-down` off `main` (`67d28d0`). Decisions: `docs/2026-10-25-iphone-duo-upside-down.md`.
