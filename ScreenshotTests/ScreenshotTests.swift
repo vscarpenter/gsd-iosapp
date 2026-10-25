@@ -270,6 +270,43 @@ final class ReleaseReadinessTests: XCTestCase {
         add(tree)
     }
 
+    /// Review finding 4 (2026-10-24): the Field Guide used the device idiom to decide whether
+    /// to list keyboard shortcuts, so an open iPhone Duo (phone idiom, regular-width root) hid
+    /// them. The rule is now the presenter's width: a compact root hides the section and a
+    /// regular root shows it. On iPhone and iPad that matches the old behavior, so this only
+    /// turns red on the open Duo, where the owner runs it after unfolding the phone.
+    func testHelpShortcutsFollowTheRootWidth() throws {
+        guard ProcessInfo.processInfo.environment["RELEASE_QA"] == "1" else {
+            throw XCTSkip("Set TEST_RUNNER_RELEASE_QA=1 on a disposable QA simulator")
+        }
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launch()
+        let skip = app.buttons["Skip"]
+        if skip.waitForExistence(timeout: 5) { skip.tap() }
+        XCTAssertTrue(app.textFields["capture-field"].waitForExistence(timeout: 20))
+        let compactRoot = app.tabBars.firstMatch.exists || app.buttons["Browse"].exists
+        if compactRoot {
+            let bar = app.tabBars.firstMatch
+            (bar.exists ? bar.buttons["Settings"] : app.buttons["Settings"]).tap()
+        } else {
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "Settings")).firstMatch.tap()
+        }
+        let guide = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@", "How to use GSD")).firstMatch
+        for _ in 0..<4 where !guide.exists { app.swipeUp(velocity: .fast) }
+        XCTAssertTrue(guide.waitForExistence(timeout: 5), "the How to use GSD row did not appear")
+        guide.tap()
+        let close = app.buttons["Close"].firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 5), "the Field Guide did not open")
+        let shortcuts = app.staticTexts["KEYBOARD SHORTCUTS"]
+        XCTAssertEqual(shortcuts.exists, !compactRoot,
+                       compactRoot ? "a compact root must not list keyboard shortcuts"
+                                   : "a regular root must list keyboard shortcuts")
+        close.tap()
+    }
+
     func testLocalTaskLifecycle() throws {
         guard ProcessInfo.processInfo.environment["RELEASE_QA"] == "1" else {
             throw XCTSkip("Set TEST_RUNNER_RELEASE_QA=1 on a disposable QA simulator")
