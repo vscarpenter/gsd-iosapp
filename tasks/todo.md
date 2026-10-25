@@ -12,12 +12,12 @@ the next day.
 - [x] `xcodegen generate`; iPhone 18 Pro, iPad Air 13-inch (M4), and Mac Catalyst builds pass
 - [x] Smoke: `RefreshBaseline.testCaptureEveryScreen` on the iPhone 17 Pro simulator, light and dark, 14 screens each, both passed; the simulator's on-disk `gsd.sqlite` kept its Sept 7 timestamp, so the demo launch never opened it
 - [x] Docs and lessons written; code committed as `32063ed`, docs in the commit after it
-- [ ] Owner's go-ahead for push and PR
+- [x] Pushed; PR #30 open against main
 
 ## Resuming From Here
 - Done: tests, package type, app wiring, three builds, the simulator smoke, decision doc, lesson, and both commits.
-- Next: push and open the PR on the owner's go-ahead, then remove the worktree.
-- Blockers: push and PR wait for the owner.
+- Next: merge PR #30 once its checks pass, then remove the worktree (`git worktree remove ../.worktrees/gsd-iosapp-demo-seed`).
+- Blockers: none; the merge is the owner's call.
 - Assumptions: the guard reads live tasks only (the set the seed deletes); the Mac harness is not re-run on this Mac until the owner chooses to.
 
 # iPhone Duo: the editor bar on the outer display (2026-10-25)
