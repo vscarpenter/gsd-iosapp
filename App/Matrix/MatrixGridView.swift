@@ -30,8 +30,24 @@ private struct MatrixGridContent: View {
     @Environment(\.editMode) private var editMode
     var onCompleted: () -> Void
 
-    private let columns = [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
+    private let columns = [GridItem(.flexible(), spacing: gridSpacing), GridItem(.flexible(), spacing: gridSpacing)]
     private var isSelecting: Bool { editMode?.wrappedValue.isEditing == true }
+
+    /// Equal 16-point panel rhythm, horizontal and vertical, inside a 12-point inset.
+    private static let gridSpacing: CGFloat = 16
+    private static let gridInset: CGFloat = 12
+    /// Below this much height two content-sized rows do not fit (the iPhone Duo's inner display
+    /// in landscape, an iPad mini in landscape), so the grid pins both rows to half the viewport
+    /// and each cell scrolls its own list: the whole 2x2 stays in view, which is the matrix's
+    /// point. iPad Air and Pro, portrait and landscape, stay above it and keep content-sized
+    /// cells with the page scrolling.
+    static let pinnedRowsBelowHeight: CGFloat = 760
+
+    /// Half the viewport, less the inset and the gap, or nil when the rows stay content-sized.
+    static func pinnedRowHeight(for viewportHeight: CGFloat) -> CGFloat? {
+        guard viewportHeight > 0, viewportHeight < pinnedRowsBelowHeight else { return nil }
+        return (viewportHeight - 2 * gridInset - gridSpacing) / 2
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,30 +55,34 @@ private struct MatrixGridContent: View {
                 palette.editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
             }
             ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 16) {   // equal 16-pt panel rhythm (H + V)
-                        ForEach(Quadrant.allCases, id: \.self) { q in
-                            QuadrantCell(
-                                quadrant: q, showCompleted: showCompleted,
-                                actions: TaskActions(
-                                    store: store,
-                                    onCompleted: onCompleted,
-                                    onError: { actionFailure = TaskActionFailure($0) }
-                                ),
-                                selection: $selection,
-                                isSelecting: isSelecting,
-                                onEdit: { palette.editor = .edit($0) },
-                                onAdd: { palette.editor = .new(q, prefill: nil) }
-                            )
-                            .id(q)
+                GeometryReader { viewport in
+                    let pinnedHeight = Self.pinnedRowHeight(for: viewport.size.height)
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: Self.gridSpacing) {
+                            ForEach(Quadrant.allCases, id: \.self) { q in
+                                QuadrantCell(
+                                    quadrant: q, showCompleted: showCompleted,
+                                    actions: TaskActions(
+                                        store: store,
+                                        onCompleted: onCompleted,
+                                        onError: { actionFailure = TaskActionFailure($0) }
+                                    ),
+                                    selection: $selection,
+                                    isSelecting: isSelecting,
+                                    pinnedHeight: pinnedHeight,
+                                    onEdit: { palette.editor = .edit($0) },
+                                    onAdd: { palette.editor = .new(q, prefill: nil) }
+                                )
+                                .id(q)
+                            }
                         }
+                        .padding(Self.gridInset)
                     }
-                    .padding(12)
+                    .swipeActionsContainerIfAvailable()
+                    .refreshable { await sync.syncNow() }
+                    .onChange(of: palette.focusedQuadrant) { _, _ in consumeQuadrantFocus(proxy) }
+                    .onAppear { consumeQuadrantFocus(proxy) }
                 }
-                .swipeActionsContainerIfAvailable()
-                .refreshable { await sync.syncNow() }
-                .onChange(of: palette.focusedQuadrant) { _, _ in consumeQuadrantFocus(proxy) }
-                .onAppear { consumeQuadrantFocus(proxy) }
             }
         }
         .background(Surface.paper)
