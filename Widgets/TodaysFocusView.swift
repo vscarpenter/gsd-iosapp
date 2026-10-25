@@ -7,7 +7,18 @@ struct TodaysFocusView: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: TodaysFocusEntry
 
-    private var visibleCount: Int { family == .systemSmall ? 3 : 5 }
+    /// Rows per family. The snapshot carries eight, so the large widget shows the whole set.
+    private var visibleCount: Int {
+        switch family {
+        case .systemSmall: 3
+        case .systemMedium: 5
+        default: 8
+        }
+    }
+
+    /// The large widget has the height for a reading size; the small and medium keep caption.
+    private var rowFont: Font { family == .systemLarge ? .subheadline : .caption }
+    private var markerFont: Font { family == .systemLarge ? .caption : .caption2 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -46,11 +57,11 @@ struct TodaysFocusView: View {
         let state = dueState(task)
         return HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: state.symbol)
-                .font(.caption2)
+                .font(markerFont)
                 .foregroundStyle(renderingMode == .fullColor ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary))
                 .widgetAccentable()
             Text(task.title)
-                .font(.caption)
+                .font(rowFont)
                 .fontWeight(state == .overdue ? .semibold : .regular)
                 .lineLimit(1)
         }

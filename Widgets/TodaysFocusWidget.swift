@@ -11,6 +11,6 @@ struct TodaysFocusWidget: Widget {
         }
         .configurationDisplayName(String(localized: "Today's Focus"))
         .description(String(localized: "Your urgent and important tasks."))
-        .supportedFamilies([.systemSmall, .systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
