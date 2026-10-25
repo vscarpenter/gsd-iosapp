@@ -151,6 +151,7 @@ struct TaskEditorView: View {
                         .accessibilityIdentifier("editor-save")
                 }
             }
+            .editorBarNeverMinimizes()
         }
         .sheet(isPresented: $showingDependencyPicker) {
             DependencyPickerView(
@@ -610,6 +611,19 @@ struct TaskEditorView: View {
             } catch {
                 saveError = String(localized: "Couldn't save. Please try again.")
             }
+        }
+    }
+}
+
+private extension View {
+    /// Keeps the sheet's bar, and with it Cancel and Save, through a scroll. On the iPhone
+    /// Duo's outer display the system minimizes a sheet's horizontal bar as the form scrolls
+    /// (iOS 27.1), and text-only items have no vertical home, so they vanished with it.
+    @ViewBuilder func editorBarNeverMinimizes() -> some View {
+        if #available(iOS 27, macOS 27, *) {
+            toolbarMinimizationBehavior(.never, for: .navigationBar)
+        } else {
+            self
         }
     }
 }
