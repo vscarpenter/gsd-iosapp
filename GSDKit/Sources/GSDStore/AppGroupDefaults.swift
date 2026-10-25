@@ -6,8 +6,12 @@ import GSDModel
 /// the group is unavailable (e.g. a plain simulator run without the entitlement). The
 /// suite is injectable so the store's pinning/settings logic is unit-testable.
 public enum AppGroupDefaults {
+    /// In a harness launch (`HarnessLaunch.isIsolated`) this is a suite that starts empty and
+    /// never aliases the App Group's, so nothing the harness stores reaches the real app.
     nonisolated(unsafe) public static let shared: UserDefaults =
-        UserDefaults(suiteName: StoreLocation.appGroupID) ?? .standard
+        HarnessLaunch.isIsolated
+            ? HarnessLaunch.makeIsolatedDefaults()
+            : (UserDefaults(suiteName: StoreLocation.appGroupID) ?? .standard)
 
     public enum Key {
         public static let pinnedSmartViewIds = "pinnedSmartViewIds"

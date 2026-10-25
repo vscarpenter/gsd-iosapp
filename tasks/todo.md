@@ -15,6 +15,29 @@ Source: finding 5 of the iPhone Duo, iOS 27, and new-device readiness review of 
 - Blockers: the Duo simulator ignores programmatic turns, so the only Duo measurement is the owner's.
 - Assumptions: shipped under stated doubt (Apple says the inner display ignores the list); the one certain effect is on Home-button iPhones.
 
+# DemoSeed isolation (2026-10-25)
+
+Branch: `fix/demo-seed-isolation`, in the worktree `../.worktrees/gsd-iosapp-demo-seed` (another
+session owns the main checkout). Decisions: `docs/2026-10-25-demo-seed-isolation.md`. Source: the
+2026-10-24 account wipe by the Mac widths harness; the tasks were restored from the Mac's Trash
+the next day.
+
+- [x] Red: `DemoFixturesTests` fails to compile on the missing type (refuses a store with a real task, nothing deleted or queued; seeds 24 into an empty store; a second seed leaves 24)
+- [x] Green: `GSDStore/DemoFixtures.swift` holds the fixtures and the guarded `seed(into:now:)`; `App/Support/DemoSeed.swift` is the launch wrapper
+- [x] `GSDApp.init`: a `--demo-seed` launch opens `AppDatabase.inMemory()` and uses `SignedOutTokenStore`
+- [x] `swift test`: 283 tests, 31 suites green
+- [x] `xcodegen generate`; iPhone 18 Pro, iPad Air 13-inch (M4), and Mac Catalyst builds pass
+- [x] Smoke: `RefreshBaseline.testCaptureEveryScreen` on the iPhone 17 Pro simulator, light and dark, 14 screens each, both passed; the simulator's on-disk `gsd.sqlite` kept its Sept 7 timestamp, so the demo launch never opened it
+- [x] Docs and lessons written; code committed as `32063ed`, docs in the commit after it
+- [x] Pushed; PR #30 open against main
+- [x] Review of PR #30 (12 findings) resolved 2026-10-25: `HarnessLaunch.isIsolated` (any `--demo-` argument) swaps every shared seam (defaults suite, reminders, Spotlight, share outbox, widget snapshot); the seed refuses any non-empty store and lost its delete loop; failures are loud; the legacy screenshot runner launches isolated
+
+## Resuming From Here
+- Done: tests, package type, app wiring, three builds, the simulator smoke, decision doc, lesson, both commits, the main merge, and the review fixes.
+- Next: merge PR #30, then remove the worktree (`git worktree remove ../.worktrees/gsd-iosapp-demo-seed`).
+- Blockers: none; the merge is the owner's call.
+- Assumptions: the guard reads live tasks only (the set the seed deletes); the Mac harness is not re-run on this Mac until the owner chooses to.
+
 # iPhone Duo: Field Guide shortcuts follow the width (2026-10-25)
 
 Branch: `fix/duo-help-shortcuts` off `main` (`316cb8c`). Decisions: `docs/2026-10-25-iphone-duo-help-shortcuts.md`.

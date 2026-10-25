@@ -1,8 +1,8 @@
 import Foundation
-import GSDModel
+import GSDStore
 
 extension UserDefaults {
-    /// Shared App-Group defaults; falls back to `.standard` if the group is
-    /// unavailable (e.g. a plain simulator run without the entitlement).
-    nonisolated(unsafe) static let shared = UserDefaults(suiteName: AppGroup.id) ?? .standard
+    /// Shared App-Group defaults, through the store's one resolver: the App Group suite in a real
+    /// launch, an empty per-launch suite in a harness launch (`HarnessLaunch.isIsolated`).
+    nonisolated(unsafe) static let shared = AppGroupDefaults.shared
 }

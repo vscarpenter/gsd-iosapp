@@ -22,6 +22,7 @@
 		1FDBA6B34191BD05C33E7153 /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE4AB4A7D546F89E5F67F5AA /* QuickActions.swift */; };
 		226EDB9DE729919DC71D3140 /* QuadrantStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */; };
 		258511F5108C63A1FCFE399D /* GlassSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79DBE02C7478A306C40B7B29 /* GlassSetting.swift */; };
+		295DD72F4CB03EA1A4B2D0FB /* SignedOutTokenStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7656BEB99D4EBAF4D985C886 /* SignedOutTokenStore.swift */; };
 		2C5CFB85FF77F009879520B9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F13D65075CBAAF0DA403E950 /* ContentView.swift */; };
 		2D10B56DA9254E08E89FE623 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 1453BDC2D91332EB87100A1D /* AppIcon.icon */; };
 		2DAC8455D9EDB41A5278D652 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 6A3C3A671584405B65D83D55 /* GSDModel */; };
@@ -195,6 +196,7 @@
 		721AA423A1BF176E1CB41486 /* TaskListRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskListRow.swift; sourceTree = "<group>"; };
 		74518A608B88BA73A9C96C80 /* DemoLaunch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoLaunch.swift; sourceTree = "<group>"; };
 		761CD99A69FF72AB17AB5968 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		7656BEB99D4EBAF4D985C886 /* SignedOutTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignedOutTokenStore.swift; sourceTree = "<group>"; };
 		7955446497B26D20179DFD36 /* WidgetSnapshotRefresher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotRefresher.swift; sourceTree = "<group>"; };
 		79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandoff.swift; sourceTree = "<group>"; };
 		79DBE02C7478A306C40B7B29 /* GlassSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSetting.swift; sourceTree = "<group>"; };
@@ -590,6 +592,7 @@
 				BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */,
 				46017093D034FF7774FAD6CD /* ProviderSignInButtonLabel.swift */,
 				454069942C9F75AFFB235E5C /* SessionStore.swift */,
+				7656BEB99D4EBAF4D985C886 /* SignedOutTokenStore.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -865,6 +868,7 @@
 				A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */,
 				811A6652C2CAA6742807B5D6 /* ShareInboxDrainer.swift in Sources */,
 				B5E7D6CD79E14CB160F046B4 /* ShareTitleEnricher.swift in Sources */,
+				295DD72F4CB03EA1A4B2D0FB /* SignedOutTokenStore.swift in Sources */,
 				4E5277A66510785848896617 /* SkeletonShimmer.swift in Sources */,
 				73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */,
 				B17361EAF4ABA6F4940F94B8 /* SmartViewListView.swift in Sources */,
