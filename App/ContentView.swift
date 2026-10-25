@@ -47,6 +47,11 @@ struct ContentView: View {
                 undo.noteDeleted(task)
             }
             .taskActionFailureAlert($undo.failure)
+            // An iPhone Duo closes and opens mid-session (an iPad window resizes), and each root
+            // keeps its own selection, so carry the surface in view across the swap.
+            .onChange(of: sizeClass) { _, size in
+                if size == .compact { palette.carryToCompact() } else { palette.carryToRegular() }
+            }
             // Catalyst re-inject: its sheet hosting controller evaluates the presentation's
             // preferences before it inherits the presenter's environment, so @Observable stores
             // must be re-applied on the presented content (a no-op on iOS). Without it, the sheet's

@@ -53,8 +53,8 @@ struct SmartViewListView: View {
                     ArchiveListView()
                 }
             }
+            .brandedNavigationTitle(String(localized: "Browse"))
             .toolbar {
-                brandedNavigationTitle(String(localized: "Browse"))
                 paletteButton(palette)
                 syncStatusChip(sync, palette)
                 ToolbarItem(placement: .topBarTrailing) {

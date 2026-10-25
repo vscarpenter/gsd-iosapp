@@ -1,3 +1,22 @@
+# iPhone Duo: fold state and vertical bars (2026-10-24)
+
+Branch: `fix/duo-fold-state-and-vertical-bars`. Decisions: `docs/2026-10-24-iphone-duo-fold-and-bars.md`.
+Source: findings 1 and 2 of the iPhone Duo, iOS 27, and new-device readiness review of the same day.
+
+- [x] Red: `RefreshBaseline.testSelectionSurvivesRootSwap` (Mac widths harness) fails on both swaps
+- [x] Green: `PaletteController.carryToCompact()` and `carryToRegular()`, applied from `ContentView` on a size-class change (`04b4a21`)
+- [x] Branded title omitted on vertical bars: `brandedNavigationTitle(_:)` is a view modifier over `VerticalBarsReader`
+- [x] `SyncStatusChip` renders a `Label` in every state
+- [x] `axisBehavior(.horizontalOnly)` tried on the text buttons and removed: the title row exists regardless, and nothing overflowed
+- [x] Verify: `swift test`, iPhone Duo, iPad, and Mac Catalyst builds, both Mac widths tests, Duo inner-display captures
+- [x] Commit the bars change (`966b90b`); push and the PR wait for the owner
+
+## Resuming From Here
+- Done: both fixes are in; the root-swap test is green; the Duo inner display confirms the bars change; iPhone 18 Pro and iPad Air still show the branded title.
+- Next: owner checks the closed pose in Device Hub (outer display after the fix; close and reopen with Dashboard in view; delete, then Undo), then push and open the PR.
+- Blockers: the closed pose cannot be driven from this shell (no Accessibility for Rex Server; the owner chose to set poses by hand).
+- Assumptions: the Browse root maps to the Matrix on opening; text buttons keep their text everywhere.
+
 # Parity port: Apple sync safety, editor merge, and archive sync (2026-10-13)
 
 Source of truth: the claude.ai Project "GSD Task Manager Project", `parity/backlog.md`.

@@ -69,8 +69,8 @@ private struct MatrixGridContent: View {
         .navigationTitle("Matrix")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .brandedNavigationTitle(String(localized: "Matrix"))
         .toolbar {
-            brandedNavigationTitle(String(localized: "Matrix"))
             showCompletedToggle($showCompleted)
             ToolbarItem(placement: .topBarTrailing) { EditButton() }.overflowsFirst()
         }

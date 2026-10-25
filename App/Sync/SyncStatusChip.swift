@@ -28,21 +28,21 @@ struct SyncStatusChip: View {
         }
     }
 
+    /// Every state is a `Label` with a symbol and a title: a bar item needs both to be placed on
+    /// the vertical bars iPhone Duo draws, and the title is what the overflow menu shows.
     @ViewBuilder private var label: some View {
         switch phase {
         case .syncing:
-            if reduceMotion {
-                Image(systemName: "arrow.triangle.2.circlepath")
-            } else {
-                ProgressView().controlSize(.small)
-            }
+            Label(String(localized: "Syncing"), systemImage: "arrow.triangle.2.circlepath")
+                .symbolEffect(.rotate, isActive: !reduceMotion)
         case .error:
-            Image(systemName: "exclamationmark.icloud").foregroundStyle(Surface.alert)
+            Label(String(localized: "Sync error"), systemImage: "exclamationmark.icloud")
+                .foregroundStyle(Surface.alert)
         case .idle:
             if health.level == .warning {
                 // Ochre = "attention, not alarm" — keeps a soft health warning visually
                 // distinct from the hard `Surface.alert` error above.
-                Image(systemName: "exclamationmark.icloud")
+                Label(health.message ?? String(localized: "Sync warning"), systemImage: "exclamationmark.icloud")
                     .foregroundStyle(QuadrantStyle.accent(.urgentNotImportant))
             } else if pendingCount > 0 {
                 Label("\(pendingCount)", systemImage: "arrow.triangle.2.circlepath")

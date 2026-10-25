@@ -47,8 +47,8 @@ struct TrashListView: View {
         .navigationTitle(String(localized: "Trash"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarTitleDisplayMode(.inline)
+        .brandedNavigationTitle(String(localized: "Trash"))
         .toolbar {
-            brandedNavigationTitle(String(localized: "Trash"))
             if !rows.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(role: .destructive) { showEmptyConfirm = true } label: {

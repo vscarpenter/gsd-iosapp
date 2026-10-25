@@ -1,5 +1,25 @@
 # Lessons
 
+## A vertical-bar fix is measured against the title row, not the bar (2026-10-24)
+
+The Duo review assumed the text-only Edit button forced a second, horizontal bar on the
+vertical-bar layout. Captures of the fixed build showed the system keeps a horizontal title row
+for every inline navigation title, items or not. Edit cost nothing there, and
+`axisBehavior(.horizontalOnly)` moved nothing. Only the custom principal title was worth hiding.
+
+**Rule:** before changing toolbar items for iPhone Duo, capture the screen with the item removed
+and see what the system still draws. Fix what the capture shows, not what the HIG text implies.
+
+## iOS 27.1 environment values may not exist in the Catalyst SDK (2026-10-24)
+
+`@Environment(\.toolbarVerticalEdge)` built for every iOS simulator and failed the Mac Catalyst
+build with "generic parameter 'Value' could not be inferred". The macOS and iOSSupport
+interfaces do not declare it. The iOS SDK's `anyAppleOS 27.1` availability says nothing about
+Catalyst.
+
+**Rule:** a new environment key path needs `#if targetEnvironment(macCatalyst)` around the read,
+and the three-destination build before the commit, every time.
+
 ## A brief's toolchain claims are hypotheses until the SDK agrees (2026-09-15)
 
 The iOS 27 refresh brief asked for `SWIFT_VERSION: "6.4"`. That setting is the language mode,

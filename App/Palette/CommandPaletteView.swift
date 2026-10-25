@@ -45,6 +45,36 @@ final class PaletteController {
     /// root swap when the window is resized mid-session (iPad multitasking, iPhone on iPad,
     /// iPhone Mirroring): the surfaces are rebuilt, the root and this controller are not.
     var editor: EditorRequest?
+
+    /// Carries the surface in view from the regular root to the compact one. An iPhone Duo closes
+    /// mid-session and an iPad window narrows; each root keeps its own selection, so without this
+    /// the compact root would land on whatever tab was last used there.
+    func carryToCompact() {
+        switch regularSelection {
+        case .matrix, .none: compactTab = 0
+        case .dashboard: compactTab = 2
+        case .settings: compactTab = 3
+        case .archive: compactTab = 1; browsePath = [.archive]
+        case .smartView(let id): compactTab = 1; browsePath = [.view(id)]
+        }
+    }
+
+    /// The reverse: the compact tab (and the Browse path under it) become the sidebar selection.
+    /// The Browse root has no sidebar peer, since the sidebar is the browse list, so it lands on
+    /// the Matrix.
+    func carryToRegular() {
+        switch compactTab {
+        case 1:
+            switch browsePath.last {
+            case .archive: regularSelection = .archive
+            case .view(let id): regularSelection = .smartView(id)
+            case .none: regularSelection = .matrix
+            }
+        case 2: regularSelection = .dashboard
+        case 3: regularSelection = .settings
+        default: regularSelection = .matrix
+        }
+    }
 }
 
 /// iPad sidebar selection. Shared so the palette handler can drive it; `RegularRootView`

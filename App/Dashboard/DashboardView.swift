@@ -56,8 +56,8 @@ struct DashboardView: View {
             .navigationTitle(dashboardNavigationTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbarTitleDisplayMode(.inline)
+            .brandedNavigationTitle(String(localized: "Dashboard"))
             .toolbar {
-                brandedNavigationTitle(String(localized: "Dashboard"))
                 paletteButton(palette)
                 if sizeClass == .compact { syncStatusChip(sync, palette) }
             }

@@ -199,6 +199,44 @@ final class RefreshBaseline: XCTestCase {
         #endif
     }
 
+    /// Mac only, WIDTHS=1: the surface on screen survives the compact/regular root swap in both
+    /// directions, which is what an iPhone Duo does as it closes and opens (and an iPad window as
+    /// it resizes). Dashboard chosen in the regular root must still be on screen after the swap
+    /// to compact; Settings chosen in the compact root must still be on screen after the swap back.
+    func testSelectionSurvivesRootSwap() throws {
+        #if targetEnvironment(macCatalyst)
+        guard ProcessInfo.processInfo.environment["WIDTHS"] == "1" else {
+            throw XCTSkip("widths run only with TEST_RUNNER_WIDTHS=1")
+        }
+        let app = launchPinned("1100x860")
+        // The View menu drives the same selection state as the sidebar and the tab bar, and a
+        // menu click registers on the Mac where a sidebar row tap can miss.
+        chooseViewMenuItem(app, "Dashboard")
+        let trend = element(app, label: "Completion Trend")
+        XCTAssertTrue(trend.waitForExistence(timeout: 5), "dashboard never appeared in the regular root")
+
+        post("dev.vinny.gsd.demo.window.compact"); pause(2.5)
+        XCTAssertTrue(trend.waitForExistence(timeout: 5), "Dashboard did not survive the swap to compact")
+
+        chooseViewMenuItem(app, "Settings")
+        let showCompleted = element(app, label: "Show Completed Tasks")
+        XCTAssertTrue(showCompleted.waitForExistence(timeout: 5), "settings never appeared in the compact root")
+
+        post("dev.vinny.gsd.demo.window.regular"); pause(2.5)
+        XCTAssertTrue(showCompleted.waitForExistence(timeout: 5), "Settings did not survive the swap back to regular")
+        #else
+        throw XCTSkip("widths run on the Mac")
+        #endif
+    }
+
+    #if targetEnvironment(macCatalyst)
+    /// Clicks View ▸ `title` in the menu bar.
+    private func chooseViewMenuItem(_ app: XCUIApplication, _ title: String) {
+        app.menuBarItems["View"].click(); pause(0.5)
+        app.menuItems[title].firstMatch.click(); pause(1.5)
+    }
+    #endif
+
     private func launchPinned(_ size: String) -> XCUIApplication {
         let appearance = ProcessInfo.processInfo.environment["SCREENSHOT_APPEARANCE"] ?? "light"
         let app = XCUIApplication()
