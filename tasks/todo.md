@@ -1,3 +1,21 @@
+# iPhone Duo: Field Guide shortcuts follow the width (2026-10-25)
+
+Branch: `fix/duo-help-shortcuts` off `main` (`316cb8c`). Decisions: `docs/2026-10-25-iphone-duo-help-shortcuts.md`.
+Source: finding 4 of the iPhone Duo, iOS 27, and new-device readiness review of 2026-10-24.
+
+- [x] Evidence: one idiom check in the app (`HelpView.swift:289`); the sheet is presented once, from `ContentView`; the editor already takes `compactPresenter`
+- [x] Fix: `HelpView(compactPresenter:)`, shortcuts shown on a regular presenter (the Mac always); `ContentView` passes its size class
+- [x] Test: `testHelpShortcutsFollowTheRootWidth` (green by construction on iPhone and iPad; red only on the open Duo, which the owner runs)
+- [x] Verify: `swift test` 283 green; iOS simulator and Mac Catalyst builds clean; the test passes on iPhone 18 Pro (hidden) and iPad Air (shown)
+- [x] Docs, memory; committed on this branch
+- [ ] Owner's go-ahead for push and PR
+
+## Resuming From Here
+- Done: fix, test, docs, and verification; committed on this branch.
+- Next: the owner gates (push and PR), then the owner's run of the test on the open Duo.
+- Blockers: the red case needs the open Duo (owner).
+- Assumptions: one rule (the presenter's width); no connected-keyboard check.
+
 # iPhone Duo: the editor bar on the outer display (2026-10-25)
 
 Branch: `fix/duo-editor-bar`, stacked on `fix/duo-screenshot-harness` (PR #27 was still open on GitHub when this started; rebase onto `main` once it merges). Decisions: `docs/2026-10-25-iphone-duo-editor-bar.md`.
