@@ -168,3 +168,19 @@ Moving the repo into a parent folder left `.build` full of absolute module-cache
 paths, and every compile failed with "missing required module 'SwiftShims'". Not a
 code problem. `swift package clean` fixes it — and is the right tool rather than
 `rm -rf .build`.
+
+## A dev-signed Catalyst build is the installed app (2026-10-25)
+
+The screenshot harness launched the Mac dev build with `--demo-seed`, and the seed deleted every
+task in the store, queuing a server delete for each. The build was signed with the owner's team
+and app group, so it opened the installed app's database in
+`~/Library/Group Containers/group.dev.vinny.gsd` and read the installed app's session from the
+shared keychain. The seed trashed 166 real tasks and the launch sync pushed the deletes.
+Simulators had hidden this for months, because they are never signed in.
+
+**Rule:** anything that erases or replaces a store must run against a store it owns. A harness
+launch gets its own in-memory database, no session, its own defaults suite, and scratch files
+for every shared seam, decided once in `GSDApp.init` by one switch that any harness argument
+flips, and the seed refuses any non-empty store. The database is one seam of six.
+"Unreachable in normal launches" is not a safety property when the abnormal launch runs on the
+owner's Mac.

@@ -12,8 +12,8 @@ import XCTest
 ///   TEST_RUNNER_SCREENSHOT_PREFIX  filename prefix, e.g. "dark-" / "ipad-dark-"
 ///   TEST_RUNNER_SCREENSHOT_SUBSET  "1" = only Matrix + Dashboard (the dark-mode pass)
 ///
-/// Expects a pre-seeded database and hasOnboarded=true in App-Group defaults — the
-/// harness script prepares both before invoking this.
+/// Launches with `--demo-seed`, so the app seeds its own fixtures into an in-memory store and
+/// never opens the shared one (see `HarnessLaunch`).
 @MainActor
 final class ScreenshotTests: XCTestCase {
 
@@ -32,6 +32,7 @@ final class ScreenshotTests: XCTestCase {
 
     func testCaptureScreenshots() throws {
         let app = XCUIApplication()
+        app.launchArguments = ["--demo-seed"]
         if UIDevice.current.userInterfaceIdiom == .pad {
             // Landscape shows sidebar + detail together — the iPad layout's best angle.
             XCUIDevice.shared.orientation = .landscapeLeft
@@ -63,7 +64,7 @@ final class ScreenshotTests: XCTestCase {
         // Task editor: tapping a row opens the edit sheet (TaskListRow.onTapGesture).
         tabs.buttons["Matrix"].tap()
         settle()
-        let row = app.staticTexts["Finish investor update draft"]
+        let row = seededDeckCard(app)
         XCTAssertTrue(row.waitForExistence(timeout: 5), "seeded Q1 task not on screen")
         row.tap()
         settle()
@@ -118,7 +119,7 @@ final class ScreenshotTests: XCTestCase {
         // centered and full-height on iPad — no detent drag needed).
         matrixRow.tap()
         settle()
-        let card = app.staticTexts["Finish investor update draft"]
+        let card = seededDeckCard(app)
         XCTAssertTrue(card.waitForExistence(timeout: 5), "seeded Q1 task not on screen")
         card.tap()
         settle()
@@ -137,6 +138,14 @@ final class ScreenshotTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// The Do First fixture the editor shot opens (`DemoFixtures`, id `demo-deck`), matched the
+    /// way RefreshBaseline matches cards: by identifier, or by the label the title starts.
+    private func seededDeckCard(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(
+            format: "identifier == %@ OR label BEGINSWITH %@",
+            "task-card-demo-deck", "Finish the Q3 board deck")).firstMatch
+    }
 
     private func settle(_ seconds: TimeInterval = 1.5) {
         Thread.sleep(forTimeInterval: seconds)
