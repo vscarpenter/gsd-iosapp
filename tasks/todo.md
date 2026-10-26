@@ -287,7 +287,7 @@ Contract: `tasks/spec.md`; approved web behavior and the owner's iOS follow-up.
   tests: 729 pass, optional localhost system test skipped in that run and passes
   separately with real PocketBase/web/native clients. Light/dark phone/iPad walks,
   save/delete Undo, all three app builds, backup parity and screenshot review pass.
-- Next: owner local testing in this checkout, then PR/CI and native release work
+- Next: review PR/CI after the owner-authorized push, and native release work
   if requested. See `docs/2026-10-26-saved-ios.md` for evidence and review questions.
 - Blockers: none for local implementation. Xcode CLI verification was used because
   XcodeBuildMCP tools are unavailable. The referenced OpenWiki quickstart is absent.
