@@ -1,3 +1,23 @@
+# Release 3.6.0 (37) to App Store Connect (2026-10-26)
+
+Branch: `chore/release-3.6.0` off `main` (`0114c51`). Record: the October 26 section of `docs/2026-10-17-release-readiness.md`.
+Source: the owner's instruction to build both platforms, bump the version and build appropriately, and deploy to the iOS and Mac App Stores. The live version on both is 2.2.0; 3.5.0 build 36 was uploaded on October 25 and never attached to a version. PR #34 (Saved) merged after it, so this is a minor bump.
+
+- [x] Preflight: clean `main` in sync with origin, App Store Connect API key in the environment, Xcode 27.1, 288 package tests pass
+- [x] Bump: `scripts/bump-version.sh minor` (project.yml and the regenerated pbxproj) to 3.6.0 (37)
+- [x] `whatsnew.txt` leads with Saved on both platforms; the rest stays cumulative since 2.2.0
+- [x] iOS: archive, export, upload; `UPLOAD SUCCEEDED`, delivery `879aeed0-d021-44d1-8279-19437b3834a1`
+- [x] Mac Catalyst: `scripts/release.sh --mac --no-bump`; `UPLOAD SUCCEEDED`, delivery `0679d942-cf38-4f2c-a775-c729c63a0f57`
+- [x] Processing state of build 37 read back from the API: VALID on iOS and macOS
+- [x] Release record appended to the readiness doc
+- [ ] Owner's go-ahead for push and PR (the local tag `v3.6.0` rides along when the owner pushes tags)
+
+## Resuming From Here
+- Done: the bump, both uploads, the What's New copy, and the release record; committed on this branch with the local tag `v3.6.0`.
+- Next: the owner gates (push and PR), then in App Store Connect: create the 3.6.0 version on iOS and macOS, attach build 37, paste `whatsnew.txt`, submit for review.
+- Blockers: none. Both builds already show VALID.
+- Assumptions: a minor bump because PR #34 is a new feature; the What's New stays cumulative since 2.2.0 because no 3.x version record exists; builds 35 and 36 stay unused.
+
 # Release 3.5.0 (36) to App Store Connect (2026-10-25)
 
 Branch: `chore/release-3.5.0` off `main` (`86d81ea`). Record: the October 25 section of `docs/2026-10-17-release-readiness.md`.
@@ -10,7 +30,7 @@ Source: the owner's instruction to bump to 3.5.0 and release both platforms. The
 - [x] `whatsnew.txt` rewritten for 3.5, cumulative since 2.2.0
 - [x] Release record appended to the readiness doc
 - [x] Processing state of build 36 read back from the API: VALID on iOS and macOS
-- [ ] Owner's go-ahead for push and PR (the local tag `v3.5.0` rides along when the owner pushes tags)
+- [x] Owner's go-ahead for push and PR: PR #33 merged as `06dca9b`, tag `v3.5.0` is on origin
 
 ## Resuming From Here
 - Done: the bump, both uploads, the What's New copy, and the release record; committed on this branch.
