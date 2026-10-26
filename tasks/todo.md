@@ -10,11 +10,11 @@ Source: the owner's instruction to build both platforms, bump the version and bu
 - [x] Mac Catalyst: `scripts/release.sh --mac --no-bump`; `UPLOAD SUCCEEDED`, delivery `0679d942-cf38-4f2c-a775-c729c63a0f57`
 - [x] Processing state of build 37 read back from the API: VALID on iOS and macOS
 - [x] Release record appended to the readiness doc
-- [ ] Owner's go-ahead for push and PR (the local tag `v3.6.0` rides along when the owner pushes tags)
+- [x] Owner's go-ahead for push and PR: branch and tag `v3.6.0` pushed, PR #35 open
 
 ## Resuming From Here
 - Done: the bump, both uploads, the What's New copy, and the release record; committed on this branch with the local tag `v3.6.0`.
-- Next: the owner gates (push and PR), then in App Store Connect: create the 3.6.0 version on iOS and macOS, attach build 37, paste `whatsnew.txt`, submit for review.
+- Next: merge PR #35, then in App Store Connect: create the 3.6.0 version on iOS and macOS, attach build 37, paste `whatsnew.txt`, submit for review.
 - Blockers: none. Both builds already show VALID.
 - Assumptions: a minor bump because PR #34 is a new feature; the What's New stays cumulative since 2.2.0 because no 3.x version record exists; builds 35 and 36 stay unused.
 
