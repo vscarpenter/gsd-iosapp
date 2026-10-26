@@ -46,7 +46,7 @@ public struct BulkActionResult: Equatable, Sendable {
     public var hasFailures: Bool { !failures.isEmpty }
 }
 
-public enum TaskStoreError: Error, LocalizedError {
+public enum TaskStoreError: Error, LocalizedError, Equatable {
     /// A delete could not be recorded for sync (the queue write failed), so the local row was
     /// KEPT rather than deleted. Deleting it would let the next pull resurrect the task (a deleted
     /// row is gone, so the next sync's seed cannot re-enqueue the lost delete). Surfaced so the
@@ -55,6 +55,10 @@ public enum TaskStoreError: Error, LocalizedError {
     /// An archive's server delete could not be queued. The task is put back to active when that
     /// write succeeds, rather than left archived here with a server copy other devices keep showing.
     case archiveNotRecorded
+    case completedTaskCannotBeSaved
+    case stopTimerBeforeSaving
+    case savedItemRequiresReturn
+    case savedItemUnavailable
 
     public var errorDescription: String? {
         switch self {
@@ -64,6 +68,14 @@ public enum TaskStoreError: Error, LocalizedError {
             // Shown after "Couldn't run auto-archive:" in Settings and Archive, so it doesn't repeat it.
             // No mention of sync: signed out, nothing leaves the device (offline-first copy rule).
             String(localized: "A task couldn't be archived. Please try again.")
+        case .completedTaskCannotBeSaved:
+            String(localized: "Only incomplete tasks can be moved to Saved.")
+        case .stopTimerBeforeSaving:
+            String(localized: "Stop the timer before moving this task to Saved.")
+        case .savedItemRequiresReturn:
+            String(localized: "Return this item to the matrix before completing it or starting a timer.")
+        case .savedItemUnavailable:
+            String(localized: "This item has changed or is no longer in Saved. Reopen it to see the latest details.")
         }
     }
 }
@@ -81,6 +93,10 @@ public final class TaskStore {
     public private(set) var hasLoadedTasks = false
     public private(set) var customViews: [SmartView] = []
     public private(set) var archivedTasks: [Task] = []
+    public var matrixTasks: [Task] { tasks.filter { !$0.isSaved } }
+    public var savedTasks: [Task] {
+        tasks.filter(\.isSaved).sorted { ($0.savedAt ?? .distantPast) > ($1.savedAt ?? .distantPast) }
+    }
 
     private let repository: any TaskRepository
     private let smartViewRepository: any SmartViewRepository
@@ -217,6 +233,59 @@ public final class TaskStore {
         try await repository.fetchAll()
     }
 
+    @discardableResult
+    public func moveToSaved(_ task: Task) async throws -> Task {
+        guard var current = try await repository.fetch(id: task.id) else { throw TaskStoreError.savedItemUnavailable }
+        guard !current.completed else { throw TaskStoreError.completedTaskCannotBeSaved }
+        guard TimeTracking.runningEntry(current.timeEntries) == nil else { throw TaskStoreError.stopTimerBeforeSaving }
+        if current.isSaved { return current }
+        let now = clock()
+        current.savedAt = now
+        current.updatedAt = now
+        try await upsertEnqueued(current, op: .update)
+        await reminders.cancel(taskID: current.id)
+        return current
+    }
+
+    public func updateSavedNotes(id: String, notes: String) async throws {
+        guard notes.utf16.count <= FieldLimits.descriptionMax else { throw ValidationError.descriptionTooLong }
+        guard var current = try await repository.fetch(id: id), current.isSaved else {
+            throw TaskStoreError.savedItemUnavailable
+        }
+        current.description = notes
+        current.updatedAt = clock()
+        try TaskValidator.validate(current)
+        try await upsertEnqueued(current, op: .update)
+        await reminders.cancel(taskID: id)
+    }
+
+    public func returnToMatrix(id: String, quadrant: Quadrant, dueDate: Date?) async throws {
+        guard var current = try await repository.fetch(id: id), current.isSaved else {
+            throw TaskStoreError.savedItemUnavailable
+        }
+        current.savedAt = nil
+        current.urgent = quadrant.isUrgent
+        current.important = quadrant.isImportant
+        current.dueDate = dueDate
+        current.notificationSent = false
+        current.lastNotificationAt = nil
+        current.snoozedUntil = nil
+        current.updatedAt = clock()
+        try await upsertEnqueued(current, op: .update)
+        await refreshReminder(current)
+    }
+
+    public func undoMoveToSaved(_ saved: Task) async throws {
+        guard var current = try await repository.fetch(id: saved.id), current.isSaved,
+              current.savedAt == saved.savedAt, current.updatedAt == saved.updatedAt else {
+            throw TaskStoreError.savedItemUnavailable
+        }
+        current.savedAt = nil
+        current.updatedAt = clock()
+        try await upsertEnqueued(current, op: .update)
+        await refreshReminder(current)
+    }
+
     // MARK: Mutations (all stamp updatedAt via the injected clock)
 
     public func add(_ parsed: ParsedCapture, override: Quadrant? = nil, dueDate: Date? = nil) async throws {
@@ -230,7 +299,7 @@ public final class TaskStore {
         )
         try TaskValidator.validate(task)
         try await upsertEnqueued(task, op: .create)   // capture-bar quick-add is a creation path → must enqueue (else reconcile deletes it)
-        if dueDate != nil { await reminders.schedule(task) }   // dated captures (Siri due date) get a reminder like create()
+        if dueDate != nil { await refreshReminder(task) }   // dated captures (Siri due date) get a reminder like create()
     }
 
     /// Tags are canonically lowercase and deduped (matching `CaptureParser` and the web app).
@@ -253,7 +322,7 @@ public final class TaskStore {
         t.updatedAt = now
         try TaskValidator.validate(t)
         try await upsertEnqueued(t, op: .create)
-        await reminders.schedule(t)
+        await refreshReminder(t)
     }
 
     /// Land a task the server ALREADY holds — the Share Extension pushed it directly and the app
@@ -266,7 +335,7 @@ public final class TaskStore {
         t.tags = Self.canonicalTags(task.tags)
         try TaskValidator.validate(t)
         try await repository.upsert(t)
-        await reminders.schedule(t)
+        await refreshReminder(t)
     }
 
     public func duplicate(_ task: Task) async throws -> Task {
@@ -293,11 +362,13 @@ public final class TaskStore {
 
     public func save(_ task: Task) async throws {
         var t = task
+        if let current = try await repository.fetch(id: task.id) { t.savedAt = current.savedAt }
+        guard !(t.isSaved && t.completed) else { throw TaskStoreError.savedItemRequiresReturn }
         t.tags = Self.canonicalTags(task.tags)
         t.updatedAt = clock()
         try TaskValidator.validate(t)
         try await upsertEnqueued(t, op: .update)
-        await reminders.schedule(t)
+        await refreshReminder(t)
     }
 
     /// The editor's Save for an existing task (parity C10). Merges the fields the user changed onto
@@ -319,27 +390,28 @@ public final class TaskStore {
         // complete spawns duplicate recurrence instances (mirrors addDependency's
         // ground-truth read).
         let persisted = try await repository.fetch(id: task.id)
+        guard !(persisted ?? task).isSaved else { throw TaskStoreError.savedItemRequiresReturn }
         let willComplete = !(persisted?.completed ?? task.completed)
 
-        var t = task
+        var t = persisted ?? task
         t.completed = willComplete
         t.completedAt = willComplete ? now : nil
         t.updatedAt = now
         try await upsertEnqueued(t, op: .update)
 
         if willComplete { await reminders.cancel(taskID: t.id) }
-        else { await reminders.schedule(t) }
+        else { await refreshReminder(t) }
 
         // Completing a recurring task spawns the next instance (product spec §6.5).
         guard willComplete,
               let next = RecurrenceEngine.spawnNext(from: t, now: now, newID: newID(), calendar: calendar)
         else { return }
         try await upsertEnqueued(next, op: .create)   // spawned recurrence instance is a NEW local task
-        await reminders.schedule(next)
+        await refreshReminder(next)
     }
 
     public func move(_ task: Task, to quadrant: Quadrant) async throws {
-        var t = task
+        var t = try await repository.fetch(id: task.id) ?? task
         t.urgent = quadrant.isUrgent; t.important = quadrant.isImportant
         t.updatedAt = clock()
         try await upsertEnqueued(t, op: .update)
@@ -352,6 +424,7 @@ public final class TaskStore {
     /// layered over the same server delete the web client performs, so the two clients
     /// remain byte-identical on the wire while both now offer a way back.
     public func delete(_ task: Task) async throws {
+        let task = try await repository.fetch(id: task.id) ?? task
         // Require the delete to be recorded for sync BEFORE moving the local row. Unlike an
         // upsert — whose row survives a failed enqueue and is re-enqueued by the next sync's seed
         // — a removed row can't be re-enqueued by seed, and the next pull would resurrect the
@@ -388,7 +461,7 @@ public final class TaskStore {
     public func restoreFromTrash(id: String) async throws {
         guard let task = try await trashRepository.restore(id: id) else { return }
         _ = await enqueue(task.id, .create, payload: task)
-        await reminders.schedule(task)
+        await refreshReminder(task)
     }
 
     /// Permanently drop one trashed row. No enqueue: the server deleted it at trash time.
@@ -410,18 +483,19 @@ public final class TaskStore {
 
     /// Set `snoozedUntil = now + preset`, clamped to the 1-year max (product spec §6.7).
     public func snooze(_ task: Task, by preset: SnoozePreset) async throws {
-        var t = task
+        var t = try await repository.fetch(id: task.id) ?? task
         let now = clock()
         let interval = min(preset.interval, FieldLimits.maxSnoozeInterval)
         t.snoozedUntil = now.addingTimeInterval(interval)
         t.updatedAt = now
         try await upsertEnqueued(t, op: .update)
-        await reminders.schedule(t)   // live impl schedules at snoozedUntil
+        await refreshReminder(t)   // live impl schedules at snoozedUntil
     }
 
     /// Start a time-tracking entry; rejects a second concurrent timer (product spec §6.9).
     public func startTimer(_ task: Task) async throws {
-        var t = task
+        var t = try await repository.fetch(id: task.id) ?? task
+        guard !t.isSaved else { throw TaskStoreError.savedItemRequiresReturn }
         let now = clock()
         t.timeEntries = try TimeTracking.start(t.timeEntries, now: now,
                                                newID: newID(size: IDGenerator.Size.timeEntry))
@@ -431,7 +505,7 @@ public final class TaskStore {
 
     /// Stop the running entry and recalculate `timeSpent` (product spec §6.9).
     public func stopTimer(_ task: Task, notes: String? = nil) async throws {
-        var t = task
+        var t = try await repository.fetch(id: task.id) ?? task
         let now = clock()
         t.timeEntries = try TimeTracking.stop(t.timeEntries, now: now, notes: notes)
         t.timeSpent = TimeTracking.timeSpentMinutes(t.timeEntries)
@@ -505,8 +579,14 @@ public final class TaskStore {
     /// not re-validate field limits here — the editor's Save path does, via `save`.)
     private func persist(_ task: Task) async throws {
         var t = task
+        if let current = try await repository.fetch(id: task.id) { t.savedAt = current.savedAt }
         t.updatedAt = clock()
         try await upsertEnqueued(t, op: .update)
+    }
+
+    private func refreshReminder(_ task: Task) async {
+        if task.isSaved { await reminders.cancel(taskID: task.id) }
+        else { await reminders.schedule(task) }
     }
 
     /// Enqueue a sync op for a local mutation (§7.5). `.delete` carries no payload. Best-effort —
@@ -541,7 +621,7 @@ public final class TaskStore {
 
     public func tasks(in quadrant: Quadrant, showCompleted: Bool) -> [Task] {
         tasks
-            .filter { $0.quadrant == quadrant && (showCompleted || !$0.completed) }
+            .filter { !$0.isSaved && $0.quadrant == quadrant && (showCompleted || !$0.completed) }
             .sorted { a, b in a.completed == b.completed ? a.updatedAt > b.updatedAt : !a.completed }
     }
 
@@ -633,6 +713,7 @@ public final class TaskStore {
     /// remove that task with no archive or trash copy. If the queue write fails, the task goes
     /// back to active and nothing changes on the server.
     public func archive(_ task: Task) async throws {
+        let task = try await repository.fetch(id: task.id) ?? task
         try await archiveRepository.archive(task)
         guard await enqueue(task.id, .delete, payload: nil) != nil else {
             try? await archiveRepository.restore(id: task.id)
@@ -734,8 +815,8 @@ public final class TaskStore {
     /// `schedule()` keeps final say (quiet hours, past-due → cancel).
     public func resyncReminders() async {
         await reminders.cancelAll()
-        for task in tasks where !task.completed && task.dueDate != nil && task.notificationEnabled {
-            await reminders.schedule(task)
+        for task in tasks where !task.isSaved && !task.completed && task.dueDate != nil && task.notificationEnabled {
+            await refreshReminder(task)
         }
         await refreshBadge()
     }

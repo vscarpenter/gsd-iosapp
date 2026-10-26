@@ -9,6 +9,7 @@ public enum AnalyticsEngine {
     public static let upcomingLimit = 5
 
     public static func compute(tasks: [Task], now: Date, calendar: Calendar, trendDays: Int) -> AnalyticsSummary {
+        let tasks = tasks.filter { !$0.isSaved }
         let startToday = calendar.startOfDay(for: now)
         let weekEnd = calendar.date(byAdding: .day, value: 7, to: startToday)!   // [startToday, +7)
 
