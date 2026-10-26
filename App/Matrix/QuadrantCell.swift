@@ -10,6 +10,9 @@ struct QuadrantCell: View {
     let actions: TaskActions
     @Binding var selection: Set<String>
     let isSelecting: Bool
+    /// Set when the grid pins its rows to a short viewport: the cell takes exactly this height
+    /// and scrolls its own list. Nil leaves the cell content-sized with the page scrolling.
+    var pinnedHeight: CGFloat? = nil
     var onEdit: (Task) -> Void
     var onAdd: () -> Void
 
@@ -35,19 +38,21 @@ struct QuadrantCell: View {
                     .foregroundStyle(Surface.ink3)
                     .accessibilityLabel(String(localized: "\(activeCount) active"))
             }
-            if items.isEmpty {
-                QuadrantEmptyPrompt(quadrant: quadrant, action: onAdd)
-            }
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
-                cardRow(task)
-                if index < items.count - 1 {
-                    Rectangle().fill(Surface.hairline).frame(height: 1)
+            if pinnedHeight != nil {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 10) { rows }
                 }
+                // Scrollable views bounce by default even when the content fits, and a bouncing
+                // cell would take the pull that the page's refresh needs. A short list stays put.
+                .scrollBounceBehavior(.basedOnSize)
+            } else {
+                rows
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
+        .frame(height: pinnedHeight)
         .background(isTargeted ? QuadrantStyle.wash(quadrant) : Surface.surface,
                     in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .overlay(
@@ -61,6 +66,19 @@ struct QuadrantCell: View {
             actions.move(task, to: quadrant)
             return true
         } isTargeted: { isTargeted = $0 }
+    }
+
+    /// The empty prompt or the cards with hairlines between them, in either layout.
+    @ViewBuilder private var rows: some View {
+        if items.isEmpty {
+            QuadrantEmptyPrompt(quadrant: quadrant, action: onAdd)
+        }
+        ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
+            cardRow(task)
+            if index < items.count - 1 {
+                Rectangle().fill(Surface.hairline).frame(height: 1)
+            }
+        }
     }
 
     @ViewBuilder private func cardRow(_ task: Task) -> some View {
