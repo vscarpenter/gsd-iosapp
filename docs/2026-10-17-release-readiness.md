@@ -200,3 +200,17 @@ The owner asked to bump to 3.5.0 and release both platforms. Before the run, a r
 - Processing: a read of the App Store Connect API after the uploads lists build 36 for 3.5.0 on both platforms with processing state VALID, the iOS build within a minute of its upload and the Mac build within four. No owner confirmation was needed this time.
 - `whatsnew.txt` now carries the 3.5 copy. It is cumulative since 2.2.0, the live version: the iOS 27 and macOS 27 refresh, the share and sync changes from PRs #19 to #23, the accessibility sizing from #24, and the iPhone Duo work.
 - Not done in this run, and owner-owed in App Store Connect: create the 3.5.0 version for iOS and for macOS, attach build 36 to each, paste the What's New copy, and submit for review. Export compliance resolves itself from `ITSAppUsesNonExemptEncryption` in the plist. Build 35 stays in App Store Connect unused.
+
+
+## 3.6.0 build 37 upload to App Store Connect, October 26
+
+The owner asked to build both platforms, bump the version and build appropriately, and deploy to the iOS and Mac App Stores. Before the run, a read of the App Store Connect API showed 2.2.0 still live on iOS and macOS, with no 3.x version record on either platform. Both 3.5.0 build 36 uploads had processed to VALID, and neither was attached to a version yet. One PR (#34, the native Saved library with notes and web sync) had merged after build 36. A new feature calls for a minor bump, so the version moves from 3.5.0 (36) to 3.6.0 (37).
+
+- `scripts/bump-version.sh minor` rewrote project.yml and regenerated the Xcode project, so project.pbxproj carries the new values. The app, the share extension, and the widgets all read 3.6.0 (37) in the iOS archive. The Mac archive embeds the app and the share extension, both at 3.6.0 (37).
+- `swift test` in GSDKit before the bump: 288 tests in 33 suites pass.
+- iOS: `scripts/release.sh --no-bump` ran the Release archive for a generic iOS device, the App Store export, and the upload. `UPLOAD SUCCEEDED with no errors`, delivery UUID `879aeed0-d021-44d1-8279-19437b3834a1`, 11,205,383 bytes, 2026-10-26 21:31 UTC. Log: `build/release-3.6.0-ios.log` (build/ is gitignored, so the log is local only).
+- Mac Catalyst: `scripts/release.sh --mac --no-bump` ran after the iOS run. The universal Release archive, the App Store export (.pkg), and the upload all succeeded. `UPLOAD SUCCEEDED with no errors`, delivery UUID `0679d942-cf38-4f2c-a775-c729c63a0f57`, 13,138,958 bytes, 2026-10-26 21:34 UTC. Log: `build/release-3.6.0-mac.log`; the .pkg and its summary stay in `build/export/`.
+- The Mac run reuses `build/GSD.xcarchive` and `build/export`, so the iOS archive and .ipa are no longer on disk. The upload record above stands on the altool result.
+- Processing: a read of the App Store Connect API after the uploads lists build 37 on both platforms with processing state VALID, each within three minutes of its upload.
+- `whatsnew.txt` now opens with "GSD 3.6 adds Saved" and leads both platform sections with a Saved bullet. The rest of the copy stays cumulative since 2.2.0, the live version.
+- Not done in this run, and owner-owed in App Store Connect: create the 3.6.0 version for iOS and for macOS, attach build 37 to each, paste the What's New copy, and submit for review. Export compliance resolves itself from `ITSAppUsesNonExemptEncryption` in the plist. Builds 35 and 36 stay in App Store Connect unused.

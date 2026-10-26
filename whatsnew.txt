@@ -1,7 +1,8 @@
 iOS (recommended)
 
-▎ GSD 3.5 is built for iOS 27 and the iPhone Duo. The system chrome takes the new Liquid Glass; your tasks stay on the same warm paper.
+▎ GSD 3.6 adds Saved and is built for iOS 27 and the iPhone Duo. The system chrome takes the new Liquid Glass; your tasks stay on the same warm paper.
 ▎
+▎ • Saved. Set a task aside without losing it. Move any open task to Saved from its menu. Find it under Browse on iPhone or in the Library sidebar on iPad, with a short note or a link kept beside the title. Search works there too. When you're ready, Return asks for the quadrant and an optional date before the task rejoins the matrix. Saved tasks stay out of your counts, widgets, and reminders, and they sync with the web app when you're signed in.
 ▎ • A layered app icon. The four quadrant tiles and the check render in every Home Screen style, including Clear and Tinted.
 ▎ • Made for iPhone Duo. Open or close the phone and you stay on the screen you were using. In landscape on the inner display the matrix keeps all four quadrants in view, and each one scrolls on its own.
 ▎ • Today's Focus in three sizes. The widget now comes in large, with room for eight tasks, and marks overdue and due-today tasks by shape so it reads in Tinted and Clear modes too.
@@ -15,8 +16,9 @@ iOS (recommended)
 
 macOS (recommended)
 
-▎ GSD 3.5 is built for macOS 27. The window, sidebar, and toolbar take the new Liquid Glass; your tasks stay on the same warm paper.
+▎ GSD 3.6 adds Saved and is built for macOS 27. The window, sidebar, and toolbar take the new Liquid Glass; your tasks stay on the same warm paper.
 ▎
+▎ • Saved. Set a task aside without losing it. Move any open task to Saved from its menu. Find it in the Library sidebar, with a short note or a link kept beside the title. Search works there too. When you're ready, Return asks for the quadrant and an optional date before the task rejoins the matrix. Saved tasks stay out of your counts and reminders, and they sync with the web app when you're signed in.
 ▎ • A layered app icon that renders in every icon style.
 ▎ • Share from Safari. When you're signed in, a shared link reaches your other devices within seconds.
 ▎ • Safer sync. Archiving a task removes it from your other devices too. An edit saved while another device changed the same task keeps both changes. A bad server listing can no longer remove tasks from your Mac.
