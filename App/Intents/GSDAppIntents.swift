@@ -98,7 +98,7 @@ struct GSDTaskQuery: EntityQuery, EntityStringQuery {
 
     func suggestedEntities() async throws -> [GSDTaskEntity] {
         try await store.fetchAllTasks()
-            .filter { !$0.completed }
+            .filter { !$0.completed && !$0.isSaved }
             .prefix(20)
             .map { GSDTaskEntity(task: $0) }
     }
@@ -107,9 +107,9 @@ struct GSDTaskQuery: EntityQuery, EntityStringQuery {
         let query = string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return try await store.fetchAllTasks()
             .filter { task in
-                query.isEmpty
+                !task.isSaved && (query.isEmpty
                 || task.title.lowercased().contains(query)
-                || task.tags.contains { $0.lowercased().contains(query) }
+                || task.tags.contains { $0.lowercased().contains(query) })
             }
             .prefix(20)
             .map { GSDTaskEntity(task: $0) }

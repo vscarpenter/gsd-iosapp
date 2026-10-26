@@ -33,7 +33,7 @@ private struct MatrixListContent: View {
 
     var body: some View {
         Group {
-            if store.tasks.isEmpty {
+            if store.matrixTasks.isEmpty {
                 EmptyStateView(icon: "square.grid.2x2",
                                title: String(localized: "Capture your first task"),
                                message: String(localized: "Type in the field above — try Call my wife !! #family."))

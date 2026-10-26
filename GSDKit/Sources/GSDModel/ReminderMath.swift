@@ -20,7 +20,7 @@ public enum ReminderMath {
     /// The master/task/completed/due gate (NOT the past-time gate — that lives in `fireDate`).
     /// True iff a reminder is conceptually wanted for this task.
     public static func shouldSchedule(_ task: Task, inputs: Inputs) -> Bool {
-        inputs.masterEnabled && task.notificationEnabled && !task.completed && task.dueDate != nil
+        inputs.masterEnabled && task.notificationEnabled && !task.completed && !task.isSaved && task.dueDate != nil
     }
 
     /// The local fire time = `dueDate − (notifyBefore ?? defaultReminder)` minutes, or nil
@@ -67,7 +67,7 @@ public enum ReminderMath {
         let startToday = calendar.startOfDay(for: now)
         let startTomorrow = calendar.date(byAdding: .day, value: 1, to: startToday)!
         return tasks.filter { task in
-            guard !task.completed, let due = task.dueDate else { return false }
+            guard !task.completed, !task.isSaved, let due = task.dueDate else { return false }
             return due < startTomorrow
         }.count
     }

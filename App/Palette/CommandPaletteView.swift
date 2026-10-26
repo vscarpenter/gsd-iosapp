@@ -13,7 +13,7 @@ enum PaletteResult {
     case sendFeedback
     case navigate(PaletteDestination)
 }
-enum PaletteDestination { case matrix, browse, archive, dashboard, settings }
+enum PaletteDestination { case matrix, browse, saved, archive, dashboard, settings }
 
 /// A Browse-stack route. The list links are value-based so the palette can push either a
 /// smart view or the Archive by appending to `PaletteController.browsePath` — a plain
@@ -21,6 +21,7 @@ enum PaletteDestination { case matrix, browse, archive, dashboard, settings }
 enum BrowseRoute: Hashable {
     case view(String)   // smart-view id
     case archive
+    case saved
 }
 
 /// Shared, environment-injected coordinator so the magnifying-glass buttons (which live
@@ -40,6 +41,7 @@ final class PaletteController {
     /// One-shot quadrant focus request (⌘1–⌘4 / `gsd://quadrant/<q>`): the matrix view
     /// scrolls to the quadrant and clears it.
     var focusedQuadrant: Quadrant?
+    var focusedSavedTaskID: String?
     /// The task editor sheet, presented once at the root (`ContentView`) for every surface.
     /// Hosted here rather than per surface so an open editor survives the compact/regular
     /// root swap when the window is resized mid-session (iPad multitasking, iPhone on iPad,
@@ -55,6 +57,7 @@ final class PaletteController {
         case .dashboard: compactTab = 2
         case .settings: compactTab = 3
         case .archive: compactTab = 1; browsePath = [.archive]
+        case .saved: compactTab = 1; browsePath = [.saved]
         case .smartView(let id): compactTab = 1; browsePath = [.view(id)]
         }
     }
@@ -67,6 +70,7 @@ final class PaletteController {
         case 1:
             switch browsePath.last {
             case .archive: regularSelection = .archive
+            case .saved: regularSelection = .saved
             case .view(let id): regularSelection = .smartView(id)
             case .none: regularSelection = .matrix
             }
@@ -79,7 +83,7 @@ final class PaletteController {
 
 /// iPad sidebar selection. Shared so the palette handler can drive it; `RegularRootView`
 /// binds its `List(selection:)` to `PaletteController.regularSelection`.
-enum RegularItem: Hashable { case matrix, archive, dashboard, settings, smartView(String) }
+enum RegularItem: Hashable { case matrix, saved, archive, dashboard, settings, smartView(String) }
 
 /// ⌘K command palette: a search field + sectioned, substring-matched results across
 /// Tasks / Smart Views / Actions / Navigation. Case-insensitive; not fuzzy (YAGNI).
@@ -110,6 +114,7 @@ struct CommandPaletteView: View {
         [(String(localized: "Matrix"), "square.grid.2x2", .navigate(.matrix)),
          (String(localized: "Dashboard"), "chart.bar.xaxis", .navigate(.dashboard)),
          (String(localized: "Browse"), "line.3.horizontal.decrease.circle", .navigate(.browse)),
+         (String(localized: "Saved"), "bookmark", .navigate(.saved)),
          (String(localized: "Archive"), "archivebox", .navigate(.archive)),
          (String(localized: "Settings"), "gearshape", .navigate(.settings))]
             .filter { match($0.0) }
@@ -121,7 +126,8 @@ struct CommandPaletteView: View {
                 if !taskResults.isEmpty {
                     Section(String(localized: "Tasks")) {
                         ForEach(taskResults) { task in
-                            paletteRow(task.title, icon: "doc.text", iconColor: Surface.ink2) {
+                            paletteRow(task.title, icon: task.isSaved ? "bookmark" : "doc.text", iconColor: Surface.ink2,
+                                       detail: task.isSaved ? String(localized: "Saved") : nil) {
                                 pick(.openTask(task))
                             }
                         }
@@ -167,13 +173,14 @@ struct CommandPaletteView: View {
 
     /// A palette result row: ink text with a graphite (or identity-accent) icon —
     /// the de-blue of the command list. `.plain` keeps the title ink, not tinted.
-    private func paletteRow(_ title: String, icon: String, iconColor: Color,
+    private func paletteRow(_ title: String, icon: String, iconColor: Color, detail: String? = nil,
                             action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 Image(systemName: icon).foregroundStyle(iconColor).frame(width: 26)
                 Text(title).foregroundStyle(Surface.ink)
                 Spacer(minLength: 0)
+                if let detail { Text(detail).font(.caption).foregroundStyle(Surface.ink2) }
             }
             .contentShape(Rectangle())
         }

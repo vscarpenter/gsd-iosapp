@@ -33,7 +33,7 @@ struct TaskActions {
         run(String(localized: "Couldn’t delete that task")) {
             try await store.delete(t)
         } onSuccess: {
-            // The root UndoDeleteToast listens and offers a recovery window; delete
+            // The root UndoTaskToast listens and offers a recovery window; delete
             // itself commits immediately (tombstone-safe), so this is fire-and-forget.
             NotificationCenter.default.post(name: .gsdTaskDeleted, object: t)
         }
@@ -42,6 +42,13 @@ struct TaskActions {
     func move(_ t: Task, to q: Quadrant) {
         run(String(localized: "Couldn’t move that task")) {
             try await store.move(t, to: q)
+        }
+    }
+
+    func moveToSaved(_ task: Task) {
+        run(String(localized: "Couldn’t move that task to Saved")) {
+            let saved = try await store.moveToSaved(task)
+            NotificationCenter.default.post(name: .gsdTaskSaved, object: saved)
         }
     }
 

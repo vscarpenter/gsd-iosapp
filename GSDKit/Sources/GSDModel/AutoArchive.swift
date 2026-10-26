@@ -11,7 +11,7 @@ public enum AutoArchive {
                                       now: Date, calendar: Calendar) -> [Task] {
         let cutoff = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: now))!
         return tasks.filter { task in
-            guard task.completed, let completedAt = task.completedAt else { return false }
+            guard task.completed, !task.isSaved, let completedAt = task.completedAt else { return false }
             return completedAt < cutoff
         }
     }

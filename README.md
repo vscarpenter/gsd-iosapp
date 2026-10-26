@@ -18,6 +18,10 @@ Every task is framed on two axes — *urgent* and *important* — and sorted int
 
 Natural-language capture parser (`!`, `!!`, `*`, `#tag`), recurrence, subtasks, dependency graphs, time tracking, snooze, archive, smart views, search, a ⌘K command palette, an analytics dashboard, import/export, and local notifications — plus native surfaces a web view can't deliver: Home/Lock-Screen **widgets**, **App Intents / Siri / Shortcuts**, a **Share Extension**, and **Spotlight**. Optional bidirectional sync runs against a [PocketBase](https://pocketbase.io/) backend, shared with the web app.
 
+Saved keeps reading, ideas and reference outside the matrix, with short notes,
+reviewed return to a quadrant, and optional sync with the web app. Find it in
+Browse on iPhone or Library on iPad and Mac. See [the implementation evidence](docs/2026-10-26-saved-ios.md).
+
 ## Architecture
 
 All testable logic lives in a layered Swift package (`GSDKit/`); the app and its two extensions are thin SwiftUI/host shells on top. The dependency direction is enforced by the package manifests:

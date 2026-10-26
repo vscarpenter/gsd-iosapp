@@ -33,6 +33,7 @@ struct TaskRecord: Codable, FetchableRecord, PersistableRecord {
     var estimatedMinutes: Int?
     var timeSpent: Int?
     var timeEntries: String
+    var savedAt: Date? = nil
 }
 
 extension TaskRecord {
@@ -61,6 +62,7 @@ extension TaskRecord {
         estimatedMinutes = task.estimatedMinutes
         timeSpent = task.timeSpent
         timeEntries = try GSDJSON.string(task.timeEntries)
+        savedAt = task.savedAt
     }
 
     func toDomain() throws -> Task {
@@ -84,7 +86,8 @@ extension TaskRecord {
             snoozedUntil: snoozedUntil,
             estimatedMinutes: estimatedMinutes,
             timeSpent: timeSpent,
-            timeEntries: try GSDJSON.value([TimeEntry].self, timeEntries)
+            timeEntries: try GSDJSON.value([TimeEntry].self, timeEntries),
+            savedAt: savedAt
         )
     }
 }

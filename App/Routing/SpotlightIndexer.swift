@@ -24,7 +24,7 @@ final class SpotlightIndexer {
     }
 
     private static func index(tasks: [Task], in index: CSSearchableIndex) async {
-        let activeItems = tasks.filter { !$0.completed }.map(searchableItem)
+        let activeItems = tasks.filter { !$0.completed && !$0.isSaved }.map(searchableItem)
         await withCheckedContinuation { continuation in
             index.deleteSearchableItems(withDomainIdentifiers: ["dev.vinny.gsd.tasks"]) { _ in
                 index.indexSearchableItems(activeItems) { _ in continuation.resume() }

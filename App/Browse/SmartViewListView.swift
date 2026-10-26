@@ -51,6 +51,8 @@ struct SmartViewListView: View {
                     }
                 case .archive:
                     ArchiveListView()
+                case .saved:
+                    SavedListView()
                 }
             }
             .brandedNavigationTitle(String(localized: "Browse"))
@@ -72,6 +74,15 @@ struct SmartViewListView: View {
     private var smartViewList: some View {
         List {
             Section {
+                NavigationLink(value: BrowseRoute.saved) {
+                    Label {
+                        Text(String(localized: "Saved")).foregroundStyle(Surface.ink)
+                    } icon: {
+                        Image(systemName: "bookmark").foregroundStyle(Surface.ink2)
+                    }
+                }
+                .accessibilityIdentifier("browse-saved")
+                .listRowBackground(Surface.surface)
                 NavigationLink(value: BrowseRoute.archive) {
                     Label {
                         Text(String(localized: "Archive")).foregroundStyle(Surface.ink)

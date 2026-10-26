@@ -4,7 +4,8 @@ import Foundation
 /// so date predicates are deterministic. `readyToWork` resolves against the FULL input
 /// set (a blocker excluded by another criterion must still block). PROBE-VERIFIED dates.
 public enum TaskFilter {
-    public static func apply(_ c: FilterCriteria, to tasks: [Task], now: Date, calendar: Calendar) -> [Task] {
+    public static func apply(_ c: FilterCriteria, to tasks: [Task], now: Date, calendar: Calendar,
+                             includingSaved: Bool = false) -> [Task] {
         let startToday = calendar.startOfDay(for: now)
         let weekEnd = calendar.date(byAdding: .day, value: 7, to: startToday)!   // [startToday, +7)
         let recentCutoff = calendar.date(byAdding: .day, value: -7, to: now)!    // rolling from now
@@ -12,6 +13,7 @@ public enum TaskFilter {
         let query = c.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
         let filtered = tasks.filter { task in
+            guard includingSaved || !task.isSaved else { return false }
             switch c.status {
             case .all: break
             case .active: if task.completed { return false }

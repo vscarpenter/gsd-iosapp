@@ -26,6 +26,9 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
     public var estimatedMinutes: Int?
     public var timeSpent: Int?                 // calculated from timeEntries
     public var timeEntries: [TimeEntry]
+    public var savedAt: Date?
+
+    public var isSaved: Bool { savedAt != nil }
 
     /// Derived, never persisted into this struct — the store column is written
     /// from this value (product spec §5.8).
@@ -54,7 +57,8 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         snoozedUntil: Date? = nil,
         estimatedMinutes: Int? = nil,
         timeSpent: Int? = nil,
-        timeEntries: [TimeEntry] = []
+        timeEntries: [TimeEntry] = [],
+        savedAt: Date? = nil
     ) {
         self.id = id
         self.title = title
@@ -79,6 +83,7 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         self.estimatedMinutes = estimatedMinutes
         self.timeSpent = timeSpent
         self.timeEntries = timeEntries
+        self.savedAt = savedAt
     }
 
     /// Stored properties only. `quadrant` is computed (never persisted/encoded) and is
@@ -88,6 +93,7 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         case createdAt, updatedAt, dueDate, recurrence, tags, subtasks, dependencies
         case parentTaskId, notifyBefore, notificationEnabled, notificationSent
         case lastNotificationAt, snoozedUntil, estimatedMinutes, timeSpent, timeEntries
+        case savedAt
     }
 
     /// Lenient decode (import tolerance — design-spec §3): require only the fields that
@@ -119,5 +125,6 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         estimatedMinutes = try c.decodeIfPresent(Int.self, forKey: .estimatedMinutes)
         timeSpent = try c.decodeIfPresent(Int.self, forKey: .timeSpent)
         timeEntries = try c.decodeIfPresent([TimeEntry].self, forKey: .timeEntries) ?? []
+        savedAt = try c.decodeIfPresent(Date.self, forKey: .savedAt)
     }
 }

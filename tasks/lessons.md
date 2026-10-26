@@ -196,3 +196,26 @@ for every shared seam, decided once in `GSDApp.init` by one switch that any harn
 flips, and the seed refuses any non-empty store. The database is one seam of six.
 "Unreachable in normal launches" is not a safety property when the abnormal launch runs on the
 owner's Mac.
+
+## Saved needs a placement boundary across every active surface (2026-10-26)
+
+Keep the full stored task set for backup, sync, account checks and dependency graphs;
+filter Saved at active presentation/scheduling boundaries. A Saved prerequisite is
+still unfinished. Clearing a PocketBase text field requires an explicit empty string.
+An incoming return also resets this device's reminder state, even though ordinary
+remote edits preserve device-local reminder fields. Exercise the real server's
+merging PATCH behavior as well as mapper round trips.
+
+SwiftUI row identifiers on an implicit group can replace child-control identifiers.
+Use an explicit accessibility container when a row has independent actions. On iOS
+27, native search hides the tab bar behind its keyboard; bind search presentation
+and close it when opening a Saved editor. Tests must target Saved search separately
+from the global palette and read notes from the editor, since matrix cards use a
+custom VoiceOver label that does not include the description.
+
+Compare Undo against the committed row: SQLite normalizes fractional timestamps,
+so an in-memory save snapshot with sub-millisecond precision can falsely fail an
+unchanged-state check. Include a fractional-clock test as well as whole-second clocks.
+For iPad screenshots use `XCUIScreen.main`, as in the existing baseline harness;
+`app.screenshot()` can crop the rotated window. Selected iPad sidebar labels need
+paper ink against the app's ink selection fill in both appearances.

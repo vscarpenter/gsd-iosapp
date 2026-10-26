@@ -20,10 +20,11 @@ struct ContentView: View {
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
 
     @State private var palette = PaletteController()
-    @State private var undo = UndoDeleteController()
+    @State private var undo = UndoTaskController()
     /// Stashed when the palette picks an editor result; acted on in the sheet's onDismiss
     /// so we don't dismiss + present in the same runloop (iOS drops the second present).
     @State private var pendingEditor: EditorRequest?
+    @State private var pendingSavedTaskID: String?
     /// Mac "About GSD" panel (app menu), posted by GSDMenuCommands on Catalyst.
     @State private var showAbout = false
     /// "Field Guide" help sheet, posted by Settings ▸ About (all platforms) and the Mac Help menu.
@@ -36,15 +37,19 @@ struct ContentView: View {
             // hardware ⌘K opens the palette anywhere in the app.
             .background { keyboardShortcuts }
             // Root-hosted so a delete from ANY surface gets the same Undo window. Compact hosts
-            // it as the tab bar's accessory (see UndoDeleteAccessory); regular keeps the capsule.
+            // it as the tab bar's accessory (see UndoTaskAccessory); regular keeps the capsule.
             .overlay(alignment: .bottom) {
                 if sizeClass != .compact {
-                    UndoDeleteToast(undo: undo).padding(.bottom, 24)
+                    UndoTaskToast(undo: undo).padding(.bottom, 24)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .gsdTaskDeleted)) { note in
                 guard let task = note.object as? Task else { return }
                 undo.noteDeleted(task)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdTaskSaved)) { note in
+                guard let task = note.object as? Task else { return }
+                undo.noteSaved(task)
             }
             .taskActionFailureAlert($undo.failure)
             // An iPhone Duo closes and opens mid-session (an iPad window resizes), and each root
@@ -174,7 +179,8 @@ struct ContentView: View {
     private func openTask(_ id: String) {
         _Concurrency.Task { @MainActor in
             if let task = try? await store.fetchTask(id: id) {
-                palette.editor = .edit(task)
+                if task.isSaved { openSavedTask(task.id) }
+                else { palette.editor = .edit(task) }
             } else {
                 navigate(to: .matrix)
             }
@@ -190,12 +196,12 @@ struct ContentView: View {
         if sizeClass == .compact {
             if #available(iOS 26.1, *) {
                 compactRoot
-                    // The undo window rides the tab bar as its accessory (see UndoDeleteAccessory).
-                    .tabViewBottomAccessory(isEnabled: undo.deleted != nil) { UndoDeleteAccessory(undo: undo) }
+                    // The undo window rides the tab bar as its accessory (see UndoTaskAccessory).
+                    .tabViewBottomAccessory(isEnabled: undo.action != nil) { UndoTaskAccessory(undo: undo) }
             } else {
                 compactRoot
                     // iOS 26.0 has no isEnabled accessory: keep the capsule clear of the tab bar.
-                    .overlay(alignment: .bottom) { UndoDeleteToast(undo: undo).padding(.bottom, 72) }
+                    .overlay(alignment: .bottom) { UndoTaskToast(undo: undo).padding(.bottom, 72) }
             }
         } else {
             RegularRootView()
@@ -225,7 +231,9 @@ struct ContentView: View {
 
     private func handle(_ result: PaletteResult) {
         switch result {
-        case .openTask(let task): pendingEditor = .edit(task)
+        case .openTask(let task):
+            if task.isSaved { pendingSavedTaskID = task.id }
+            else { pendingEditor = .edit(task) }
         case .newTask: pendingEditor = .new(.urgentImportant, prefill: nil)
         case .toggleShowCompleted: showCompleted.toggle()
         case .toggleTheme:
@@ -245,6 +253,11 @@ struct ContentView: View {
 
     /// The palette dismissed; if it picked an editor result, present it now (separate runloop).
     private func presentPendingEditor() {
+        if let id = pendingSavedTaskID {
+            pendingSavedTaskID = nil
+            openSavedTask(id)
+            return
+        }
         guard let pending = pendingEditor else { return }
         pendingEditor = nil
         palette.editor = pending
@@ -256,6 +269,7 @@ struct ContentView: View {
             case .matrix: palette.compactTab = 0
             case .browse: palette.compactTab = 1; palette.browsePath = []
             case .archive: palette.compactTab = 1; palette.browsePath = [.archive]
+            case .saved: palette.compactTab = 1; palette.browsePath = [.saved]
             case .dashboard: palette.compactTab = 2
             case .settings: palette.compactTab = 3
             }
@@ -264,6 +278,7 @@ struct ContentView: View {
             case .matrix: palette.regularSelection = .matrix
             case .browse: break   // iPad has no Browse tab; the sidebar is always visible
             case .archive: palette.regularSelection = .archive
+            case .saved: palette.regularSelection = .saved
             case .dashboard: palette.regularSelection = .dashboard
             case .settings: palette.regularSelection = .settings
             }
@@ -277,6 +292,11 @@ struct ContentView: View {
         } else {
             palette.regularSelection = .smartView(id)
         }
+    }
+
+    private func openSavedTask(_ id: String) {
+        palette.focusedSavedTaskID = id
+        navigate(to: .saved)
     }
 }
 
@@ -315,6 +335,7 @@ private struct RegularRootView: View {
                 }
 
                 Section(String(localized: "Library")) {
+                    sidebarNavLabel(String(localized: "Saved"), .saved) { sidebarSymbol("bookmark", .saved) }
                     sidebarNavLabel(String(localized: "Archive"), .archive) { sidebarSymbol("archivebox", .archive) }
                     sidebarNavLabel(String(localized: "Settings"), .settings) { sidebarSymbol("gearshape", .settings) }
                 }
@@ -345,6 +366,8 @@ private struct RegularRootView: View {
                 }
             case .archive:
                 NavigationStack { ArchiveListView() }
+            case .saved:
+                NavigationStack { SavedListView() }
             case .dashboard:
                 DashboardView()
             case .settings:
@@ -366,17 +389,19 @@ private struct RegularRootView: View {
         .tag(item)
     }
 
-    /// A graphite SF Symbol for a sidebar row, flipped to the on-accent ink when selected.
+    /// A graphite SF Symbol for a sidebar row, flipped to the selection's contrasting ink.
     private func sidebarSymbol(_ name: String, _ item: RegularItem) -> some View {
         Image(systemName: name).foregroundStyle(sidebarInk(item, base: Surface.ink2))
     }
 
-    /// The row's normal ink, or the system's selected-content color when it is the selected
-    /// row. The selection fill is not ours to predict: since the 27 SDK it is the opaque app
-    /// tint (ink) on iPad, and on the Mac it is the accent while the sidebar has focus and a
-    /// neutral fill when it does not. `.primary` follows whichever fill the system painted.
+    /// iPad uses the root ink tint as an opaque selection fill, so paper is its contrasting
+    /// label color in both appearances. Catalyst owns its active/inactive selection colors.
     private func sidebarInk(_ item: RegularItem, base: Color) -> AnyShapeStyle {
+        #if targetEnvironment(macCatalyst)
         palette.regularSelection == item ? AnyShapeStyle(.primary) : AnyShapeStyle(base)
+        #else
+        palette.regularSelection == item ? AnyShapeStyle(Surface.paper) : AnyShapeStyle(base)
+        #endif
     }
 
     @ViewBuilder private func sidebarRow(_ view: SmartView) -> some View {

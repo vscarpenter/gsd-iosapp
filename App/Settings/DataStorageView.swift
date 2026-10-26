@@ -52,7 +52,7 @@ struct DataStorageView: View {
                     Label(String(localized: "Erase All Data"), systemImage: "trash")
                 }
             } footer: {
-                Text(String(localized: "Erasing removes all tasks, archived items, and custom views. Your appearance settings are kept. Export first if you want a backup."))
+                Text(String(localized: "Erasing removes all tasks, Saved items, archived items, and custom views. Your appearance settings are kept. Export first if you want a backup."))
             }
         }
         .onAppear { cleanupExportFile() }      // clear any stale export from a previous session
@@ -65,7 +65,7 @@ struct DataStorageView: View {
             Button(String(localized: "Replace (erase existing)"), role: .destructive) { runImport(mode: .replace) }
             Button(String(localized: "Cancel"), role: .cancel) { pendingImportData = nil }
         } message: {
-            Text(String(localized: "Merge keeps your current tasks and adds the imported ones. Replace deletes your current tasks first — and, if you're signed in, deletes them on all your devices."))
+            Text(String(localized: "Merge keeps your current tasks and Saved items and adds the imported ones. Replace deletes your current tasks and Saved items first — and, if you're signed in, deletes them on all your devices."))
         }
         .alert(String(localized: "Erase All Data"), isPresented: $showEraseAlert) {
             TextField(String(localized: "Type RESET to confirm"), text: $resetConfirmText)

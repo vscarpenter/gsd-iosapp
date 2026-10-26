@@ -25,6 +25,10 @@ final class LiveReminderScheduler: ReminderScheduling, @unchecked Sendable {
 
     func schedule(_ task: Task) async {
         let id = identifier(for: task.id)
+        guard !task.isSaved else {
+            center.removePendingNotificationRequests(withIdentifiers: [id])
+            return
+        }
         let settings = settingsProvider()
         // A snoozed task fires at snoozedUntil (if still future); otherwise normal fireDate.
         let baseFire: Date?

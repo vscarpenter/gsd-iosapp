@@ -18,7 +18,7 @@ struct ArchiveListView: View {
     private var results: [Task] {
         guard !searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return store.archivedTasks }
         return TaskFilter.apply(FilterCriteria(searchQuery: searchText),
-                                to: store.archivedTasks, now: .now, calendar: .current)
+                                to: store.archivedTasks, now: .now, calendar: .current, includingSaved: true)
     }
 
     var body: some View {

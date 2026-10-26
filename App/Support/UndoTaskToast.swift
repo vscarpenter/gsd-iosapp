@@ -6,60 +6,80 @@ extension Notification.Name {
     /// Posted by `TaskActions.delete` after the store commits, carrying the deleted `Task`
     /// snapshot as the notification object so the root undo window can offer restore.
     static let gsdTaskDeleted = Notification.Name("dev.vinny.gsd.taskDeleted")
+    static let gsdTaskSaved = Notification.Name("dev.vinny.gsd.taskSaved")
 }
 
-/// Root-owned state for the "Deleted, Undo" recovery window that a delete from any surface
-/// (matrix swipe, `⋯` menu, Browse row, VoiceOver custom action) opens for about six seconds,
-/// the calm alternative to a confirmation dialog (design critique P2, 2026-07-02).
-///
-/// Undo re-creates the task snapshot rather than blocking the delete: the delete's tombstone
-/// is already enqueued by `TaskStore.delete`, and the follow-up create wins last-write-wins
-/// on the server, so restore is safe online and offline.
+enum UndoTaskAction {
+    case deleted(Task)
+    case saved(Task)
+
+    var task: Task { switch self { case .deleted(let task), .saved(let task): task } }
+    var message: String {
+        switch self {
+        case .deleted(let task): String(localized: "Deleted “\(task.title)”")
+        case .saved(let task): String(localized: "Moved “\(task.title)” to Saved")
+        }
+    }
+}
+
+/// One recovery window across surfaces. Deleted items restore from trash; a move to Saved
+/// can be undone only while the saved transition is unchanged, including by another device.
 @MainActor @Observable
-final class UndoDeleteController {
-    private(set) var deleted: Task?
+final class UndoTaskController {
+    private(set) var action: UndoTaskAction?
     var failure: TaskActionFailure?
     private var expiry: _Concurrency.Task<Void, Never>?
 
     /// Opens the window for `task` and schedules its close.
     func noteDeleted(_ task: Task) {
-        withAnimation { deleted = task }
+        note(.deleted(task))
+    }
+
+    func noteSaved(_ task: Task) {
+        note(.saved(task))
+    }
+
+    private func note(_ next: UndoTaskAction) {
+        withAnimation { action = next }
         UIAccessibility.post(
             notification: .announcement,
-            argument: String(localized: "Deleted \(task.title). Undo is available."))
+            argument: String(localized: "\(next.message). Undo is available."))
         expiry?.cancel()
         expiry = _Concurrency.Task { [weak self] in
             // VoiceOver users navigate slower than sighted users tap: hold longer.
             let seconds: Double = UIAccessibility.isVoiceOverRunning ? 12 : 6
             try? await _Concurrency.Task.sleep(for: .seconds(seconds))
-            guard !_Concurrency.Task.isCancelled, let self, self.deleted?.id == task.id else { return }
-            withAnimation { self.deleted = nil }
+            guard !_Concurrency.Task.isCancelled, let self, self.action?.task.id == next.task.id else { return }
+            withAnimation { self.action = nil }
         }
     }
 
     func restore(into store: TaskStore) {
-        guard let task = deleted else { return }
-        withAnimation { deleted = nil }
+        guard let action else { return }
+        withAnimation { self.action = nil }
         _Concurrency.Task { @MainActor in
             do {
-                try await store.create(task)
+                switch action {
+                case .deleted(let task): try await store.restoreFromTrash(id: task.id)
+                case .saved(let task): try await store.undoMoveToSaved(task)
+                }
             } catch {
-                failure = TaskActionFailure(String(localized: "Couldn’t restore that task"))
+                failure = TaskActionFailure(String(localized: "Couldn’t undo that action: \(error.localizedDescription)"))
             }
         }
     }
 }
 
 /// The ink capsule for the regular root (iPad, Mac), overlaid above the bottom edge.
-struct UndoDeleteToast: View {
-    let undo: UndoDeleteController
+struct UndoTaskToast: View {
+    let undo: UndoTaskController
     @Environment(TaskStore.self) private var store
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        if let task = undo.deleted {
+        if let action = undo.action {
             HStack(spacing: 14) {
-                Text(String(localized: "Deleted “\(task.title)”"))
+                Text(action.message)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Button(String(localized: "Undo")) { undo.restore(into: store) }
@@ -80,16 +100,16 @@ struct UndoDeleteToast: View {
 /// glass, keeps the accessory clear of the bar, and folds it beside the bar when the bar
 /// minimizes on scroll, which retires the old fixed 72-point clearance. Expanded: the title
 /// and Undo; inline (beside the minimized bar): Undo alone.
-struct UndoDeleteAccessory: View {
-    let undo: UndoDeleteController
+struct UndoTaskAccessory: View {
+    let undo: UndoTaskController
     @Environment(TaskStore.self) private var store
     @Environment(\.tabViewBottomAccessoryPlacement) private var placement
 
     var body: some View {
-        if let task = undo.deleted {
+        if let action = undo.action {
             HStack(spacing: 12) {
                 if placement != .inline {
-                    Text(String(localized: "Deleted “\(task.title)”"))
+                    Text(action.message)
                         .lineLimit(1)
                         .truncationMode(.middle)
                         .foregroundStyle(Surface.ink)
