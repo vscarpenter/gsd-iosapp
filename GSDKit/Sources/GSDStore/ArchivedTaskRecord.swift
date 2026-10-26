@@ -34,6 +34,7 @@ struct ArchivedTaskRecord: Codable, FetchableRecord, PersistableRecord {
     var timeSpent: Int?
     var timeEntries: String
     var archivedAt: Date
+    var savedAt: Date? = nil
 }
 
 extension ArchivedTaskRecord {
@@ -52,6 +53,7 @@ extension ArchivedTaskRecord {
         snoozedUntil = r.snoozedUntil; estimatedMinutes = r.estimatedMinutes
         timeSpent = r.timeSpent; timeEntries = r.timeEntries
         self.archivedAt = archivedAt
+        savedAt = r.savedAt
     }
 
     /// Reconstruct the domain task (drops `archivedAt`, which is archive-only metadata).
@@ -64,7 +66,7 @@ extension ArchivedTaskRecord {
                            notifyBefore: notifyBefore, notificationEnabled: notificationEnabled,
                            notificationSent: notificationSent, lastNotificationAt: lastNotificationAt,
                            snoozedUntil: snoozedUntil, estimatedMinutes: estimatedMinutes,
-                           timeSpent: timeSpent, timeEntries: timeEntries)
+                           timeSpent: timeSpent, timeEntries: timeEntries, savedAt: savedAt)
         return try r.toDomain()
     }
 }

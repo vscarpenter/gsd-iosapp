@@ -35,7 +35,8 @@ package enum TaskWireMapper {
             snoozedUntil: WireDate.format(task.snoozedUntil),
             clientUpdatedAt: WireDate.format(task.updatedAt),
             clientCreatedAt: WireDate.format(task.createdAt),
-            deviceId: deviceId
+            deviceId: deviceId,
+            savedAt: WireDate.format(task.savedAt)
         )
     }
 
@@ -77,7 +78,8 @@ package enum TaskWireMapper {
             snoozedUntil: WireDate.parse(r.snoozedUntil),
             estimatedMinutes: r.estimatedMinutes,
             timeSpent: r.timeSpent,
-            timeEntries: r.timeEntries.map(reconstruct)
+            timeEntries: r.timeEntries.map(reconstruct),
+            savedAt: WireDate.parse(r.savedAt)
         )
     }
 
@@ -101,7 +103,8 @@ package enum TaskWireMapper {
             snoozedUntil: local.snoozedUntil,               // device-local (§7.4)
             estimatedMinutes: r.estimatedMinutes,
             timeSpent: local.timeSpent,                     // derived from timeEntries → stays local
-            timeEntries: local.timeEntries                  // wire form lossy → prefer local
+            timeEntries: local.timeEntries,                 // wire form lossy → prefer local
+            savedAt: WireDate.parse(r.savedAt)
         )
     }
 

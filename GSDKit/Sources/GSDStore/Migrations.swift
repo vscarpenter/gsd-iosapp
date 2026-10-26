@@ -11,7 +11,19 @@ extension AppDatabase {
         registerV4(&migrator)
         registerV5(&migrator)
         registerV6(&migrator)
+        registerV7(&migrator)
         return migrator
+    }
+
+    static func registerV7(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v7-saved-placement") { db in
+            for table in ["tasks", "archivedTasks", "deletedTasks"] {
+                try db.alter(table: table) { definition in
+                    definition.add(column: "savedAt", .datetime)
+                }
+            }
+            try db.create(index: "tasks_savedAt", on: "tasks", columns: ["savedAt"])
+        }
     }
 
     /// Trash (soft delete). The web client has carried a 30-day recoverable trash since its

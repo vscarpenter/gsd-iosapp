@@ -268,3 +268,26 @@ Owner is handling certificate/profile reconciliation. Continue locally without c
 - [x] Owner resolved certificate profiles; signed Catalyst Debug/Release builds, signatures, matrix startup/relaunch, menus, and Delete/Undo verified.
 - [x] Owner authorized committing readiness fixes and opening a PR on October 18.
 - Account/provider flows, physical-device VoiceOver, distribution validation, and App Store Connect state remain separate checks.
+# Saved on iOS (2026-10-26)
+
+Branch: `feat/saved-tasks`, isolated checkout `../gsd-iosapp-saved` from `06dca9b`.
+Contract: `tasks/spec.md`; approved web behavior and the owner's iOS follow-up.
+
+- [x] Add failing model, wire, migration and backup regression tests.
+- [x] Implement Saved storage/wire placement and mapper round trips; package suite passes.
+- [ ] Add failing transition, active-query, reminder and snapshot tests.
+- [ ] Implement save, short notes and return through the shared TaskStore.
+- [ ] Build native Saved, task actions, navigation and search with existing tokens.
+- [ ] Verify package tests, iPhone/iPad/Catalyst builds and isolated UI walks.
+- [ ] Commit logical units and document evidence and remaining release steps.
+
+## Resuming From Here
+
+- Done: model, wire and v7 local migration; Saved survives task, archive/trash and
+  backup mapping. Legacy, empty and cleared wire placement are covered. Tests pass.
+- Next: transitions, active filtering, reminder/widget exclusion and native UI.
+- Blockers: XcodeBuildMCP is unavailable, so use the repository's Xcode CLI workflow.
+  The referenced `openwiki/quickstart.md` is absent; owning source/specs are available.
+- Assumptions: Saved belongs in Browse/Library; iOS 26 minimum and current iOS 27
+  system chrome remain; no submission or production data writes in this task.
+
