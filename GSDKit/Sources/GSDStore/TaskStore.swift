@@ -243,8 +243,10 @@ public final class TaskStore {
         current.savedAt = now
         current.updatedAt = now
         try await upsertEnqueued(current, op: .update)
+        // SQLite normalizes fractional dates; Undo must compare the committed snapshot.
+        let saved = try await repository.fetch(id: current.id) ?? current
         await reminders.cancel(taskID: current.id)
-        return current
+        return saved
     }
 
     public func updateSavedNotes(id: String, notes: String) async throws {
@@ -276,8 +278,7 @@ public final class TaskStore {
     }
 
     public func undoMoveToSaved(_ saved: Task) async throws {
-        guard var current = try await repository.fetch(id: saved.id), current.isSaved,
-              current.savedAt == saved.savedAt, current.updatedAt == saved.updatedAt else {
+        guard var current = try await repository.fetch(id: saved.id), current.isSaved, current == saved else {
             throw TaskStoreError.savedItemUnavailable
         }
         current.savedAt = nil

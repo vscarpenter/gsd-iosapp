@@ -84,9 +84,12 @@ package enum TaskWireMapper {
     }
 
     /// Pull-merge into an existing local task: remote wins for synced fields; the device-local +
-    /// derived set is preserved from `local` (conventions 7). `quadrant` recomputed from flags.
+    /// derived set is preserved from `local` (conventions 7). Returning from Saved resets this
+    /// device's reminder state just like a native return. `quadrant` recomputed from flags.
     private static func merged(_ r: PocketBaseTaskRecord, into local: Task) -> Task {
-        Task(
+        let savedAt = WireDate.parse(r.savedAt)
+        let returning = local.isSaved && savedAt == nil
+        return Task(
             id: r.taskId, title: r.title, description: r.description,
             urgent: r.urgent, important: r.important,
             completed: r.completed, completedAt: WireDate.parse(r.completedAt),
@@ -98,13 +101,13 @@ package enum TaskWireMapper {
             parentTaskId: local.parentTaskId,               // device-local (no wire column)
             notifyBefore: r.notifyBefore,
             notificationEnabled: r.notificationEnabled,
-            notificationSent: local.notificationSent,       // device-local (§7.4)
-            lastNotificationAt: local.lastNotificationAt,   // device-local (§7.4)
-            snoozedUntil: local.snoozedUntil,               // device-local (§7.4)
+            notificationSent: returning ? false : local.notificationSent,
+            lastNotificationAt: returning ? nil : local.lastNotificationAt,
+            snoozedUntil: returning ? nil : local.snoozedUntil,
             estimatedMinutes: r.estimatedMinutes,
             timeSpent: local.timeSpent,                     // derived from timeEntries → stays local
             timeEntries: local.timeEntries,                 // wire form lossy → prefer local
-            savedAt: WireDate.parse(r.savedAt)
+            savedAt: savedAt
         )
     }
 

@@ -36,6 +36,20 @@ struct SavedWireTests {
         #expect(!TaskWireMapper.toDomain(wire, mergingInto: nil).isSaved)
     }
 
+    @Test func webReturnResetsNativeReminderStateWhileSavedEditsPreserveIt() throws {
+        let stamp = try #require(WireDate.parse(savedString))
+        let local = Task(id: "reading", title: "Read later", urgent: false, important: true,
+                         createdAt: stamp, updatedAt: stamp, notificationSent: true,
+                         lastNotificationAt: stamp, snoozedUntil: stamp.addingTimeInterval(3600), savedAt: stamp)
+        var wire = TaskWireMapper.toWire(local, owner: "user", deviceId: "web")
+        let stillSaved = TaskWireMapper.toDomain(wire, mergingInto: local)
+        #expect(stillSaved.notificationSent && stillSaved.snoozedUntil == local.snoozedUntil)
+        wire.savedAt = ""
+        let returned = TaskWireMapper.toDomain(wire, mergingInto: local)
+        #expect(!returned.notificationSent)
+        #expect(returned.lastNotificationAt == nil && returned.snoozedUntil == nil)
+    }
+
     @Test(arguments: ["{}", "{\"saved_at\":null}", "{\"saved_at\":\"\"}"])
     func legacyEmptyPlacementIsActive(fields: String) throws {
         var json = try #require(JSONSerialization.jsonObject(with: Data(fields.utf8)) as? [String: Any])

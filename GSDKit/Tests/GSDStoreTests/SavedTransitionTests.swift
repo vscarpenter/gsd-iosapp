@@ -7,12 +7,12 @@ import GSDModel
 struct SavedTransitionTests {
     private let now = Date(timeIntervalSince1970: 1_793_016_000)
 
-    private func makeStore() throws -> (TaskStore, GRDBTaskRepository, GRDBSyncQueueRepository, RecordingReminderScheduler) {
+    private func makeStore(at date: Date? = nil) throws -> (TaskStore, GRDBTaskRepository, GRDBSyncQueueRepository, RecordingReminderScheduler) {
         let db = try AppDatabase.inMemory()
         let repo = GRDBTaskRepository(db)
         let queue = GRDBSyncQueueRepository(db)
         let reminders = RecordingReminderScheduler()
-        let stamp = now
+        let stamp = date ?? now
         let store = TaskStore(repository: repo, smartViewRepository: GRDBSmartViewRepository(db),
                               archiveRepository: GRDBArchiveRepository(db), trashRepository: GRDBTrashRepository(db),
                               defaults: UserDefaults(suiteName: "saved-\(UUID().uuidString)")!,
@@ -144,5 +144,45 @@ struct SavedTransitionTests {
         try await store.save(saved)
         try await store.snooze(saved, by: .oneHour)
         #expect(reminders.scheduleCancelCalls == [.cancel(saved.id), .cancel(saved.id)])
+    }
+
+    @Test func undoRejectsAnEditInTheSameClockTick() async throws {
+        let (store, repo, _, _) = try makeStore()
+        let original = task(); try await repo.upsert(original)
+        let saved = try await store.moveToSaved(original)
+        try await store.updateSavedNotes(id: saved.id, notes: "Changed without advancing the clock")
+        await #expect(throws: TaskStoreError.savedItemUnavailable) { try await store.undoMoveToSaved(saved) }
+        #expect(try await repo.fetch(id: saved.id)?.isSaved == true)
+    }
+
+    @Test func undoSnapshotUsesThePersistedTimestampPrecision() async throws {
+        let (store, repo, _, _) = try makeStore(at: now.addingTimeInterval(0.123456))
+        let original = task(); try await repo.upsert(original)
+        let saved = try await store.moveToSaved(original)
+        #expect(saved == (try await repo.fetch(id: original.id)))
+        try await store.undoMoveToSaved(saved)
+        #expect(try await repo.fetch(id: original.id)?.isSaved == false)
+    }
+
+    @Test func savedOnlyStoreRetainsDataWithoutActiveQueriesOrReminders() async throws {
+        let (store, repo, queue, reminders) = try makeStore()
+        var saved = task(); saved.savedAt = now
+        try await repo.upsert(saved)
+        store.start()
+        for _ in 0..<100 {
+            if store.tasks.count == 1 { break }
+            try await _Concurrency.Task.sleep(for: .milliseconds(10))
+        }
+        #expect(store.tasks.map(\.id) == [saved.id])
+        #expect(store.savedTasks.map(\.id) == [saved.id])
+        #expect(store.matrixTasks.isEmpty)
+        #expect(store.tasks(in: saved.quadrant, showCompleted: true).isEmpty)
+        #expect(store.tasks(matching: .init()).isEmpty)
+        await store.resyncReminders()
+        #expect(reminders.scheduleCancelCalls == [.cancelAll])
+        let result = try await store.bulkComplete(ids: [saved.id])
+        #expect(result.failedIDs == [saved.id])
+        #expect(try await queue.all().isEmpty)
+        #expect(try await repo.fetch(id: saved.id)?.isSaved == true)
     }
 }

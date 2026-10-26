@@ -284,9 +284,10 @@ Contract: `tasks/spec.md`; approved web behavior and the owner's iOS follow-up.
 ## Resuming From Here
 
 - Done: storage, transitions, active filtering, reminder/widget exclusion and native
-  UI. All 725 package tests pass. Engine pull/push/realtime tests cover both clients;
-  real web-export and native-export fixtures pass both import contracts.
-- Next: finish isolated iPhone/iPad UI walks, Catalyst build, and evidence docs.
+  UI. Real PocketBase/web/native interoperability passes with owner auth and encryption
+  hooks. Phone/iPad builds and Catalyst compile pass. UI walks found and fixed search
+  presentation and fractional-date Undo; regression tests pass.
+- Next: finish final light/dark phone/iPad UI reruns and record final test counts.
 - Blockers: XcodeBuildMCP is unavailable, so use the repository's Xcode CLI workflow.
   The referenced `openwiki/quickstart.md` is absent; owning source/specs are available.
 - Assumptions: Saved belongs in Browse/Library; iOS 26 minimum and current iOS 27
