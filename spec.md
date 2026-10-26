@@ -82,7 +82,7 @@ A **`TabView`** with these tabs:
 
 1. **Matrix** — the primary surface: a sticky **capture field** at top, then the four quadrants. Because four quadrants cannot be shown legibly at once on a phone, the matrix uses a **vertical stack of quadrant sections** (each a collapsible, scrollable group with a header showing the quadrant name + live count), which mirrors how the web app stacks quadrants on mobile. A segmented **"Focus / All"** control and a quadrant filter let the user zero in. (Alternative considered: a paged 2×2; rejected as cramped and gesture-conflicting with row swipes.)
 2. **Dashboard** — analytics (§6.15).
-3. **Browse** — Smart Views list + Archive access + full-text search entry (this is where resurrected smart views live on iPhone; see §6.13).
+3. **Browse** — Smart Views list, Saved and Archive access, and full-text search entry (this is where resurrected smart views live on iPhone; see §6.13).
 4. **Settings** — §6.17.
 
 Global affordances on iPhone:
@@ -93,7 +93,7 @@ Global affordances on iPhone:
 
 A **`NavigationSplitView`** (two- or three-column):
 
-- **Sidebar:** Matrix, a live list of **Smart Views** (built-in + custom, pinned ones first), Dashboard, Archive, Settings.
+- **Sidebar:** Matrix, a live list of **Smart Views** (built-in + custom, pinned ones first), Dashboard, Saved, Archive, Settings.
 - **Content:** the selected surface. For **Matrix**, a true **2×2 grid** filling the content column (Q1 top-left, Q2 top-right, Q3 bottom-left, Q4 bottom-right). For a Smart View, the filtered task list.
 - **Inspector (optional third column):** the task editor (§6.3) opens here on iPad rather than as a sheet, so editing doesn't occlude the board.
 
@@ -126,6 +126,7 @@ All entities below must be representable in the local GRDB store, in the JSON im
 | `createdAt` | Date | yes | now | |
 | `updatedAt` | Date | yes | now | bumped on every mutation; drives sync LWW |
 | `dueDate` | Date? | no | — | |
+| `savedAt` | Date? | no | — | non-nil means Saved; omitted in legacy backups means matrix |
 | `recurrence` | enum | yes | `none` | one of `none`, `daily`, `weekly`, `monthly` — **there is no "yearly"** |
 | `tags` | [String] | yes | `[]` | 0–20 items; each 1–30 chars; stored lowercase |
 | `subtasks` | [Subtask] | yes | `[]` | 0–50 items (§5.2) |
@@ -140,7 +141,17 @@ All entities below must be representable in the local GRDB store, in the JSON im
 | `timeSpent` | Int? | no | — | total tracked minutes, **calculated** from `timeEntries` |
 | `timeEntries` | [TimeEntry] | yes | `[]` | 0–1000 items (§5.3) |
 
-**Device-local fields** (`notificationSent`, `lastNotificationAt`, `snoozedUntil`) are *not* authoritative across devices: on sync pull they are preserved from the existing local record, never clobbered by the remote (§7.4).
+**Device-local fields** (`notificationSent`, `lastNotificationAt`, `snoozedUntil`) are *not* authoritative across devices: ordinary sync pulls preserve the existing local values (§7.4). An incoming return from Saved resets this device's reminder state, matching a native return.
+
+**Saved placement (2026-10-26).** An incomplete task can move to Saved while retaining
+its identity and context. Stop a running timer first. Saved items live outside active
+matrix/smart-view counts, analytics, reminders, widgets and active search suggestions;
+their dependency edges still block unfinished work. Saved has title/note/tag search
+and short notes in `description` (600 UTF-16 units, matching the web limit). Return
+reviews the quadrant and optional due date, clears `savedAt` and reminder delivery/
+snooze metadata, and resumes active behavior without completion or recurrence.
+Global palette results identify Saved items and navigate to Saved. The v7 additive
+local migration preserves tasks, archive and trash; JSON backups retain placement.
 
 ### 5.2 Subtask (embedded in Task)
 
@@ -514,6 +525,7 @@ Fields use **snake_case**. The collection already exists on the backend; the iOS
 | `important` | bool | |
 | `quadrant` | string | one of the four quadrant ids |
 | `due_date` | string | ISO-8601 or empty |
+| `saved_at` | string | ISO-8601 or empty; returning MUST send `""` to clear the remote field |
 | `completed` | bool | |
 | `completed_at` | string | ISO-8601 or empty |
 | `recurrence` | string | `none` / `daily` / `weekly` / `monthly` |
@@ -538,7 +550,7 @@ Fields use **snake_case**. The collection already exists on the backend; the iOS
 Implement a bidirectional mapper between the local `Task` (camelCase, rich `timeEntries`) and the PocketBase record (snake_case, flattened `time_entries`). Notably:
 - `timeEntries` `{id, startedAt, endedAt, notes}` → `time_entries` `{id, startedAt, minutes}` on push; reconstruct best-effort on pull (the wire form loses `endedAt`/`notes`, so **prefer the local copy** when both exist).
 - `updatedAt` (local) ↔ `client_updated_at` (remote) is the LWW key.
-- Preserve `notification_sent` / `last_notification_at` / `snoozed_until` as device-local (§7.4).
+- Preserve `notification_sent` / `last_notification_at` / `snoozed_until` as device-local (§7.4), except a Saved-to-matrix transition resets them on this device.
 
 ### 7.3 Conflict resolution — Last-Write-Wins (LWW)
 

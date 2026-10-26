@@ -278,17 +278,18 @@ Contract: `tasks/spec.md`; approved web behavior and the owner's iOS follow-up.
 - [x] Add failing transition, active-query, reminder and snapshot tests.
 - [x] Implement save, short notes and return through the shared TaskStore.
 - [x] Build native Saved, task actions, navigation and search with existing tokens.
-- [ ] Verify package tests, iPhone/iPad/Catalyst builds and isolated UI walks.
-- [ ] Commit logical units and document evidence and remaining release steps.
+- [x] Verify package tests, iPhone/iPad/Catalyst builds and isolated UI walks.
+- [x] Commit logical units and document evidence and remaining release steps.
 
 ## Resuming From Here
 
-- Done: storage, transitions, active filtering, reminder/widget exclusion and native
-  UI. Real PocketBase/web/native interoperability passes with owner auth and encryption
-  hooks. Phone/iPad builds and Catalyst compile pass. UI walks found and fixed search
-  presentation and fractional-date Undo; regression tests pass.
-- Next: finish final light/dark phone/iPad UI reruns and record final test counts.
-- Blockers: XcodeBuildMCP is unavailable, so use the repository's Xcode CLI workflow.
-  The referenced `openwiki/quickstart.md` is absent; owning source/specs are available.
+- Done: native Saved, short notes, search, reviewed return and web sync. 730 package
+  tests: 729 pass, optional localhost system test skipped in that run and passes
+  separately with real PocketBase/web/native clients. Light/dark phone/iPad walks,
+  save/delete Undo, all three app builds, backup parity and screenshot review pass.
+- Next: owner local testing in this checkout, then PR/CI and native release work
+  if requested. See `docs/2026-10-26-saved-ios.md` for evidence and review questions.
+- Blockers: none for local implementation. Xcode CLI verification was used because
+  XcodeBuildMCP tools are unavailable. The referenced OpenWiki quickstart is absent.
 - Assumptions: Saved belongs in Browse/Library; iOS 26 minimum and current iOS 27
   system chrome remain; no submission or production data writes in this task.
