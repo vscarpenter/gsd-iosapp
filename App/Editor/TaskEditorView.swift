@@ -113,6 +113,7 @@ struct TaskEditorView: View {
                     Section(String(localized: "Notes")) {
                         TextField(String(localized: "Description"), text: $description, axis: .vertical)
                             .lineLimit(3...8)
+                            .accessibilityIdentifier("editor-description")
                     }
                     linksSection
                     dueDateSection
@@ -615,7 +616,7 @@ struct TaskEditorView: View {
     }
 }
 
-private extension View {
+extension View {
     /// Keeps the sheet's bar, and with it Cancel and Save, through a scroll. On the iPhone
     /// Duo's outer display the system minimizes a sheet's horizontal bar as the form scrolls
     /// (iOS 27.1), and text-only items have no vertical home, so they vanished with it.

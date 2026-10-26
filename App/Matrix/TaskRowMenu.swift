@@ -15,6 +15,11 @@ struct TaskRowMenu: View {
         Button { actions.duplicate(task) } label: {
             Label(String(localized: "Duplicate"), systemImage: "plus.square.on.square")
         }
+        if !task.completed && !task.isSaved {
+            Button { actions.moveToSaved(task) } label: {
+                Label(String(localized: "Move to Saved"), systemImage: "bookmark")
+            }
+        }
         ShareLink(item: task.shareText) {
             Label(String(localized: "Share"), systemImage: "square.and.arrow.up")
         }
