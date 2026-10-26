@@ -1,3 +1,23 @@
+# Release 3.5.0 (36) to App Store Connect (2026-10-25)
+
+Branch: `chore/release-3.5.0` off `main` (`86d81ea`). Record: the October 25 section of `docs/2026-10-17-release-readiness.md`.
+Source: the owner's instruction to bump to 3.5.0 and release both platforms. The live version on both is 2.2.0; build 35 (3.0.0) was uploaded on October 18 and never submitted.
+
+- [x] Preflight: clean `main` in sync with origin, App Store Connect API key in the environment, Xcode 27.1
+- [x] Bump: `scripts/release.sh set 3.5.0 36` (project.yml and the regenerated pbxproj)
+- [x] iOS: archive, export, upload; `UPLOAD SUCCEEDED`, delivery `24370c4e-37ef-4c0c-a141-26f61f8e80a0`
+- [x] Mac Catalyst: `scripts/release.sh --mac --no-bump`; `UPLOAD SUCCEEDED`, delivery `c0e90ef0-d9d9-4207-9a9a-457a41462e66`
+- [x] `whatsnew.txt` rewritten for 3.5, cumulative since 2.2.0
+- [x] Release record appended to the readiness doc
+- [x] Processing state of build 36 read back from the API: VALID on iOS and macOS
+- [ ] Owner's go-ahead for push and PR (the local tag `v3.5.0` rides along when the owner pushes tags)
+
+## Resuming From Here
+- Done: the bump, both uploads, the What's New copy, and the release record; committed on this branch.
+- Next: the owner gates (push and PR), then in App Store Connect: create the 3.5.0 version on iOS and macOS, attach build 36, paste `whatsnew.txt`, submit for review.
+- Blockers: none for the uploads. The processing check is a read of the API and repeats until both builds show VALID.
+- Assumptions: 3.5.0 rather than 3.0.1 on the owner's word; the What's New covers everything since 2.2.0 because no 3.0.0 version record exists; build 35 stays unused.
+
 # iPhone Duo: matrix rows in landscape and a large widget (2026-10-25)
 
 Branch: `fix/duo-matrix-rows-and-large-widget` off `main` (`62f868f`). Decisions: `docs/2026-10-25-iphone-duo-matrix-rows-and-large-widget.md`.
@@ -9,11 +29,11 @@ Source: findings 6 and 7 of the iPhone Duo, iOS 27, and new-device readiness rev
 - [x] Finding 6 guard: the pinned cell's inner scroll view takes `scrollBounceBehavior(.basedOnSize)`, so a short list leaves the pull to the page's refresh
 - [x] Verify: iPad mini (iOS 27.0, landscape) matrix before (`build/screens/duo-matrix-before`, second row below the fold) and after (`duo-matrix-after`, full 2x2 in view); iPad Air unchanged (`duo-matrix-after-air`, 0 px dark and 82 px light against `editor-bar`); `swift test` 283 green; `xcodegen generate` no project change; iPhone 18 Pro, iPad Air 13-inch (M4), and Mac Catalyst builds clean
 - [x] Docs, memory; three commits on this branch (finding 6, finding 7, docs)
-- [ ] Owner's go-ahead for push and PR
+- [x] Pushed; PR #32 merged as `86d81ea`; local branch removed
 
 ## Resuming From Here
 - Done: both fixes, the bounce guard, every verification run, the decision record, and memory; committed on this branch.
-- Next: the owner gates (push and PR), then the owner's Device Hub look at the open Duo in landscape and the large widget on a Home Screen.
+- Next: the owner's Device Hub look at the open Duo in landscape and the large widget on a Home Screen.
 - Blockers: the Duo inner display and the widget render are owner-checked; the iPad mini walk misses the sidebar's Archive and Settings rows (harness, out of scope).
 - Assumptions: a 760 pt threshold; the large widget shows the snapshot's eight rows; no snapshot cap change; pull-to-refresh on a pinned cell is reasoned from Apple's bounce default, not measured.
 

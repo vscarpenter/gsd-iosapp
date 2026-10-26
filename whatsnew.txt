@@ -1,20 +1,26 @@
 iOS (recommended)
 
-▎ GSD 3.0 is built for iOS 27. The system chrome takes the new Liquid Glass; your tasks stay on the same warm paper.
+▎ GSD 3.5 is built for iOS 27 and the iPhone Duo. The system chrome takes the new Liquid Glass; your tasks stay on the same warm paper.
 ▎
-▎ • A layered app icon. The four quadrant tiles and the check now render in every Home Screen style, including Clear and Tinted.
+▎ • A layered app icon. The four quadrant tiles and the check render in every Home Screen style, including Clear and Tinted.
+▎ • Made for iPhone Duo. Open or close the phone and you stay on the screen you were using. In landscape on the inner display the matrix keeps all four quadrants in view, and each one scrolls on its own.
+▎ • Today's Focus in three sizes. The widget now comes in large, with room for eight tasks, and marks overdue and due-today tasks by shape so it reads in Tinted and Clear modes too.
+▎ • Share from Safari. When you're signed in, a shared link reaches your other devices within seconds, even with GSD in the background.
+▎ • Safer sync. Archiving a task removes it from your other devices too. An edit saved while another device changed the same task keeps both changes. A bad server listing can no longer remove tasks from your device.
 ▎ • Swipe on iPad. Matrix cards use the system swipe actions: swipe right to complete, left to snooze or delete, the same gestures as iPhone.
 ▎ • Room to work. The tab bar tucks away while you scroll and comes back when you scroll up, so the capture field is the only chrome left in full.
-▎ • Resize without losing your place. Open the editor, change the window size (iPhone Mirroring, iPad multitasking), and the editor stays open.
-▎ • Today's Focus in any style. The widget marks overdue and due-today tasks by shape, so it reads in Tinted and Clear modes too.
+▎ • Larger text, more room. At accessibility text sizes the editor grows and the quadrant choices stack.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
 
 macOS (recommended)
 
-▎ GSD 3.0 is built for macOS 27. The window, sidebar, and toolbar take the new Liquid Glass; your tasks stay on the same warm paper.
+▎ GSD 3.5 is built for macOS 27. The window, sidebar, and toolbar take the new Liquid Glass; your tasks stay on the same warm paper.
 ▎
 ▎ • A layered app icon that renders in every icon style.
+▎ • Share from Safari. When you're signed in, a shared link reaches your other devices within seconds.
+▎ • Safer sync. Archiving a task removes it from your other devices too. An edit saved while another device changed the same task keeps both changes. A bad server listing can no longer remove tasks from your Mac.
 ▎ • The sidebar runs edge to edge and its selected row reads clearly in every state.
 ▎ • Resize the window across the compact boundary and an open editor stays open.
 ▎ • Toolbar items yield in a sensible order when a window gets narrow: search stays, Edit and Show Completed move to the overflow menu first.
+▎ • One View menu, and it has Sync Now (Cmd-R) for a manual sync.
