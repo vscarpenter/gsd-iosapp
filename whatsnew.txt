@@ -1,28 +1,15 @@
 iOS (recommended)
 
-▎ GSD 3.6 adds Saved and is built for iOS 27 and the iPhone Duo. The system chrome takes the new Liquid Glass; your tasks stay on the same warm paper.
+▎ GSD 3.6.1 fixes Saved sync. Items you set aside on one device now reach every other device, including the ones saved before this update. They appear after the first sync on this version.
 ▎
-▎ • Saved. Set a task aside without losing it. Move any open task to Saved from its menu. Find it under Browse on iPhone or in the Library sidebar on iPad, with a short note or a link kept beside the title. Search works there too. When you're ready, Return asks for the quadrant and an optional date before the task rejoins the matrix. Saved tasks stay out of your counts, widgets, and reminders, and they sync with the web app when you're signed in.
-▎ • A layered app icon. The four quadrant tiles and the check render in every Home Screen style, including Clear and Tinted.
-▎ • Made for iPhone Duo. Open or close the phone and you stay on the screen you were using. In landscape on the inner display the matrix keeps all four quadrants in view, and each one scrolls on its own.
-▎ • Today's Focus in three sizes. The widget now comes in large, with room for eight tasks, and marks overdue and due-today tasks by shape so it reads in Tinted and Clear modes too.
-▎ • Share from Safari. When you're signed in, a shared link reaches your other devices within seconds, even with GSD in the background.
-▎ • Safer sync. Archiving a task removes it from your other devices too. An edit saved while another device changed the same task keeps both changes. A bad server listing can no longer remove tasks from your device.
-▎ • Swipe on iPad. Matrix cards use the system swipe actions: swipe right to complete, left to snooze or delete, the same gestures as iPhone.
-▎ • Room to work. The tab bar tucks away while you scroll and comes back when you scroll up, so the capture field is the only chrome left in full.
-▎ • Larger text, more room. At accessibility text sizes the editor grows and the quadrant choices stack.
+▎ GSD 3.6 added Saved: set a task aside without losing it, keep a short note or a link beside the title, and return it to the matrix when you're ready. It also brought the layered app icon, iPhone Duo support, the large Today's Focus widget, and sharing from Safari.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
 
 macOS (recommended)
 
-▎ GSD 3.6 adds Saved and is built for macOS 27. The window, sidebar, and toolbar take the new Liquid Glass; your tasks stay on the same warm paper.
+▎ GSD 3.6.1 fixes Saved sync. Items you set aside on one device now reach every other device, including the ones saved before this update. They appear after the first sync on this version.
 ▎
-▎ • Saved. Set a task aside without losing it. Move any open task to Saved from its menu. Find it in the Library sidebar, with a short note or a link kept beside the title. Search works there too. When you're ready, Return asks for the quadrant and an optional date before the task rejoins the matrix. Saved tasks stay out of your counts and reminders, and they sync with the web app when you're signed in.
-▎ • A layered app icon that renders in every icon style.
-▎ • Share from Safari. When you're signed in, a shared link reaches your other devices within seconds.
-▎ • Safer sync. Archiving a task removes it from your other devices too. An edit saved while another device changed the same task keeps both changes. A bad server listing can no longer remove tasks from your Mac.
-▎ • The sidebar runs edge to edge and its selected row reads clearly in every state.
-▎ • Resize the window across the compact boundary and an open editor stays open.
-▎ • Toolbar items yield in a sensible order when a window gets narrow: search stays, Edit and Show Completed move to the overflow menu first.
-▎ • One View menu, and it has Sync Now (Cmd-R) for a manual sync.
+▎ GSD 3.6 added Saved: set a task aside without losing it, keep a short note or a link beside the title, and return it to the matrix when you're ready. It also brought the layered app icon, sharing from Safari, and a single View menu with Sync Now (Cmd-R).
+▎
+▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.

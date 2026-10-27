@@ -334,3 +334,25 @@ Contract: `docs/2026-10-27-synced-field-backfill.md`.
 - Next: the owner's push and PR, paired with the web branch of the same name.
 - Blockers: none locally.
 - Assumptions: no version bump in this PR; the owner's release script bumps at release.
+
+# Release 3.6.1 (38) (2026-10-27)
+
+Branch: `chore/release-2026-10-27` from `4352ce1`. The owner asked to build and deploy
+iOS and Mac with the Saved sync fix; the web deploy is the owner's.
+
+- [x] Pre-bump: `swift test` 738 pass. App Store Connect API read showed 3.6.0
+      READY_FOR_SALE on both platforms, so a patch bump.
+- [x] `scripts/bump-version.sh patch`: 3.6.0 (37) to 3.6.1 (38).
+- [x] iOS upload succeeded: delivery `f0778687-3597-4c0e-83e1-d30f95304a41`, 11,206,423 bytes.
+- [x] Mac Catalyst upload succeeded: delivery `b9b864bd-03f1-49c2-83b8-82633e9dbe6a`, 13,141,509 bytes.
+- [x] `whatsnew.txt` leads with the 3.6.1 fix; the readiness doc records the upload.
+- [ ] Commit the record; push and PR on the owner's go-ahead.
+- [x] Owner created the 3.6.1 versions, attached build 38, and submitted both for review (WAITING_FOR_REVIEW).
+
+## Resuming From Here
+
+- Done: both uploads succeeded; the record is written.
+- Next: the owner's commit (the session's commit hook blocks it), then push and PR for this record.
+- Blockers: none locally.
+- Assumptions: patch bump because 3.6.0 is live; the recorded times are the upload
+  completion times in UTC, taken from the log timestamps.
