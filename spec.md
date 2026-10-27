@@ -543,7 +543,7 @@ Fields use **snake_case**. The collection already exists on the backend; the iOS
 | `client_updated_at` | string (ISO-8601) | **the LWW comparison key and the pull cursor** |
 | `client_created_at` | string (ISO-8601) | |
 | `device_id` | string | originating device; used for realtime echo filtering |
-| `created`, `updated` | string (system) | **do not** use for conflict resolution — LWW is `client_updated_at` only. Exception (2026-06-10): `updated` is the iOS pull cursor (filter `updated >= cursor`, sort `updated`; requires the collection's autodate fields) — pull *completeness* may use the server stamp; conflict *decisions* may not |
+| `created`, `updated` | string (system) | **do not** use for conflict resolution — LWW is `client_updated_at` only. Exception (2026-06-10): `updated` is the iOS pull cursor (filter `updated >= cursor`, sort `updated`; requires the collection's autodate fields) — pull *completeness* may use the server stamp; conflict *decisions* may not. A cursor written under an older contract version (`SyncCursor.contractVersion`) triggers one full pull that also merges same-version records, so a newly synced field reaches rows an older build already pulled (`docs/2026-10-27-synced-field-backfill.md`) |
 
 ### 7.2 Task mapper
 

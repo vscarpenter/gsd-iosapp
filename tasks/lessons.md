@@ -219,3 +219,13 @@ unchanged-state check. Include a fractional-clock test as well as whole-second c
 For iPad screenshots use `XCUIScreen.main`, as in the existing baseline harness;
 `app.screenshot()` can crop the rotated window. Selected iPad sidebar labels need
 paper ink against the app's ink selection fill in both appearances.
+
+## A new synced field needs a one-time backfill (2026-10-27)
+
+Adding a wire column is not enough. A build that pulled the record before the column
+existed stored the row at the same `client_updated_at` the server still holds, and the
+pull cursor sits past it. Neither an incremental pull nor a cursor reset brings the
+field across, because an equal stamp is a no-op on both clients. Stamp the cursor with
+a contract version, and when it predates the build, pull everything once and merge
+same-version rows. Never clear the cursor to force that pull: a nil cursor triggers the
+first-sign-in seed, which pushes every local row with the field still empty.

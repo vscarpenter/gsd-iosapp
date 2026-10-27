@@ -56,3 +56,47 @@ struct SyncCursorTests {
         #expect(defaults.string(forKey: "gsd.sync.lastSyncAt") == nil)
     }
 }
+
+// MARK: Pull contract (a newly synced field reaches rows an older build already pulled)
+
+extension SyncCursorTests {
+    @Test func unsetCursorNeedsNoBackfill() {
+        #expect(!SyncCursor(defaults: freshDefaults()).needsBackfill())
+    }
+
+    @Test func cursorWrittenBeforeTheContractNeedsBackfill() {
+        let defaults = freshDefaults()
+        defaults.set("2026-10-27 00:00:00.000Z", forKey: "gsd.sync.lastServerUpdated")   // an older build's cursor
+        #expect(SyncCursor(defaults: defaults).needsBackfill())
+    }
+
+    @Test func legacyClientCursorNeedsBackfill() {
+        let defaults = freshDefaults()
+        defaults.set("2026-06-10T12:00:00.000Z", forKey: "gsd.sync.lastSyncAt")
+        #expect(SyncCursor(defaults: defaults).needsBackfill())
+    }
+
+    @Test func markBackfilledStampsTheContract() {
+        let defaults = freshDefaults()
+        defaults.set("2026-10-27 00:00:00.000Z", forKey: "gsd.sync.lastServerUpdated")
+        let cursor = SyncCursor(defaults: defaults)
+        cursor.markBackfilled()
+        #expect(!cursor.needsBackfill())
+        #expect(cursor.load() != nil)                                  // the cursor itself is untouched
+    }
+
+    @Test func advanceStampsTheContractSoAFreshInstallNeverBackfills() {
+        let cursor = SyncCursor(defaults: freshDefaults())
+        cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000_000_000))
+        #expect(!cursor.needsBackfill())
+    }
+
+    @Test func clearForgetsTheContract() {
+        let defaults = freshDefaults()
+        let cursor = SyncCursor(defaults: defaults)
+        cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000_000_000))
+        cursor.clear()
+        defaults.set("2026-10-27 00:00:00.000Z", forKey: "gsd.sync.lastServerUpdated")
+        #expect(cursor.needsBackfill())
+    }
+}
