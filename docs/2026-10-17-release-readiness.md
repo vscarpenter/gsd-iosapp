@@ -214,3 +214,17 @@ The owner asked to build both platforms, bump the version and build appropriatel
 - Processing: a read of the App Store Connect API after the uploads lists build 37 on both platforms with processing state VALID, each within three minutes of its upload.
 - `whatsnew.txt` now opens with "GSD 3.6 adds Saved" and leads both platform sections with a Saved bullet. The rest of the copy stays cumulative since 2.2.0, the live version.
 - Not done in this run, and owner-owed in App Store Connect: create the 3.6.0 version for iOS and for macOS, attach build 37 to each, paste the What's New copy, and submit for review. Export compliance resolves itself from `ITSAppUsesNonExemptEncryption` in the plist. Builds 35 and 36 stay in App Store Connect unused.
+
+
+## 3.6.1 build 38 upload to App Store Connect, October 27
+
+The owner asked to build and deploy the iOS and Mac versions with the Saved sync fix (PR #36, merged as `4352ce1`) and to deploy the web version by hand. Before the run, a read of the App Store Connect API showed 3.6.0 as READY_FOR_SALE on iOS and macOS, both version records created October 26. A fix on a live version calls for a patch bump, so the version moves from 3.6.0 (37) to 3.6.1 (38).
+
+- `swift test` in GSDKit on main before the bump: 738 tests across the package suites pass.
+- `scripts/bump-version.sh patch` rewrote project.yml and regenerated the Xcode project, so project.pbxproj carries the new values. Log: `build/release-3.6.1-bump.log`.
+- iOS: `scripts/release.sh --no-bump` ran the Release archive for a generic iOS device, the App Store export, and the upload. `UPLOAD SUCCEEDED with no errors`, delivery UUID `f0778687-3597-4c0e-83e1-d30f95304a41`, 11,206,423 bytes, finished 2026-10-27 18:34 UTC. Log: `build/release-3.6.1-ios.log` (build/ is gitignored, so the log is local only).
+- Mac Catalyst: `scripts/release.sh --mac --no-bump` ran after the iOS run. The universal Release archive, the App Store export (.pkg), and the upload all succeeded. `UPLOAD SUCCEEDED with no errors`, delivery UUID `b9b864bd-03f1-49c2-83b8-82633e9dbe6a`, 13,141,509 bytes, finished 2026-10-27 18:36 UTC. Log: `build/release-3.6.1-mac.log`.
+- The Mac run reuses `build/GSD.xcarchive` and `build/export`, so the iOS archive and .ipa are no longer on disk. The upload record above stands on the altool result.
+- Processing: a read of the App Store Connect API at 18:38 UTC lists build 38 for 3.6.1 as VALID on macOS and VALID on iOS.
+- `whatsnew.txt` now leads with "GSD 3.6.1 fixes Saved sync" on both platforms and summarizes 3.6 in one paragraph. With 3.6.0 live, the notes no longer need to run cumulative from 2.2.0.
+- Submission: the owner created the 3.6.1 version for iOS and for macOS, attached build 38 to each, and submitted both for review the same afternoon. A read of the App Store Connect API at 18:45 UTC shows both versions as WAITING_FOR_REVIEW.
