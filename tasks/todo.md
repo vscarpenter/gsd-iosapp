@@ -313,3 +313,24 @@ Contract: `tasks/spec.md`; approved web behavior and the owner's iOS follow-up.
   XcodeBuildMCP tools are unavailable. The referenced OpenWiki quickstart is absent.
 - Assumptions: Saved belongs in Browse/Library; iOS 26 minimum and current iOS 27
   system chrome remain; no submission or production data writes in this task.
+
+# Synced-field backfill (2026-10-27)
+
+Branch: `fix/synced-field-backfill` from `a1555bb`. Same branch name on the web.
+Contract: `docs/2026-10-27-synced-field-backfill.md`.
+
+- [x] Failing tests: `SyncCursorTests` contract cases, `SyncEngineBackfillTests`.
+- [x] `SyncCursor.contractVersion` + `needsBackfill`/`markBackfilled`; `sync()` runs one
+      epoch pull with `mergeSameVersion` when the cursor predates the contract.
+- [x] Full `swift test`: 738 tests across the package suites, all passing (288 in GSDSync,
+      including the 8 new cases). `xcodegen generate` left project.pbxproj unchanged.
+- [x] Debug builds with CODE_SIGNING_ALLOWED=NO: generic iOS Simulator, iPad Air 13-inch
+      (M4) simulator, and Mac Catalyst all succeed.
+- [x] Committed on the branch. Push and PR wait for the owner.
+
+## Resuming From Here
+
+- Done: the fix and its tests; the dated doc explains the bug and the contract.
+- Next: the owner's push and PR, paired with the web branch of the same name.
+- Blockers: none locally.
+- Assumptions: no version bump in this PR; the owner's release script bumps at release.

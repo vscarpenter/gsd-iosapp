@@ -17,6 +17,14 @@ public struct SyncCursor: @unchecked Sendable {
     private let defaults: UserDefaults
     private let key = "gsd.sync.lastServerUpdated"
     private let legacyKey = "gsd.sync.lastSyncAt"
+    private let versionKey = "gsd.sync.contractVersion"
+
+    /// The pull contract this build speaks, numbered like the web's `PULL_CURSOR_VERSION` so
+    /// the two histories read the same. Bump it when a build is the first to read a newly
+    /// synced field: a cursor stamped with an older version, or none, pulls everything once
+    /// and merges same-version records, which backfills the field onto rows an older build
+    /// pulled and stored without it (docs/2026-10-27-synced-field-backfill.md). 3: `saved_at`.
+    static let contractVersion = 3
 
     // public so the App can construct it (C3) and pass it to the public SyncEngine.init;
     // load/advance/clear stay internal — only the same-module engine calls them.
@@ -34,11 +42,21 @@ public struct SyncCursor: @unchecked Sendable {
     func advance(maxApplied: Date?) {
         guard let maxApplied else { return }
         defaults.set(WireDate.formatPocketBase(maxApplied.addingTimeInterval(-5)), forKey: key)
+        defaults.set(Self.contractVersion, forKey: versionKey)
         defaults.removeObject(forKey: legacyKey)
     }
+
+    /// A cursor exists from a build that spoke an older contract. A fresh install has no cursor
+    /// and nothing to backfill; its first `advance` stamps the current contract.
+    func needsBackfill() -> Bool {
+        load() != nil && defaults.integer(forKey: versionKey) < Self.contractVersion
+    }
+
+    func markBackfilled() { defaults.set(Self.contractVersion, forKey: versionKey) }
 
     func clear() {
         defaults.removeObject(forKey: key)
         defaults.removeObject(forKey: legacyKey)
+        defaults.removeObject(forKey: versionKey)
     }
 }

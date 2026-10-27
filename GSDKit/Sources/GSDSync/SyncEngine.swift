@@ -75,9 +75,13 @@ public actor SyncEngine {
                   now: now, throttleMs: throttleMs, history: history)
     }
 
+    private static let epoch = "1970-01-01 00:00:00.000Z"
+
     /// Pull remote → local (upsert-only; no deletes). LWW vs local; device-local preserved via the
-    /// mapper merge. Returns the applied count + the max `client_updated_at` seen (for cursor advance).
-    func pull(token: String, since: String) async throws -> (applied: Int, conflicts: Int, maxApplied: Date?) {
+    /// mapper merge. `mergeSameVersion` also applies records at the local row's own version: the
+    /// one full pull after a contract bump (`SyncCursor.contractVersion`), when the local copy may
+    /// lack a field an older build never read. Returns the applied count + the max `updated` seen.
+    func pull(token: String, since: String, mergeSameVersion: Bool = false) async throws -> (applied: Int, conflicts: Int, maxApplied: Date?) {
         if isErasing { return (0, 0, nil) }       // §3.4 pull-suppression gate (set during a destructive drain)
         let records = try await client.listTasks(updatedSince: since, token: token)
         var applied = 0
@@ -98,9 +102,11 @@ public actor SyncEngine {
                 case .resurrected: applied += 1; continue
                 }
             }
-            // Upsert when there's no local copy, or the remote is strictly newer (LWW).
+            // Upsert when there's no local copy, or the remote is strictly newer (LWW). A same-version
+            // remote is the version this device already holds; it is merged only while backfilling.
             let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
-            guard local == nil || decision == .takeRemote else { continue }
+            let accepted = local == nil || decision == .takeRemote || (mergeSameVersion && decision == .noOp)
+            guard accepted else { continue }
             if local != nil && decision == .takeRemote { conflicts += 1 }   // a real conflict resolved in remote's favor
             try await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
             applied += 1
@@ -249,8 +255,13 @@ public actor SyncEngine {
             case .manual, .networkRegained, .launch, .foreground: try await requeueFailed()
             case .signIn, .periodic, .mutation, .background: break
             }
-            let since = cursor.load() ?? "1970-01-01 00:00:00.000Z"
-            let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since)
+            // An older build's cursor sits past records it stored without a field this build reads,
+            // so pull everything once and merge same-version rows. The seed above did not run: the
+            // cursor is set, so nothing re-pushes those rows with the field still empty.
+            let backfill = cursor.needsBackfill()
+            let since = backfill ? Self.epoch : (cursor.load() ?? Self.epoch)
+            let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since, mergeSameVersion: backfill)
+            if backfill { cursor.markBackfilled() }
             result.pulled = pulled
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
