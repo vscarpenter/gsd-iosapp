@@ -10,8 +10,8 @@ struct QuadrantCell: View {
     let actions: TaskActions
     @Binding var selection: Set<String>
     let isSelecting: Bool
-    /// Set when the grid pins its rows to a short viewport: the cell takes exactly this height
-    /// and scrolls its own list. Nil leaves the cell content-sized with the page scrolling.
+    /// The grid's row height: the cell takes exactly this height and scrolls its own list.
+    /// Nil only before the grid's first layout, when the cell is content-sized.
     var pinnedHeight: CGFloat? = nil
     var onEdit: (Task) -> Void
     var onAdd: () -> Void
@@ -74,7 +74,9 @@ struct QuadrantCell: View {
             QuadrantEmptyPrompt(quadrant: quadrant, action: onAdd)
         }
         ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
+            // Natural height only: a cell's spare height belongs to the cell, never to a card.
             cardRow(task)
+                .fixedSize(horizontal: false, vertical: true)
             if index < items.count - 1 {
                 Rectangle().fill(Surface.hairline).frame(height: 1)
             }

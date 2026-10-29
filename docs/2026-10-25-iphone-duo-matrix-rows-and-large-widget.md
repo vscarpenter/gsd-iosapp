@@ -13,6 +13,9 @@ same problem. iPad Air and Pro, in either orientation, have the height and never
 
 ### Decision
 
+Superseded on October 28 by `docs/2026-10-28-matrix-card-stretch.md`: the grid now pins both
+rows on every size, matching the web, and `pinnedRowsBelowHeight` is gone.
+
 Below 760 points of viewport height the grid pins both rows to half the viewport, less the
 grid's inset and gap, and each cell scrolls its own list. Above it nothing changes: cells stay
 content-sized and the page scrolls. The threshold is a constant on `MatrixGridView`

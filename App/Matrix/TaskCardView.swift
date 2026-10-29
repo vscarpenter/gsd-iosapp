@@ -24,14 +24,10 @@ struct TaskCardView: View {
     var menu: (() -> AnyView)?
 
     private var isBlocked: Bool { blockedByCount > 0 }
+    private static let spineWidth: CGFloat = 3
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                .fill(QuadrantStyle.accent(task.quadrant))
-                .frame(width: 3)
-                .accessibilityHidden(true)
-
             VStack(alignment: .leading, spacing: 6) {
                 Text(task.title)
                     .font(.headline)
@@ -60,6 +56,18 @@ struct TaskCardView: View {
             Spacer(minLength: 0)
 
             trailingControls
+        }
+        // The accent spine is an overlay, not an HStack child: a Shape takes every point of
+        // height it is offered, so as a child it let the card grow to whatever its container
+        // proposed. The iPad/Mac grid gives both cells in a row the taller cell's height, and a
+        // lone Do First card stretched to fill it. As an overlay the spine follows the card's
+        // content height and never drives it. Leading inset = 3pt spine + the 12pt gap it had.
+        .padding(.leading, Self.spineWidth + 12)
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 1.5, style: .continuous)
+                .fill(QuadrantStyle.accent(task.quadrant))
+                .frame(width: Self.spineWidth)
+                .accessibilityHidden(true)
         }
         .padding(.vertical, 12)               // in-card vertical air (4-pt grid)
         .frame(minHeight: 44)                 // ≥44pt hit target (§12.3)
