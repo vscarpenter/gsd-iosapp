@@ -1,15 +1,15 @@
 iOS (recommended)
 
-▎ GSD 3.6.1 fixes Saved sync. Items you set aside on one device now reach every other device, including the ones saved before this update. They appear after the first sync on this version.
+▎ GSD 3.6.3 fixes the matrix on iPad. A task card now keeps its own size instead of stretching to match a busier quadrant beside it. All four quadrants also stay in view, and a long list scrolls inside its own quadrant.
 ▎
-▎ GSD 3.6 added Saved: set a task aside without losing it, keep a short note or a link beside the title, and return it to the matrix when you're ready. It also brought the layered app icon, iPhone Duo support, the large Today's Focus widget, and sharing from Safari.
+▎ GSD 3.6 added Saved, a place to set a task aside with a short note or a link and return it to the matrix when you're ready. GSD 3.6.1 made Saved sync across your devices.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
 
 macOS (recommended)
 
-▎ GSD 3.6.1 fixes Saved sync. Items you set aside on one device now reach every other device, including the ones saved before this update. They appear after the first sync on this version.
+▎ GSD 3.6.3 fixes the matrix. A task card now keeps its own size instead of stretching to match a busier quadrant beside it. All four quadrants also stay in the window, and a long list scrolls inside its own quadrant.
 ▎
-▎ GSD 3.6 added Saved: set a task aside without losing it, keep a short note or a link beside the title, and return it to the matrix when you're ready. It also brought the layered app icon, sharing from Safari, and a single View menu with Sync Now (Cmd-R).
+▎ GSD 3.6 added Saved, a place to set a task aside with a short note or a link and return it to the matrix when you're ready. GSD 3.6.1 made Saved sync across your devices.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
