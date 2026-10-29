@@ -1,5 +1,16 @@
 # Lessons
 
+## Opening the project in Xcode 27.1 rewrites generated files (2026-10-28)
+
+A working tree for a two-file matrix fix also held changes to `project.pbxproj` and both shared
+schemes. Xcode 27.1 had re-saved them (`LastUpgradeCheck = 2710`, scheme version 1.3, dropped
+default attributes) and written 3.6.2 (39) into the app target only. The build then warned that
+the extensions' 3.6.1 didn't match the app's 3.6.2. `project.yml` still said 3.6.1 (38), so the
+next `xcodegen generate` would have reverted all of it anyway.
+
+**Rule:** never commit pbxproj or scheme changes that `project.yml` didn't cause. Discard them
+with `git checkout -- GSD.xcodeproj`, and bump versions only through `scripts/bump-version.sh`.
+
 ## A capture is only as fresh as the test bundle behind it (2026-10-25)
 
 The first Duo diagnostic run showed the branded title back on the outer display and looked like

@@ -1,3 +1,26 @@
+# Matrix card fix and release 3.6.3 (39) to App Store Connect (2026-10-28)
+
+Branch: `chore/release-3.6.3` off `main` (`2854e66`), PR #38. Records: `docs/2026-10-28-matrix-card-stretch.md` and the October 28 section of `docs/2026-10-17-release-readiness.md`.
+Source: the owner's review of a Claude desktop fix for a stretched Do First card on iPad and Mac, then the instruction to update the docs, undo the project file changes, refresh the App Store screenshots, bump to 3.6.3 with the next build, push, and upload both platforms. 3.6.1 (38) is live on both.
+
+- [x] Review: the spine overlay and the equal-row grid both hold; lopsided iPad captures in `build/screens/lop-*` show each one's part
+- [x] Stray Xcode 27.1 project and scheme changes undone (they carried an app-only 3.6.2 (39) bump)
+- [x] Docs: new decision record, superseded note on the 2026-10-25 Duo doc, `QuadrantCell` comments
+- [x] Verify: `swift test` 288 green, `xcodegen generate` no change, iPhone 17, iPad Pro 13-inch (M5), and Mac Catalyst builds
+- [x] Commits: `f8e57d6` fix, `8e30367` screenshots, `cdf27bf` bump
+- [x] Screenshots: 6.5-inch 1284x2778, new 6.3-inch 1206x2622, iPad 13-inch 2752x2064, all without alpha
+- [x] Pushed; PR #38 open
+- [x] iOS upload: `UPLOAD SUCCEEDED`, delivery `d45686c4-97fb-47e2-a53a-6f952d9be79b`
+- [x] Mac upload: `UPLOAD SUCCEEDED`, delivery `2a502031-36f6-4bcd-8c7b-732856d28d90`
+- [x] Processing state of build 39 read back from the API: VALID on iOS and macOS
+- [x] Release record appended to the readiness doc
+
+## Resuming From Here
+- Done: the fix, the docs, the screenshots, the bump, both uploads, and the release record, all on PR #38.
+- Next: merge PR #38 and tag `v3.6.3`. Then in App Store Connect, create the 3.6.3 version on iOS and macOS, attach build 39, paste `whatsnew.txt`, upload the iPhone and iPad sets from `screenshots/`, and submit for review.
+- Blockers: none.
+- Assumptions: branch plus PR rather than a push to `main`; the Mac App Store screenshots were not recaptured; the new screenshots stay local until the owner uploads them.
+
 # Release 3.6.0 (37) to App Store Connect (2026-10-26)
 
 Branch: `chore/release-3.6.0` off `main` (`0114c51`). Record: the October 26 section of `docs/2026-10-17-release-readiness.md`.

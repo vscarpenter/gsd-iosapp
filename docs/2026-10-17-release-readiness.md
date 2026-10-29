@@ -228,3 +228,18 @@ The owner asked to build and deploy the iOS and Mac versions with the Saved sync
 - Processing: a read of the App Store Connect API at 18:38 UTC lists build 38 for 3.6.1 as VALID on macOS and VALID on iOS.
 - `whatsnew.txt` now leads with "GSD 3.6.1 fixes Saved sync" on both platforms and summarizes 3.6 in one paragraph. With 3.6.0 live, the notes no longer need to run cumulative from 2.2.0.
 - Submission: the owner created the 3.6.1 version for iOS and for macOS, attached build 38 to each, and submitted both for review the same afternoon. A read of the App Store Connect API at 18:45 UTC shows both versions as WAITING_FOR_REVIEW.
+
+
+## 3.6.3 build 39 upload to App Store Connect, October 28
+
+The owner asked to ship the iPad and Mac matrix fix: undo the stray Xcode project changes, refresh the App Store screenshots, bump to 3.6.3 with the next build number, push, and upload both platforms. Before the run, a read of the App Store Connect API showed 3.6.1 as READY_FOR_SALE on iOS and macOS, with build 38 as the newest build. No 3.6.2 was ever uploaded, because the owner asked for 3.6.3 directly and the stray Xcode bump to 3.6.2 (39) was discarded.
+
+- The fix is `f8e57d6`, recorded in `docs/2026-10-28-matrix-card-stretch.md`. On the branch, `swift test` passed 288 tests in 33 suites, and the iPhone 17, iPad Pro 13-inch (M5), and Mac Catalyst builds succeeded.
+- Screenshots (`8e30367`): `ScreenshotTests` ran on iOS 27.0 in light and dark. The 6.5-inch set comes from the iPhone 18 Pro Max, resized to 1284x2778. A new 6.3-inch set comes from the iPhone 17 at 1206x2622. The 13-inch iPad set comes from the iPad Pro 13-inch (M5), rotated to 2752x2064. Every file was checked for size and has no alpha channel. The Mac App Store screenshots were not recaptured, because that walk drives the real screen.
+- `scripts/bump-version.sh set 3.6.3 39` rewrote project.yml and regenerated the Xcode project (`cdf27bf`). The app and both extensions read 3.6.3 (39).
+- iOS: `scripts/release.sh --no-bump` ran the Release archive for a generic iOS device, the App Store export, and the upload. `UPLOAD SUCCEEDED with no errors`, delivery UUID `d45686c4-97fb-47e2-a53a-6f952d9be79b`, 11,208,421 bytes, finished 2026-10-29 03:57 UTC. Log: `build/release-3.6.3-ios.log` (build/ is gitignored, so the log is local only).
+- Mac Catalyst: `scripts/release.sh --mac --no-bump` ran after the iOS run. The universal Release archive, the App Store export (.pkg), and the upload all succeeded. `UPLOAD SUCCEEDED with no errors`, delivery UUID `2a502031-36f6-4bcd-8c7b-732856d28d90`, 13,144,662 bytes, finished 2026-10-29 04:00 UTC. Log: `build/release-3.6.3-mac.log`.
+- The Mac run reuses `build/GSD.xcarchive` and `build/export`, so the iOS archive and .ipa are no longer on disk. The upload record above stands on the altool result.
+- Processing: a read of the App Store Connect API lists build 39 for 3.6.3 as VALID on iOS at 04:00 UTC and on macOS at 04:02 UTC.
+- `whatsnew.txt` leads with the matrix fix on both platforms and keeps one paragraph on Saved.
+- Not done in this run, and owner-owed in App Store Connect: create the 3.6.3 version for iOS and for macOS, attach build 39 to each, paste the What's New copy, upload the new iPhone and iPad screenshot sets from `screenshots/`, and submit for review. Export compliance resolves itself from `ITSAppUsesNonExemptEncryption` in the plist.
