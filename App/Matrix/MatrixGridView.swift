@@ -36,17 +36,19 @@ private struct MatrixGridContent: View {
     /// Equal 16-point panel rhythm, horizontal and vertical, inside a 12-point inset.
     private static let gridSpacing: CGFloat = 16
     private static let gridInset: CGFloat = 12
-    /// Below this much height two content-sized rows do not fit (the iPhone Duo's inner display
-    /// in landscape, an iPad mini in landscape), so the grid pins both rows to half the viewport
-    /// and each cell scrolls its own list: the whole 2x2 stays in view, which is the matrix's
-    /// point. iPad Air and Pro, portrait and landscape, stay above it and keep content-sized
-    /// cells with the page scrolling.
-    static let pinnedRowsBelowHeight: CGFloat = 760
+    /// The grid always pins both rows to half the viewport and each cell scrolls its own list,
+    /// matching the web matrix (`grid-rows-[minmax(280px,1fr)_minmax(280px,1fr)]`): the whole
+    /// 2x2 stays in view, which is the matrix's point. Content-sized rows (the old rule on tall
+    /// viewports) let the longest list set its row's height, so one busy quadrant turned its
+    /// neighbor into a huge empty panel and pushed the bottom row off screen.
+    /// Below this floor a cell stops reading as a quadrant; the rows hold at it and the page
+    /// scrolls instead. It matches `QuadrantCell`'s own minimum height.
+    static let minimumPinnedRowHeight: CGFloat = 220
 
-    /// Half the viewport, less the inset and the gap, or nil when the rows stay content-sized.
+    /// Half the viewport, less the inset and the gap, never below the floor; nil before layout.
     static func pinnedRowHeight(for viewportHeight: CGFloat) -> CGFloat? {
-        guard viewportHeight > 0, viewportHeight < pinnedRowsBelowHeight else { return nil }
-        return (viewportHeight - 2 * gridInset - gridSpacing) / 2
+        guard viewportHeight > 0 else { return nil }
+        return max(minimumPinnedRowHeight, (viewportHeight - 2 * gridInset - gridSpacing) / 2)
     }
 
     var body: some View {
