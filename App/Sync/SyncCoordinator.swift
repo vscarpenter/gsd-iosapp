@@ -32,6 +32,7 @@ final class SyncCoordinator {
     @ObservationIgnored private var monitor: NWPathMonitor?
     @ObservationIgnored private var online = true
     @ObservationIgnored private var active = false
+    @ObservationIgnored private var heldForAccountDeletion = false
 
     /// Runs after every sync that pulled cleanly. GSDApp hangs the auto-archive sweep here: archiving
     /// deletes the server copy (parity B-43), so while signed in the sweep must decide from data at
@@ -82,12 +83,28 @@ final class SyncCoordinator {
     /// Sign-out: tear down AND reset the engine's pull cursor (re-seed + full-pull next sign-in;
     /// local tasks are NOT wiped). Keeps the engine out of `SessionStore`.
     func signedOut() {
+        heldForAccountDeletion = false
         stop()
         _Concurrency.Task { await engine.resetCursor() }
     }
 
+    /// Account deletion: no sync and no realtime until it ends. Each server delete arrives here as a
+    /// realtime event that removes the local row, and a sync would read the emptied server the same
+    /// way, so either one would lose the tasks a user chose to keep. The erase passes call the
+    /// engine directly and aren't held.
+    func holdForAccountDeletion() {
+        heldForAccountDeletion = true
+        stop()
+    }
+
+    /// The deletion failed with nothing removed from the server, so normal sync can return.
+    func releaseAfterFailedAccountDeletion() {
+        heldForAccountDeletion = false
+        start(trigger: .manual)
+    }
+
     func enteredForeground() {
-        guard signedIn() else { return }
+        guard signedIn(), !heldForAccountDeletion else { return }
         resume(trigger: .foreground)
     }
 
@@ -154,9 +171,7 @@ final class SyncCoordinator {
             tries += 1
         }
         await refreshStatus()
-        if result.notSignedIn { return .empty }   // nothing synced to erase for a signed-out user
-        if result.skipped || result.error != nil { return .failed }
-        return result.pushed == 0 ? .empty : .erased
+        return AccountDeleter.ErasePass(result)
     }
 
     /// §3.4 after a destructive import-replace: drain the cleared-task deletes under the gate.
@@ -239,6 +254,7 @@ final class SyncCoordinator {
     }
 
     private func runSync(trigger: SyncTrigger) async {
+        guard !heldForAccountDeletion else { return }
         phase = .syncing
         let result = await engine.sync(trigger: trigger)
         apply(result)

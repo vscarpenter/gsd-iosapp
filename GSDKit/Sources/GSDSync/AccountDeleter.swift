@@ -14,7 +14,21 @@ public struct AccountDeleter: Sendable {
     public enum ErasePass: Equatable, Sendable {
         case empty                              // a complete listing came back empty
         case erased                             // deleted at least one task; re-list to confirm
+        case partial                            // deleted at least one task, then failed
         case failed
+
+        /// Classifies one `SyncEngine.eraseAllRemote` run. A signed-out user has nothing synced to erase.
+        public init(_ result: SyncResult) {
+            if result.notSignedIn {
+                self = .empty
+            } else if result.error != nil {
+                self = result.pushed > 0 ? .partial : .failed
+            } else if result.skipped {
+                self = .failed
+            } else {
+                self = result.pushed == 0 ? .empty : .erased
+            }
+        }
     }
 
     public enum Outcome: Equatable, Sendable {
@@ -23,6 +37,16 @@ public struct AccountDeleter: Sendable {
         case sessionExpired
         /// Retryable. `remoteTasksErased` is true when the account survived but tasks were removed.
         case failed(remoteTasksErased: Bool)
+
+        /// Whether the caller must sign out. Reconcile deletes a local task that is absent from the
+        /// server with nothing queued, so once tasks have left the server, a live session would
+        /// remove the local copies on its next sync, even after a relaunch.
+        public var endsSession: Bool {
+            switch self {
+            case .deleted, .sessionExpired: true
+            case .failed(let remoteTasksErased): remoteTasksErased
+            }
+        }
     }
 
     /// Enumerate-and-delete passes before the fallback refuses to touch the user record.
@@ -59,6 +83,8 @@ public struct AccountDeleter: Sendable {
                 }
             case .erased:
                 erased = true
+            case .partial:
+                return .failed(remoteTasksErased: true)
             case .failed:
                 return .failed(remoteTasksErased: erased)
             }

@@ -103,7 +103,9 @@ final class SessionStore {
     /// In-app account deletion (App Store 5.1.1(v)). `AccountDeleter` tries `DELETE /api/gsd/account`
     /// first and falls back to erasing remote tasks then the user record only on a 404. Local
     /// teardown happens ONLY after the remote delete is confirmed, so a failure leaves local data
-    /// untouched (offline-first: never wipe local while the remote account survives).
+    /// untouched (offline-first: never wipe local while the remote account survives). Sync stays held
+    /// throughout, and a failure that removed server tasks signs out, or the next sync would read
+    /// those tasks as deleted and remove the local copies.
     func deleteAccount(eraseLocalData: Bool) async {
         inProgress = true; lastError = nil
         defer { inProgress = false }
@@ -115,7 +117,9 @@ final class SessionStore {
             erasePass: { await coordinator?.eraseRemoteTasksPass() ?? .empty },
             deleteUserRecord: { try await auth.deleteAccount() })
 
-        switch await deleter.delete() {
+        coordinator?.holdForAccountDeletion()
+        let outcome = await deleter.delete()
+        switch outcome {
         case .deleted:
             if eraseLocalData {
                 // Best-effort: the remote account is already gone, so there's no safe fallback.
@@ -128,8 +132,13 @@ final class SessionStore {
             signOut()   // clear the dead session so Settings offers sign-in again
         case .failed(let remoteTasksErased):
             lastError = remoteTasksErased
-                ? String(localized: "Your synced tasks were removed from the server, but your account wasn't deleted. Try again to finish.")
+                ? String(localized: "Some or all of your synced tasks were removed from the server, but your account wasn't deleted. Your tasks on this device are safe. Sign in and try again to finish.")
                 : String(localized: "Couldn't delete your account right now. Check your connection and try again.")
+            if outcome.endsSession {
+                signOut()
+            } else {
+                coordinator?.releaseAfterFailedAccountDeletion()
+            }
         }
     }
 
