@@ -103,6 +103,7 @@ public final class TaskStore {
     private let archiveRepository: any ArchiveRepository
     private let trashRepository: any TrashRepository
     private let defaults: UserDefaults
+    private let feedbackDefaults: UserDefaults
     private let clock: @Sendable () -> Date
     private let newID: @Sendable () -> String
     private let calendar: Calendar
@@ -126,6 +127,7 @@ public final class TaskStore {
         archiveRepository: any ArchiveRepository,
         trashRepository: any TrashRepository,
         defaults: UserDefaults = AppGroupDefaults.shared,
+        feedbackDefaults: UserDefaults = .standard,
         clock: @escaping @Sendable () -> Date = { Date() },
         newID: @escaping @Sendable () -> String = { IDGenerator.generate(size: IDGenerator.Size.smartView) },
         calendar: Calendar = .current,
@@ -137,6 +139,7 @@ public final class TaskStore {
         self.archiveRepository = archiveRepository
         self.trashRepository = trashRepository
         self.defaults = defaults
+        self.feedbackDefaults = feedbackDefaults
         self.clock = clock
         self.newID = newID
         self.calendar = calendar
@@ -1057,5 +1060,6 @@ public final class TaskStore {
         defaults.removeObject(forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
         defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAutoEnabled)
         defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAfterDays)
+        FeedbackLocalState.reset(in: feedbackDefaults)
     }
 }

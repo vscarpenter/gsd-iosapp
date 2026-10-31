@@ -36,6 +36,9 @@ struct SyncEnginePushTests {
     final class CRUDExecutor: RequestExecuting, @unchecked Sendable {
         var indexJSON = #"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#
         var writeStatus = 200
+        var deleteStatus: Int?
+        /// Behave like the real server after a delete: a PATCH to a removed record is a 404.
+        var missingRecords = false
         private(set) var writes: [(method: String, path: String)] = []
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
             let m = request.httpMethod ?? "GET"
@@ -44,7 +47,8 @@ struct SyncEnginePushTests {
             }
             writes.append((m, request.url!.path))
             let body = #"{"id":"rec_x","task_id":"a","title":"t","urgent":false,"important":false}"#
-            return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: writeStatus, httpVersion: nil, headerFields: nil)!)
+            let status = m == "DELETE" ? (deleteStatus ?? writeStatus) : (missingRecords && m == "PATCH" ? 404 : writeStatus)
+            return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
         }
     }
     private func remoteItem(taskId: String, recordId: String, updated: String) -> String {
@@ -166,6 +170,41 @@ struct SyncEnginePushTests {
         let result = await engine.sync(trigger: .launch)
         #expect(result.pushed == 1)
         #expect(try await queue.all().isEmpty)
+    }
+
+    // B-45: the delete removed rec_a, so the create that follows it in the same run must POST.
+    // A PATCH would hit the deleted record, 404, and spend a retry on a healthy item.
+    @Test func createAfterSameRunDeleteRecreatesTheRecord() async throws {
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let exec = CRUDExecutor()
+        exec.indexJSON = #"{"page":1,"perPage":200,"totalItems":1,"totalPages":1,"items":[\#(remoteItem(taskId: "a", recordId: "rec_a", updated: "2020-01-01T00:00:00.000Z"))]}"#
+        exec.missingRecords = true
+        let t = Task(id: "a", title: "restored", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 1_900_000_000), updatedAt: Date(timeIntervalSince1970: 1_900_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1, payload: nil))
+        try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 2, payload: t))
+        let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
+        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
+        #expect(exec.writes.map { $0.method } == ["DELETE", "POST"])
+        #expect(pushed == 2 && failed == 0)
+        #expect(try await queue.all().isEmpty)
+    }
+
+    // The other side of B-45: a delete the server refused leaves the record in place, so a later
+    // item for the task must keep targeting it. A POST here would duplicate the task remotely.
+    @Test func failedDeleteKeepsTheRecordInTheIndex() async throws {
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        let exec = CRUDExecutor()
+        exec.indexJSON = #"{"page":1,"perPage":200,"totalItems":1,"totalPages":1,"items":[\#(remoteItem(taskId: "a", recordId: "rec_a", updated: "2020-01-01T00:00:00.000Z"))]}"#
+        exec.deleteStatus = 500
+        let t = Task(id: "a", title: "restored", urgent: false, important: false,
+                     createdAt: Date(timeIntervalSince1970: 1_900_000_000), updatedAt: Date(timeIntervalSince1970: 1_900_000_000))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1, payload: nil))
+        try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 2, payload: t))
+        let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
+        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
+        #expect(exec.writes.map { $0.method } == ["DELETE", "PATCH"])
+        #expect(pushed == 1 && failed == 1)
     }
 
     @Test func pushFailureBumpsRetryCountAndKeepsPending() async throws {

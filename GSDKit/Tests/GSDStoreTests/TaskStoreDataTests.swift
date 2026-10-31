@@ -81,6 +81,27 @@ struct TaskStoreDataTests {
         #expect(store.pinnedSmartViewIds.isEmpty)
     }
 
+    @Test func eraseAllDataClearsTheFeedbackDraftAndSubmissionID() async throws {
+        // B-16: web `resetFeedbackState()` clears the draft, its submission id and the sent
+        // marker. Erase All Data must not leave a half-written message behind.
+        let db = try AppDatabase.inMemory()
+        let feedback = UserDefaults(suiteName: "test-feedback-\(UUID().uuidString)")!
+        feedback.set(Data("draft".utf8), forKey: FeedbackLocalState.Key.draft)
+        feedback.set("sub-123", forKey: FeedbackLocalState.Key.submissionID)
+        feedback.set(1_700_000_000.0, forKey: FeedbackLocalState.Key.lastSentAt)
+        let store = TaskStore(repository: GRDBTaskRepository(db),
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db),
+                              trashRepository: GRDBTrashRepository(db),
+                              defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
+                              feedbackDefaults: feedback,
+                              clock: { Date(timeIntervalSince1970: 1000) })
+        try await store.eraseAllData()
+        #expect(feedback.object(forKey: FeedbackLocalState.Key.draft) == nil)
+        #expect(feedback.object(forKey: FeedbackLocalState.Key.submissionID) == nil)
+        #expect(feedback.object(forKey: FeedbackLocalState.Key.lastSentAt) == nil)
+    }
+
     @Test func eraseAllDataClearsTheSyncQueue() async throws {
         // A signed-out user's mutations all enqueue; an erase that leaves them queued would
         // re-create every "erased" task on the server (and then locally) at the next sign-in.
