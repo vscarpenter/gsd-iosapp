@@ -52,7 +52,7 @@ struct SyncEngineRemoteAbsenceTests {
         return SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
                           tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
                           tombstones: GRDBTombstoneRepository(db), cursor: cursor,
-                          deviceId: "dev-A", tokenProvider: { Self.jwt },
+                          deviceId: "dev-A", tokenProvider: { Self.jwt }, rawToken: { Self.jwt },
                           now: { Self.now }, throttleMs: 0, reminders: reminders)
     }
     private func task(_ id: String = "a") -> Task {
@@ -180,7 +180,7 @@ struct SyncEngineRemoteAbsenceTests {
         let cursor = SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
         let eng = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: Executor()),
                              tasks: tasks, queue: queue, tombstones: GRDBTombstoneRepository(db), cursor: cursor,
-                             deviceId: "dev-A", tokenProvider: { Self.jwt }, now: { Self.now }, throttleMs: 0)
+                             deviceId: "dev-A", tokenProvider: { Self.jwt }, rawToken: { Self.jwt }, now: { Self.now }, throttleMs: 0)
         let deleted = try await eng.reconcileDeletions(token: Self.jwt, owner: "u1")
         #expect(deleted == 0)
         #expect(try await base.fetch(id: "new-task") != nil)
