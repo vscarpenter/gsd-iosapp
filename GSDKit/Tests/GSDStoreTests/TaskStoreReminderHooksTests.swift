@@ -119,6 +119,50 @@ struct TaskStoreReminderHooksTests {
         #expect(rec.calls.contains { if case .badge = $0 { true } else { false } })  // badge refreshed
     }
 
+    @Test func resyncSchedulesOnlyTheSoonestSixtyInFireOrder() async throws {
+        // B-37: iOS keeps 64 pending requests and does not document which survive, so the
+        // store picks. 70 tasks, shuffled; the soonest 60 by fire time are scheduled, in order.
+        let rec = RecordingReminderScheduler()
+        let store = try makeStore(rec)
+        store.start()
+        // Quiet hours (seeded 22:00-07:00) would defer some fires and reorder them; this test is
+        // about the cap, so take them out of the picture.
+        var settings = store.notificationSettings
+        settings.quietHoursStart = nil; settings.quietHoursEnd = nil
+        store.notificationSettings = settings
+        let hours = Array(1...70).shuffled()
+        // Half past the hour: a due time of exactly local midnight is an all-day task, which fires at 09:00.
+        for h in hours { try await store.create(task("t\(h)", due: now.addingTimeInterval(Double(h) * 3600 + 1800))) }
+        try await store.create(task("past", due: now.addingTimeInterval(-3600)))                   // no future fire
+        try await store.create(task("done", due: now.addingTimeInterval(1800), completed: true))   // no reminder
+        var waited = 0
+        while store.tasks.count != 72 && waited < 400 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        rec.calls = []
+        await store.resyncReminders()
+        let scheduled = rec.scheduleCancelCalls.compactMap { call -> String? in
+            if case .schedule(let id) = call { id } else { nil }
+        }
+        #expect(scheduled == (1...60).map { "t\($0)" })
+    }
+
+    @Test func resyncBreaksEqualFireTimesById() async throws {
+        let rec = RecordingReminderScheduler()
+        let store = try makeStore(rec)
+        store.start()
+        let due = now.addingTimeInterval(7200)
+        for n in (0..<62).shuffled() { try await store.create(task("c\(String(format: "%02d", n))", due: due)) }
+        var waited = 0
+        while store.tasks.count != 62 && waited < 400 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        rec.calls = []
+        await store.resyncReminders()
+        let expected = (0..<60).map { RecordingReminderScheduler.Call.schedule("c\(String(format: "%02d", $0))") }
+        #expect(rec.scheduleCancelCalls == [.cancelAll] + expected)
+    }
+
     // B-07, foreground half: sync moves the row straight through the repository, so no §9.1 hook runs.
     // The observer still fires `onTasksChanged`, which the App debounces into this resync.
     @Test func aTaskSyncAbandonsToTrashNotifiesTheObserverAndLeavesTheResync() async throws {

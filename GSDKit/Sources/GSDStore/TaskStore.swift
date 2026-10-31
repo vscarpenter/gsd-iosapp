@@ -803,6 +803,9 @@ public final class TaskStore {
         if let value { defaults.set(value, forKey: key) } else { defaults.removeObject(forKey: key) }
     }
 
+    /// Pending-notification budget for a resync, under iOS's 64-request limit.
+    static let maxScheduledReminders = 60
+
     /// Recompute the app-icon badge over the live snapshot and forward it (product spec §9.4).
     /// Uses the pure `ReminderMath.badgeCount` (the only scheduling math the store touches —
     /// it returns an `Int`, so `GSDStore` stays free of `UserNotifications`).
@@ -820,10 +823,33 @@ public final class TaskStore {
     /// `schedule()` keeps final say (quiet hours, past-due → cancel).
     public func resyncReminders() async {
         await reminders.cancelAll()
-        for task in tasks where !task.isSaved && !task.completed && task.dueDate != nil && task.notificationEnabled {
-            await refreshReminder(task)
-        }
+        for task in soonestReminderTasks() { await refreshReminder(task) }
         await refreshBadge()
+    }
+
+    /// iOS keeps 64 pending notification requests and does not document which survive, so the
+    /// sweep picks: the soonest `maxScheduledReminders` by `ReminderMath.nextFire` (the one fire
+    /// rule: all-day hour, snooze, quiet hours). A task with no future fire takes no slot. Equal
+    /// fire times break by id so every resync picks the same tasks (Android `ReminderPlanner.soonest`).
+    /// 60 leaves room for single-task edits between resyncs. Tasks past the cap wait for the next
+    /// resync, which runs on store changes and launch.
+    private func soonestReminderTasks() -> [Task] {
+        let settings = notificationSettings
+        let inputs = ReminderMath.Inputs(masterEnabled: settings.enabled, defaultReminder: settings.defaultReminder)
+        let now = clock()
+        return tasks
+            .compactMap { task -> (task: Task, fire: Date)? in
+                guard !task.isSaved,
+                      let fire = ReminderMath.nextFire(for: task, inputs: inputs,
+                                                       quietStart: settings.quietHoursStart,
+                                                       quietEnd: settings.quietHoursEnd,
+                                                       now: now, calendar: calendar)
+                else { return nil }
+                return (task, fire)
+            }
+            .sorted { ($0.fire, $0.task.id) < ($1.fire, $1.task.id) }
+            .prefix(Self.maxScheduledReminders)
+            .map(\.task)
     }
 
     /// Request OS notification authorization (contextual — product spec §9.2) and stamp
