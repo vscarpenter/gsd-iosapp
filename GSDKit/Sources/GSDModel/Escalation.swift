@@ -19,6 +19,9 @@ public enum Escalation {
 
         /// The hint shown beside Mark urgent; same words as web.
         public var markUrgentHint: String { "Moves to \(quadrant.title)" }
+
+        /// The action's one-line spoken name, hint lowercased to read mid-sentence (same as web).
+        public var markUrgentAccessibilityLabel: String { "Mark urgent, moves to \(quadrant.title)" }
     }
 
     public struct Result: Sendable, Equatable {

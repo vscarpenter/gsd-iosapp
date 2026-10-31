@@ -194,7 +194,7 @@ struct QuadrantCell: View {
         Button(String(localized: "Delete")) { actions.delete(task) }
         Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
         if let target = task.escalation(window: escalationWindow).target {
-            Button(String(localized: "Mark urgent, \(target.markUrgentHint)")) { actions.markUrgent(task, target: target) }
+            Button(target.markUrgentAccessibilityLabel) { actions.markUrgent(task, target: target) }
         }
         if TimeTracking.runningEntry(task.timeEntries) == nil {
             Button(String(localized: "Start timer")) { actions.startTimer(task) }

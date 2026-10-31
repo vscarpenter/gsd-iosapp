@@ -19,4 +19,9 @@ struct EscalationCopyTests {
         #expect(Escalation.Target.urgentImportant.markUrgentHint == "Moves to Do First")
         #expect(Escalation.Target.urgentNotImportant.markUrgentHint == "Moves to Delegate")
     }
+
+    @Test func markUrgentAccessibilityLabelMatchesWebsLowercaseHint() {
+        #expect(Escalation.Target.urgentImportant.markUrgentAccessibilityLabel == "Mark urgent, moves to Do First")
+        #expect(Escalation.Target.urgentNotImportant.markUrgentAccessibilityLabel == "Mark urgent, moves to Delegate")
+    }
 }
