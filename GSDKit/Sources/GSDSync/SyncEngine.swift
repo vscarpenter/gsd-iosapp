@@ -157,6 +157,9 @@ public actor SyncEngine {
                 switch item.operation {
                 case .delete:
                     if let recordId = remote?.recordId { try await client.deleteTask(recordId: recordId, token: token) }
+                    // The record is gone, so a later same-drain create for this task must POST, not
+                    // PATCH the deleted record. A delete that threw never reaches this line.
+                    index.removeValue(forKey: item.taskId)
                 case .create, .update:
                     guard let payload = item.payload else { break }
                     let wire = TaskWireMapper.toWire(payload, owner: owner, deviceId: deviceId, recordId: remote?.recordId ?? "")
