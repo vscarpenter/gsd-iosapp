@@ -9,6 +9,7 @@ struct TaskCardView: View {
     let task: Task
 
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.escalationWindow) private var escalationWindow
 
     /// Injected for the live-ticking timer + deterministic previews.
     var now: Date = .now
@@ -22,6 +23,8 @@ struct TaskCardView: View {
     var onToggle: (() -> Void)?
     /// When non-nil, a trailing `⋯` button presents this menu content.
     var menu: (() -> AnyView)?
+
+    private var escalation: Escalation.Result { task.escalation(window: escalationWindow, now: now) }
 
     private var isBlocked: Bool { blockedByCount > 0 }
     private static let spineWidth: CGFloat = 3
@@ -148,7 +151,7 @@ struct TaskCardView: View {
     }
 
     private var hasMetadata: Bool {
-        task.dueDate != nil || task.recurrence != .none
+        task.dueDate != nil || task.recurrence != .none || escalation.escalating
             || blockedByCount > 0 || blockingCount > 0
             || TimeTracking.runningEntry(task.timeEntries) != nil
             || (task.timeSpent ?? 0) > 0
@@ -159,11 +162,16 @@ struct TaskCardView: View {
         let runningStart = TimeTracking.runningEntry(task.timeEntries)?.startedAt
         HStack(spacing: 10) {
             if let dueDate = task.dueDate {
-                let state = RelativeDate.state(for: dueDate, reference: now)
-                Label(RelativeDate.dueString(for: dueDate, reference: now),
-                      systemImage: state == .overdue ? "exclamationmark.triangle" : "calendar")
-                    .foregroundStyle(dueColor(for: dueDate))
-                    .fontWeight(state == .upcoming ? .regular : .semibold)
+                if let target = escalation.target {
+                    // Beside the due chip when the card is wide enough; stacked under it when
+                    // a narrow iPad cell would otherwise truncate both ("in 1 we…  Escala…").
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 10) { dueLabel(dueDate); escalatingTag(target) }
+                        VStack(alignment: .leading, spacing: 4) { dueLabel(dueDate); escalatingTag(target) }
+                    }
+                } else {
+                    dueLabel(dueDate)
+                }
             }
             if task.recurrence != .none {
                 Image(systemName: "repeat").accessibilityLabel(String(localized: "Repeats"))
@@ -197,6 +205,22 @@ struct TaskCardView: View {
         .font(.footnote)
         .foregroundStyle(Surface.ink3)
         .lineLimit(1)
+    }
+
+    private func dueLabel(_ dueDate: Date) -> some View {
+        let state = RelativeDate.state(for: dueDate, reference: now)
+        return Label(RelativeDate.dueString(for: dueDate, reference: now),
+                     systemImage: state == .overdue ? "exclamationmark.triangle" : "calendar")
+            .foregroundStyle(dueColor(for: dueDate))
+            .fontWeight(state == .upcoming ? .regular : .semibold)
+    }
+
+    /// Text plus an up arrow in the target quadrant's ink, never color alone. The full due
+    /// phrase is the accessible name (spec-escalation §5); the card's combined label repeats it.
+    private func escalatingTag(_ target: Escalation.Target) -> some View {
+        Label(String(localized: "Escalating"), systemImage: "arrow.up")
+            .fontWeight(.semibold)
+            .foregroundStyle(target.accent)
     }
 
     /// Live elapsed since the running entry started: pulsing accent dot + tabular HH:MM:SS.
@@ -249,6 +273,9 @@ struct TaskCardView: View {
         let state = task.completed ? String(localized: "completed") : String(localized: "active")
         var parts = ["\(task.title)", task.quadrant.title, state]
         if let dueDate = task.dueDate { parts.append(RelativeDate.dueString(for: dueDate, reference: now)) }
+        if let days = escalation.daysUntilDue, escalation.escalating {
+            parts.append(Escalation.accessibilityLabel(daysUntilDue: days))
+        }
         if task.recurrence != .none { parts.append(String(localized: "repeats")) }
         if isBlocked { parts.append(String(localized: "blocked by \(blockedByCount)")) }
         if blockingCount > 0 { parts.append(String(localized: "blocking \(blockingCount)")) }

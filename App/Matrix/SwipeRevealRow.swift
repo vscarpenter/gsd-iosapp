@@ -23,12 +23,15 @@ struct SwipeRevealRow<Menu: View, Content: View>: View {
     @ViewBuilder let menu: () -> Menu
     @ViewBuilder let content: () -> Content
 
+    @Environment(\.escalationWindow) private var escalationWindow
     @State private var offset: CGFloat = 0
     @State private var rowSize: CGSize = .zero
 
     private let buttonWidth: CGFloat = 84
     private var leadingReveal: CGFloat { buttonWidth }        // one button
-    private var trailingReveal: CGFloat { buttonWidth * 2 }   // Snooze + Delete
+    private var markUrgentTarget: Escalation.Target? { task.escalation(window: escalationWindow).target }
+    // Snooze + Delete, plus Mark urgent while the task is escalating.
+    private var trailingReveal: CGFloat { buttonWidth * (markUrgentTarget == nil ? 2 : 3) }
     private let fullSwipeFraction: CGFloat = 0.5              // of the row width
 
     var body: some View {
@@ -56,6 +59,12 @@ struct SwipeRevealRow<Menu: View, Content: View>: View {
                 .frame(width: offset)                         // grows with the swipe so it fills on a full-swipe
             } else if offset < 0 {
                 HStack(spacing: 0) {
+                    if let target = markUrgentTarget {
+                        revealButton("arrow.up", String(localized: "Mark urgent"), target.accent) {
+                            actions.markUrgent(task, target: target); close()
+                        }
+                        .frame(width: buttonWidth)
+                    }
                     revealButton("moon.zzz", String(localized: "Snooze"),
                                  QuadrantStyle.accent(.notUrgentNotImportant)) {   // slate
                         actions.snooze(task, by: .oneHour); close()
