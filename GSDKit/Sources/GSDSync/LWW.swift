@@ -32,7 +32,13 @@ enum LWW {
     /// `isRemoteNewerThanArchive`). A far-future stamp is never newer. Comparing its capped value
     /// here would resurrect tombstones and block the local edit that heals the record.
     static func isRemoteNewer(_ remote: Date, than local: Date, now: Date) -> Bool {
-        ms(remote) <= ceilingMs(now) && ms(remote) > ms(local)
+        isRemoteNewer(remote, thanMs: ms(local), now: now)
+    }
+
+    /// The same rule against a stamp already in milliseconds, like a queue row's `timestamp`. A round
+    /// trip through `Date` can lose a millisecond, which would make an equal stamp read as newer.
+    static func isRemoteNewer(_ remote: Date, thanMs localMs: Int, now: Date) -> Bool {
+        ms(remote) <= ceilingMs(now) && ms(remote) > localMs
     }
 
     private static func ceilingMs(_ now: Date) -> Int { ms(now) + maxClockSkewMs }

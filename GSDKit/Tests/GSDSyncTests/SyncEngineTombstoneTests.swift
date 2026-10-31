@@ -77,16 +77,30 @@ struct SyncEngineTombstoneTests {
         #expect(try await GRDBArchiveRepository(db).fetchAll().isEmpty)   // never in two tables
     }
 
-    @Test func pullKeepsATrashedTaskWhoseDeleteIsStillQueued() async throws {
-        // The delete this device queued still wins, as on the realtime path. Bringing the row back
-        // would let that delete, then reconcile, remove the task and its Trash copy for good.
+    @Test func pullKeepsATrashedTaskWhoseQueuedDeleteWillStillLand() async throws {
+        // Push will still send this delete: the remote edit predates it. Bringing the row back would
+        // let that delete, then reconcile, remove the task and its Trash copy for good.
         let db = try AppDatabase.inMemory()
         try await GRDBTrashRepository(db).trash(task("a"), at: Self.buriedAt)
-        try await GRDBSyncQueueRepository(db).enqueue(SyncQueueItem(id: "d1", taskId: "a", operation: .delete, timestamp: 1))
+        let queuedAfterTheEdit = Int(WireDate.parse(Self.after)!.timeIntervalSince1970 * 1000) + 1
+        try await GRDBSyncQueueRepository(db).enqueue(SyncQueueItem(id: "d1", taskId: "a", operation: .delete, timestamp: queuedAfterTheEdit))
         _ = try await engine(db, pullListing(remote("a", updated: Self.after)))
             .pull(token: Self.jwt, since: "1970-01-01 00:00:00.000Z")
         #expect(try await GRDBTaskRepository(db).fetch(id: "a") == nil)
         #expect(try await GRDBTrashRepository(db).fetchAll().map(\.id) == ["a"])
+    }
+
+    @Test func pullBringsBackATrashedTaskWhoseQueuedDeleteIsStale() async throws {
+        // Push will drop this delete: the remote edit is newer. Suppressing the record would strand
+        // the task in Trash here once the cursor moves past it.
+        let db = try AppDatabase.inMemory()
+        try await GRDBTrashRepository(db).trash(task("a"), at: Self.buriedAt)
+        let queuedBeforeTheEdit = Int(Self.buriedAt.timeIntervalSince1970 * 1000)
+        try await GRDBSyncQueueRepository(db).enqueue(SyncQueueItem(id: "d1", taskId: "a", operation: .delete, timestamp: queuedBeforeTheEdit))
+        _ = try await engine(db, pullListing(remote("a", updated: Self.after)))
+            .pull(token: Self.jwt, since: "1970-01-01 00:00:00.000Z")
+        #expect(try await GRDBTaskRepository(db).fetch(id: "a")?.title == "remote")
+        #expect(try await GRDBTrashRepository(db).fetchAll().isEmpty)
     }
 
     // MARK: Realtime
