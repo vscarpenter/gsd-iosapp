@@ -231,11 +231,7 @@ struct FeedbackView: View {
 /// Group — extensions have no feedback surface, so the draft stays app-only).
 private struct FeedbackDraftStore {
     private let defaults = UserDefaults.standard
-    private enum Key {
-        static let draft = "feedback.draft"
-        static let submissionID = "feedback.submissionID"
-        static let lastSentAt = "feedback.lastSentAt"
-    }
+    private typealias Key = FeedbackLocalState.Key
 
     func loadDraft() -> FeedbackDraft {
         guard let data = defaults.data(forKey: Key.draft),

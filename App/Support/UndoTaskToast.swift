@@ -7,17 +7,23 @@ extension Notification.Name {
     /// snapshot as the notification object so the root undo window can offer restore.
     static let gsdTaskDeleted = Notification.Name("dev.vinny.gsd.taskDeleted")
     static let gsdTaskSaved = Notification.Name("dev.vinny.gsd.taskSaved")
+    /// Posted by `TaskActions.markUrgent`, carrying the task as it was BEFORE the move.
+    static let gsdTaskMarkedUrgent = Notification.Name("dev.vinny.gsd.taskMarkedUrgent")
 }
 
 enum UndoTaskAction {
     case deleted(Task)
     case saved(Task)
+    /// Carries the task as it was before Mark urgent, so Undo can move it back.
+    case markedUrgent(Task)
 
-    var task: Task { switch self { case .deleted(let task), .saved(let task): task } }
+    var task: Task { switch self { case .deleted(let task), .saved(let task), .markedUrgent(let task): task } }
     var message: String {
         switch self {
         case .deleted(let task): String(localized: "Deleted “\(task.title)”")
         case .saved(let task): String(localized: "Moved “\(task.title)” to Saved")
+        case .markedUrgent(let task):
+            String(localized: "Marked “\(task.title)” urgent. Moved to \(Quadrant(urgent: true, important: task.important).title)")
         }
     }
 }
@@ -37,6 +43,10 @@ final class UndoTaskController {
 
     func noteSaved(_ task: Task) {
         note(.saved(task))
+    }
+
+    func noteMarkedUrgent(_ before: Task) {
+        note(.markedUrgent(before))
     }
 
     private func note(_ next: UndoTaskAction) {
@@ -62,6 +72,7 @@ final class UndoTaskController {
                 switch action {
                 case .deleted(let task): try await store.restoreFromTrash(id: task.id)
                 case .saved(let task): try await store.undoMoveToSaved(task)
+                case .markedUrgent(let before): try await store.move(before, to: before.quadrant)
                 }
             } catch {
                 failure = TaskActionFailure(String(localized: "Couldn’t undo that action: \(error.localizedDescription)"))

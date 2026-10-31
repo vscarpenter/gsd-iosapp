@@ -12,8 +12,6 @@ struct SyncEngineRemoteAbsenceTests {
     final class Executor: RequestExecuting, @unchecked Sendable {
         var listJSON = #"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#
         var identityStatus = 200
-        var identityId = "u1"
-        var identityOffline = false
         var writeStatus = 200
         private(set) var identityChecks = 0
         private(set) var writes: [String] = []
@@ -24,8 +22,7 @@ struct SyncEngineRemoteAbsenceTests {
             }
             if request.url!.path.hasSuffix("/auth-refresh") {
                 identityChecks += 1
-                if identityOffline { throw URLError(.notConnectedToInternet) }
-                let body = identityStatus == 200 ? #"{"token":"fresh","record":{"id":"\#(identityId)","email":"e@x"}}"# : #"{"message":"nope"}"#
+                let body = identityStatus == 200 ? #"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"# : #"{"message":"nope"}"#
                 return response(body, identityStatus)
             }
             if method == "GET" { return response(listJSON) }
@@ -249,78 +246,35 @@ struct SyncEngineRemoteAbsenceTests {
         #expect(reminders.cancelled.isEmpty)
     }
 
-    // MARK: Identity (Android `confirmIdentity`)
+    // MARK: Identity
 
-    // A request the server treats as a guest lists zero items, so an empty listing proves nothing
-    // until the server confirms the session. Both destructive verdicts wait for that.
+    // `SyncEngineSessionConfirmTests` owns the check and its failure cases. These pin only what B-07
+    // adds to it: the failed-only verdict waits for the check as well.
     private func seedOneOfEachDestructiveVerdict(_ db: AppDatabase) async throws {
         try await GRDBTaskRepository(db).upsert(task("no-rows"))
         try await GRDBTaskRepository(db).upsert(task("failed-only"))
         try await GRDBSyncQueueRepository(db).enqueue(failedRow(taskId: "failed-only"))
     }
-    private func expectNothingMoved(_ db: AppDatabase) async throws {
+
+    @Test func aRejectedSessionMovesNothingToTrash() async throws {
+        let db = try AppDatabase.inMemory()
+        try await seedOneOfEachDestructiveVerdict(db)
+        let exec = Executor(); exec.identityStatus = 401
+        await #expect(throws: (any Error).self) {
+            _ = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
+        }
         #expect(try await GRDBTaskRepository(db).fetchAll().count == 2)
         #expect(try await GRDBTrashRepository(db).fetchAll().isEmpty)
         #expect(try await GRDBSyncQueueRepository(db).all().count == 1)
     }
 
-    // Rejected, forbidden, rate limited, and server error: none of them confirm the session.
-    @Test(arguments: [401, 403, 429, 500, 503])
-    func aFailedIdentityCheckChangesNothing(status: Int) async throws {
-        let db = try AppDatabase.inMemory()
-        try await seedOneOfEachDestructiveVerdict(db)
-        let exec = Executor(); exec.identityStatus = status
-        await #expect(throws: (any Error).self) {
-            _ = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
-        }
-        try await expectNothingMoved(db)
-    }
-
-    @Test func anIdentityCheckThatCantReachTheServerChangesNothing() async throws {
-        let db = try AppDatabase.inMemory()
-        try await seedOneOfEachDestructiveVerdict(db)
-        let exec = Executor(); exec.identityOffline = true
-        await #expect(throws: (any Error).self) {
-            _ = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
-        }
-        try await expectNothingMoved(db)
-    }
-
-    @Test func aSessionForAnotherAccountChangesNothing() async throws {
-        let db = try AppDatabase.inMemory()
-        try await seedOneOfEachDestructiveVerdict(db)
-        let exec = Executor(); exec.identityId = "someone-else"
-        await #expect(throws: SyncIdentityMismatch.self) {
-            _ = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
-        }
-        try await expectNothingMoved(db)
-    }
-
-    @Test func aRejectedSessionSurfacesAsASyncError() async throws {
-        let db = try AppDatabase.inMemory()
-        try await seedOneOfEachDestructiveVerdict(db)
-        let exec = Executor(); exec.identityStatus = 401
-        let result = await engine(db, exec).sync(trigger: .periodic)
-        #expect(result.error != nil && result.deleted == 0)
-        try await expectNothingMoved(db)
-    }
-
-    @Test func aConfirmedSessionWithAnEmptyRemoteStillApplies() async throws {
+    @Test func aConfirmedSessionAppliesBothVerdictsOnOneCheck() async throws {
         let db = try AppDatabase.inMemory()
         try await seedOneOfEachDestructiveVerdict(db)
         let exec = Executor()
         let deleted = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
         #expect(deleted == 2)
-        #expect(exec.identityChecks == 1)   // once per run, not once per task
-    }
-
-    @Test func aRunWithNothingToReconcileMakesNoIdentityRequest() async throws {
-        let db = try AppDatabase.inMemory(); let queue = GRDBSyncQueueRepository(db)
-        try await GRDBTaskRepository(db).upsert(task())
-        try await queue.enqueue(pendingRow())
-        let exec = Executor(); exec.identityStatus = 401
-        let deleted = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
-        #expect(deleted == 0)
-        #expect(exec.identityChecks == 0)
+        #expect(exec.identityChecks == 1)
+        #expect(try await GRDBTrashRepository(db).fetchAll().map(\.id) == ["failed-only"])
     }
 }
