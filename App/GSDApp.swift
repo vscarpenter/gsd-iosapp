@@ -213,6 +213,11 @@ struct GSDApp: App {
                         coordinator.enteredForeground()
                         _Concurrency.Task { await store.refreshBadge() }
                         _Concurrency.Task { await shareDrainer.drain() }
+                        // Reminders that fired while the app was closed free slots under the
+                        // 60-reminder cap, and a resync otherwise runs only on task changes.
+                        // Skipped before the first snapshot: the launch emission does that sweep,
+                        // and sweeping an empty snapshot would wipe live reminders.
+                        if store.hasLoadedTasks { reminderResyncer.schedule() }
                     case .background:
                         coordinator.enteredBackground()
                         BackgroundRefresh.schedule()
