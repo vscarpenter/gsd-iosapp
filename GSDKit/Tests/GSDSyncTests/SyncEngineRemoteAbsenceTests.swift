@@ -54,7 +54,7 @@ struct SyncEngineRemoteAbsenceTests {
         return SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
                           tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
                           tombstones: GRDBTombstoneRepository(db), cursor: cursor,
-                          deviceId: "dev-A", tokenProvider: { Self.jwt },
+                          deviceId: "dev-A", tokenProvider: { Self.jwt }, rawToken: { Self.jwt },
                           now: { Self.now }, throttleMs: 0, reminders: reminders)
     }
     private func task(_ id: String = "a") -> Task {
