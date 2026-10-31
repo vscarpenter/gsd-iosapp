@@ -147,14 +147,42 @@ public enum TaskImporter {
         }
         let archived = validated(envelope.archivedTasks)
         let deleted = validated(envelope.deletedTasks)
+        let (views, droppedViewIDs) = admittedSmartViews(envelope.smartViews, skipped: &skipped)
         return ImportResult(
             tasks: tasks, skipped: skipped,
             archivedTasks: archived,
             deletedTasks: deleted,
-            smartViews: envelope.smartViews,
+            smartViews: views,
             notificationSettings: envelope.notificationSettings?.settings,
             archiveSettings: envelope.archiveSettings.map { ($0.enabled, $0.archiveAfterDays) },
-            pinnedSmartViewIds: envelope.appPreferences?.pinnedSmartViewIds)
+            // A pin to a dropped view would hold a slot with nothing behind it. Filter before
+            // capping so the freed slot goes to the next pin.
+            pinnedSmartViewIds: envelope.appPreferences.map {
+                Array($0.pinnedSmartViewIds.filter { !droppedViewIDs.contains($0) }
+                    .prefix(SmartViewLimits.maxPinned))
+            })
+    }
+
+    /// Drops custom views that break a bound and any past the cap, counting each drop.
+    /// Built-ins are derived at read time and never stored, so they pass through uncounted
+    /// (the store ignores them).
+    private static func admittedSmartViews(_ views: [SmartViewWire]?, skipped: inout Int) -> (views: [SmartViewWire]?, droppedIDs: Set<String>) {
+        guard let views else { return (nil, []) }
+        var admitted: [SmartViewWire] = []
+        var dropped: Set<String> = []
+        var customCount = 0
+        for view in views {
+            if view.isBuiltIn { admitted.append(view); continue }
+            guard SmartViewLimits.isWithinBounds(view), customCount < SmartViewLimits.maxViews else {
+                skipped += 1
+                dropped.insert(view.id)
+                continue
+            }
+            customCount += 1
+            admitted.append(view)
+        }
+        // An id that is dropped in one row but admitted in another still has a view behind it.
+        return (admitted, dropped.subtracting(admitted.map(\.id)))
     }
 
     /// Envelope whose `tasks` are decoded one-at-a-time via `LenientTask` so a single
