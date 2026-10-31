@@ -212,6 +212,26 @@ struct AuthServiceTests {
         #expect(store.token == kept)  // retryable; NOT signed out
     }
 
+    @Test func deleteAccountViaRouteSendsAuthedDeleteAndEndsTheSession() async throws {
+        let token = makeJWT(id: "u1", exp: 1_893_456_000)
+        let store = InMemoryTokenStore(token); let exec = FakeExecutor()
+        exec.routes["/api/gsd/account"] = (Data(), 204)
+        try await refreshService(store: store, exec: exec, now: Date(timeIntervalSince1970: 1_000_000_000))
+            .deleteAccountViaRoute()
+        #expect(exec.lastRequest?.httpMethod == "DELETE")
+        #expect(exec.lastRequest?.url?.path == "/api/gsd/account")
+        #expect(exec.lastRequest?.value(forHTTPHeaderField: "Authorization") == token)
+        #expect(store.token == nil)
+    }
+
+    @Test func deleteAccountViaRouteNotFoundThrowsAndKeepsTheSession() async throws {
+        let kept = makeJWT(id: "u1", exp: 1_893_456_000)
+        let store = InMemoryTokenStore(kept); let exec = FakeExecutor()   // unrouted path answers 404
+        let service = refreshService(store: store, exec: exec, now: Date(timeIntervalSince1970: 1_000_000_000))
+        await #expect(throws: PocketBaseError.http(status: 404, body: "")) { try await service.deleteAccountViaRoute() }
+        #expect(store.token == kept)   // the fallback still needs the token
+    }
+
     @Test func deleteAccountThrowsNotSignedInWhenNoToken() async throws {
         let service = refreshService(store: InMemoryTokenStore(), exec: FakeExecutor(),
                                      now: Date(timeIntervalSince1970: 1_000_000_000))

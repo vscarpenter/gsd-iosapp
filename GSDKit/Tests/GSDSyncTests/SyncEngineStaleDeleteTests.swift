@@ -117,6 +117,16 @@ struct SyncEngineStaleDeleteTests {
         #expect(exec.writes == ["DELETE"])
     }
 
+    // The archived-version check needs the rule as well: compared raw, a poisoned record would protect
+    // itself from every archive's delete.
+    @Test func aFarFutureRemoteStampDoesNotStopAnArchiveDelete() async throws {
+        let db = try AppDatabase.inMemory(); let queue = GRDBSyncQueueRepository(db)
+        try await queue.enqueue(deleteRow(payload: task()))
+        let exec = listing(updated: "2099-01-01T00:00:00.000Z")
+        _ = try await engine(db, exec).push(token: Self.jwt, owner: "u1")
+        #expect(exec.writes == ["DELETE"])
+    }
+
     // The normal archive: the server holds exactly the version archived. A sub-millisecond clock must
     // not make the remote read as newer, or every ordinary archive would leave its server copy behind.
     @Test(arguments: [0.0004, 0.0005, 0.0006, 0.1236, 0.9994, 0.9996, 0.3337, 0.6669])
@@ -222,6 +232,19 @@ struct SyncEngineStaleDeleteTests {
         #expect(exec.writes.isEmpty)
         #expect(try await GRDBArchiveRepository(db).fetchAll().map(\.id) == ["a"])
         #expect(try await GRDBSyncQueueRepository(db).all().isEmpty)
+    }
+
+    // A failed delete can still be revived and sent, so it holds the tombstone like a pending one.
+    // Bringing the row back would let it, then reconcile, remove the task for good.
+    @Test func aFailedDeleteThatWouldStillLandKeepsTheTombstone() async throws {
+        let db = try AppDatabase.inMemory()
+        let buriedAt = WireDate.parse("2026-06-15T09:00:00.000Z")!
+        try await GRDBTrashRepository(db).trash(task(), at: buriedAt)
+        try await GRDBSyncQueueRepository(db).enqueue(deleteRow(status: .failed))
+        let exec = listing(updated: Self.beforeQueue)   // after buriedAt, before queuedAt
+        _ = await engine(db, exec).sync(trigger: .periodic)   // periodic doesn't revive failed rows
+        #expect(exec.writes.isEmpty)
+        #expect(try await GRDBTaskRepository(db).fetch(id: "a") == nil)
     }
 
     // A failed delete row isn't pushed until a retry revives it, and push then drops it as stale.

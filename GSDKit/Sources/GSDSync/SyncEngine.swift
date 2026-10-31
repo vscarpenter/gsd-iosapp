@@ -282,9 +282,9 @@ public actor SyncEngine {
         let pendingIds = Set(rows.filter { $0.status == .pending }.map(\.taskId))
         let unprotected = snapshot.filter { !remoteIds.contains($0.id) && !pendingIds.contains($0.id) }
         if unprotected.isEmpty { return 0 }
-        // The list rule filters rows, so a request the server treats as a guest answers 200 with zero
-        // items, and an empty listing proves nothing until auth-refresh accepts this token. The fresh
-        // token it returns is not kept. Android `confirmIdentity`.
+        // The list rule filters rows, so a token the server rejects lists as 200 with zero items, just
+        // like an empty account. Only auth-refresh tells them apart. Any failure throws before a delete.
+        // The fresh token it returns is not kept. Android `confirmIdentity`.
         guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
         var deleted = 0
         for task in unprotected {
