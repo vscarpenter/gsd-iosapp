@@ -22,6 +22,10 @@ struct TaskEditorView: View {
     @State private var tags: [String]
     @State private var tagDraft = ""
     @State private var saveError: String?
+    /// B-18: the draft as the sheet opened, captured once on first appear. Close asks
+    /// "Discard changes?" only when the live draft differs from it.
+    @State private var baseline: EditorDraft?
+    @State private var confirmingDiscard = false
     // C2 — due date + recurrence
     @State private var dueDate: Date?
     @State private var recurrence: RecurrenceType
@@ -81,6 +85,22 @@ struct TaskEditorView: View {
             original = t
             editingTaskID = t.id
         }
+    }
+
+    private var currentDraft: EditorDraft {
+        EditorDraft(title: title, description: description, quadrant: quadrant, tags: tags,
+                    dueDate: dueDate, recurrence: recurrence, snoozedUntil: snoozedUntil,
+                    notificationEnabled: notificationEnabled, notifyBefore: notifyBefore,
+                    estimateText: estimateText, subtasks: subtasks, dependencies: dependencies,
+                    tagDraft: tagDraft, subtaskDraft: subtaskDraft)
+    }
+
+    private var hasUnsavedChanges: Bool {
+        baseline.map { currentDraft.isDirty(since: $0) } ?? false
+    }
+
+    private func requestCancel() {
+        if hasUnsavedChanges { confirmingDiscard = true } else { dismiss() }
     }
 
     var body: some View {
@@ -143,7 +163,7 @@ struct TaskEditorView: View {
             .navigationTitle(original == nil ? String(localized: "New Task") : String(localized: "Edit Task"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "Cancel")) { dismiss() }
+                    Button(String(localized: "Cancel"), action: requestCancel)
                         .accessibilityIdentifier("editor-cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
@@ -153,6 +173,18 @@ struct TaskEditorView: View {
                 }
             }
             .editorBarNeverMinimizes()
+            .onAppear { if baseline == nil { baseline = currentDraft } }
+            // A swipe-down would drop the draft with no prompt (SwiftUI has no hook for the
+            // attempt), so while there are edits the sheet closes only through Cancel or Save.
+            .interactiveDismissDisabled(hasUnsavedChanges)
+            // An alert, not a confirmationDialog: on iOS 26 a dialog anchors to Cancel as a popover and
+            // drops its cancel-role row, which leaves no visible "Keep Editing".
+            .alert(String(localized: "Discard changes?"), isPresented: $confirmingDiscard) {
+                Button(String(localized: "Discard Changes"), role: .destructive) { dismiss() }
+                Button(String(localized: "Keep Editing"), role: .cancel) {}
+            } message: {
+                Text(String(localized: "Your edits to this task will be lost."))
+            }
         }
         .sheet(isPresented: $showingDependencyPicker) {
             DependencyPickerView(
