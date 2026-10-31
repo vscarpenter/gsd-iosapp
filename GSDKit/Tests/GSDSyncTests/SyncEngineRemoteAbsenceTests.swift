@@ -14,6 +14,7 @@ struct SyncEngineRemoteAbsenceTests {
         var identityStatus = 200
         var identityId = "u1"
         var identityOffline = false
+        var writeStatus = 200
         private(set) var identityChecks = 0
         private(set) var writes: [String] = []
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -29,7 +30,7 @@ struct SyncEngineRemoteAbsenceTests {
             }
             if method == "GET" { return response(listJSON) }
             writes.append(method)
-            return response(#"{"id":"rec_a","task_id":"a","title":"t","urgent":false,"important":false}"#)
+            return response(#"{"id":"rec_a","task_id":"a","title":"t","urgent":false,"important":false}"#, writeStatus)
         }
     }
 
@@ -147,6 +148,59 @@ struct SyncEngineRemoteAbsenceTests {
         #expect(result.pushed == 1)
         #expect(exec.writes == ["POST"])
         #expect(try await GRDBTrashRepository(db).fetchAll().isEmpty)
+    }
+
+    // MARK: Read order
+
+    /// A task the user creates while reconcile reads the task table. It enqueues first and writes the
+    /// row second, as `TaskStore` does, so a queue read AFTER this sees the row that protects the task.
+    final class CreatingTasks: TaskRepository, @unchecked Sendable {
+        let base: GRDBTaskRepository; let queue: GRDBSyncQueueRepository; let created: Task
+        private var done = false
+        init(_ base: GRDBTaskRepository, _ queue: GRDBSyncQueueRepository, creating created: Task) {
+            self.base = base; self.queue = queue; self.created = created
+        }
+        func fetchAll() async throws -> [Task] {
+            if !done {
+                done = true
+                try await queue.enqueue(SyncQueueItem(id: "new", taskId: created.id, operation: .create, timestamp: 1, payload: created))
+                try await base.upsert(created)
+            }
+            return try await base.fetchAll()
+        }
+        func upsert(_ task: Task) async throws { try await base.upsert(task) }
+        func fetch(id: String) async throws -> Task? { try await base.fetch(id: id) }
+        func delete(id: String) async throws { try await base.delete(id: id) }
+        func replaceAll(_ tasks: [Task]) async throws { try await base.replaceAll(tasks) }
+        func observeAll() -> AsyncThrowingStream<[Task], Error> { base.observeAll() }
+    }
+
+    // Reading the queue first would miss the new row and delete the task with no Trash copy. Android
+    // had this bug (AND-RO). The order holds only because the tasks are read before the queue.
+    @Test func aTaskCreatedDuringReconcilesTaskReadSurvives() async throws {
+        let db = try AppDatabase.inMemory(); let queue = GRDBSyncQueueRepository(db); let base = GRDBTaskRepository(db)
+        let tasks = CreatingTasks(base, queue, creating: task("new-task"))
+        let cursor = SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
+        let eng = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: Executor()),
+                             tasks: tasks, queue: queue, tombstones: GRDBTombstoneRepository(db), cursor: cursor,
+                             deviceId: "dev-A", tokenProvider: { Self.jwt }, rawToken: { Self.jwt }, now: { Self.now }, throttleMs: 0)
+        let deleted = try await eng.reconcileDeletions(token: Self.jwt, owner: "u1")
+        #expect(deleted == 0)
+        #expect(try await base.fetch(id: "new-task") != nil)
+        #expect(try await queue.all().map(\.id) == ["new"])
+    }
+
+    // The fifth failure goes to Trash in the same run, because reconcile runs right after push. On a
+    // periodic run nothing revives it first, so the user gets no window. It's owner decision item 10.
+    @Test func aFifthFailedPushMovesTheTaskToTrashInTheSameRun() async throws {
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
+        try await tasks.upsert(task())
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, retryCount: 4, payload: task()))
+        let exec = Executor(); exec.writeStatus = 400
+        let result = await engine(db, exec).sync(trigger: .periodic)
+        #expect(result.failed == 1 && result.deleted == 1)
+        #expect(try await GRDBTrashRepository(db).fetchAll().map(\.id) == ["a"])
+        #expect(try await queue.all().isEmpty)
     }
 
     // MARK: Reminders
