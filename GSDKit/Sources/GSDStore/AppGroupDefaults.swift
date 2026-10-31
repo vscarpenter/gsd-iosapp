@@ -26,6 +26,7 @@ public enum AppGroupDefaults {
         public static let deviceId = AppGroup.deviceIDKey   // shared with the extension
         public static let deviceName = "deviceName"
         public static let fetchShareTitles = "fetchShareTitles"
+        public static let escalationWindowDays = "escalationWindowDays"
     }
 }
 
@@ -38,5 +39,19 @@ public struct ArchiveSettings: Equatable, Sendable {
     public init(autoEnabled: Bool = false, afterDays: Int = 30) {
         self.autoEnabled = autoEnabled
         self.afterDays = ArchiveSettings.allowedDays.contains(afterDays) ? afterDays : 30
+    }
+}
+
+/// Persistence for the per-device escalation window. Stored as days, with 0 meaning Off;
+/// absent or unrecognised values fall back to the 2-day default (spec-escalation §4).
+extension EscalationWindow {
+    public static func load(from defaults: UserDefaults = AppGroupDefaults.shared) -> EscalationWindow {
+        guard let stored = defaults.object(forKey: AppGroupDefaults.Key.escalationWindowDays) as? Int,
+              let window = EscalationWindow(rawValue: stored) else { return .default }
+        return window
+    }
+
+    public func save(to defaults: UserDefaults = AppGroupDefaults.shared) {
+        defaults.set(rawValue, forKey: AppGroupDefaults.Key.escalationWindowDays)
     }
 }
