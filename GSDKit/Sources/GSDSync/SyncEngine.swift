@@ -19,6 +19,9 @@ public struct SyncResult: Equatable, Sendable {
 /// items — a background loop must not hammer a persistently-rejecting server.
 public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, periodic, networkRegained, mutation, background }
 
+/// The server confirmed a session, but for a different account than the token's owner claim.
+struct SyncIdentityMismatch: Error {}
+
 /// What the internal test initializer passes for `tombstones`: no task is archived or trashed.
 private struct NoTombstones: TombstoneRepository {
     func tombstoneDate(id: String) async throws -> Date? { nil }
@@ -202,14 +205,20 @@ public actor SyncEngine {
     /// already has its protection visible to this later read (Fix E). The index fails closed
     /// (parity S10): an incomplete or unidentifiable listing throws before anything is deleted,
     /// instead of reading a record it couldn't decode as deleted on the server.
-    func reconcileDeletions(token: String) async throws -> Int {
+    func reconcileDeletions(token: String, owner: String) async throws -> Int {
         let remoteIds = Set(try await client.remoteIndex(token: token).keys)
         let snapshot = try await tasks.fetchAll()
         let rows = try await queue.all()
         let queuedIds = Set(rows.map(\.taskId))
         let pendingIds = Set(rows.filter { $0.status == .pending }.map(\.taskId))
+        let unprotected = snapshot.filter { !remoteIds.contains($0.id) && !pendingIds.contains($0.id) }
+        if unprotected.isEmpty { return 0 }
+        // The list rule filters rows, so a request the server treats as a guest answers 200 with zero
+        // items, and an empty listing proves nothing until auth-refresh accepts this token. The fresh
+        // token it returns is not kept. Android `confirmIdentity`.
+        guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
         var deleted = 0
-        for task in snapshot where !remoteIds.contains(task.id) && !pendingIds.contains(task.id) {
+        for task in unprotected {
             if queuedIds.contains(task.id) {
                 if try await tombstones.abandonToTrash(id: task.id, at: now()) { deleted += 1 }
             } else {
@@ -280,7 +289,7 @@ public actor SyncEngine {
             result.pulled = pulled
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
-            result.deleted = try await reconcileDeletions(token: token)    // destructive — last
+            result.deleted = try await reconcileDeletions(token: token, owner: owner)    // destructive — last
             cursor.advance(maxApplied: maxApplied)
             await record(trigger: trigger, result: result, conflicts: conflicts, start: start)
         } catch {
