@@ -33,7 +33,7 @@ final class EditorDiscardTests: XCTestCase {
         title.tap()
         title.typeText(" edited")
         app.buttons["editor-cancel"].tap()
-        XCTAssertTrue(app.staticTexts["Discard changes?"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.alerts["Discard changes?"].waitForExistence(timeout: 5))
         app.buttons["Keep Editing"].tap()
         XCTAssertTrue(element(app, "task-editor").exists, "Keep Editing must leave the editor open")
 
