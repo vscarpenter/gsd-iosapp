@@ -10,7 +10,7 @@ public protocol SyncQueueRepository: Sendable {
     func pending() async throws -> [SyncQueueItem]     // status == .pending, ordered by timestamp asc
     func update(_ item: SyncQueueItem) async throws
     func remove(id: String) async throws
-    func allTaskIds() async throws -> Set<String>      // pending + failed — both protect from deletion-reconcile (5c)
+    func allTaskIds() async throws -> Set<String>      // pending + failed
     func all() async throws -> [SyncQueueItem]          // every item (pending + failed), timestamp asc — health checks (5d)
 }
 

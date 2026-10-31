@@ -23,6 +23,7 @@ public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, per
 private struct NoTombstones: TombstoneRepository {
     func tombstoneDate(id: String) async throws -> Date? { nil }
     func resurrect(_ task: Task) async throws {}
+    func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool { false }
 }
 
 /// Bidirectional active-task sync (§7.4–7.5). Writes pulled tasks DIRECTLY via the repository
@@ -192,20 +193,28 @@ public actor SyncEngine {
         try await queue.update(f)
     }
 
-    /// §7.4 step 5 (destructive — runs LAST, over a FRESH post-push remote index): delete local
-    /// ACTIVE tasks absent remotely AND not in the queue. `fetchAll()` is the active table only
-    /// (archived is a separate repo, out of scope). `allTaskIds()` = pending + failed (both
-    /// protect) and is read AFTER `fetchAll` — TaskStore enqueues before it upserts, so any task
-    /// in the snapshot already has its protection visible to this later read (Fix E). The index
-    /// fails closed (parity S10): an incomplete or unidentifiable listing throws before anything
-    /// is deleted, instead of reading a record it couldn't decode as deleted on the server.
+    /// §7.4 step 5 (destructive — runs LAST, over a FRESH post-push remote index). Three verdicts
+    /// for a local ACTIVE task the server no longer lists (B-07; web `classifyRemoteDeletion`,
+    /// Android `reconcileDeletions`): a pending row PROTECTS it, because a push will still try;
+    /// only failed rows ABANDON it to Trash, because its content never reached the server; no
+    /// rows APPLY the remote delete locally. `fetchAll()` is the active table only. The queue is
+    /// read AFTER `fetchAll`: TaskStore enqueues before it upserts, so any task in the snapshot
+    /// already has its protection visible to this later read (Fix E). The index fails closed
+    /// (parity S10): an incomplete or unidentifiable listing throws before anything is deleted,
+    /// instead of reading a record it couldn't decode as deleted on the server.
     func reconcileDeletions(token: String) async throws -> Int {
         let remoteIds = Set(try await client.remoteIndex(token: token).keys)
         let snapshot = try await tasks.fetchAll()
-        let queuedIds = try await queue.allTaskIds()
+        let rows = try await queue.all()
+        let queuedIds = Set(rows.map(\.taskId))
+        let pendingIds = Set(rows.filter { $0.status == .pending }.map(\.taskId))
         var deleted = 0
-        for task in snapshot where !remoteIds.contains(task.id) && !queuedIds.contains(task.id) {
-            try await tasks.delete(id: task.id); deleted += 1
+        for task in snapshot where !remoteIds.contains(task.id) && !pendingIds.contains(task.id) {
+            if queuedIds.contains(task.id) {
+                if try await tombstones.abandonToTrash(id: task.id, at: now()) { deleted += 1 }
+            } else {
+                try await tasks.delete(id: task.id); deleted += 1
+            }
         }
         return deleted
     }
