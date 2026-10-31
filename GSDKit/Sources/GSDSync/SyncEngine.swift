@@ -156,7 +156,8 @@ public actor SyncEngine {
     }
 
     /// Drain the pending queue → remote (§7.5). Payload-LWW-guard (skip+drop a stale upsert iff remote
-    /// `client_updated_at` > the payload's `updatedAt`); create(no recordId)/update(by recordId)/delete;
+    /// `client_updated_at` > the payload's `updatedAt`); stale-delete guard (`isStaleDelete`);
+    /// create(no recordId)/update(by recordId)/delete;
     /// ~throttle; 429 aborts the loop; across-sync retry (5/10/30/60/300 s) → `failed` after 5 (kept).
     func push(token: String, owner: String) async throws -> (pushed: Int, failed: Int) {
         var index = try await client.remoteIndex(token: token)
@@ -174,6 +175,10 @@ public actor SyncEngine {
             // payload-LWW-guard (upserts only): remote strictly newer than what we'd write → drop, let pull win.
             if item.operation != .delete, let payload = item.payload, let remoteUpdated = remote?.clientUpdatedAt,
                LWW.isRemoteNewer(remoteUpdated, than: payload.updatedAt, now: now()) {
+                try await queue.remove(id: item.id); continue
+            }
+            // Resolved, not retried: the newer remote edit stays, and the next pull delivers it.
+            if item.operation == .delete, isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt) {
                 try await queue.remove(id: item.id); continue
             }
             do {
@@ -203,6 +208,19 @@ public actor SyncEngine {
             }
         }
         return (pushed, failed)
+    }
+
+    /// A delete is stale when the remote changed after it was queued (B-42). An archive's delete also
+    /// carries the task as archived, and is stale when the remote is newer than that version (B-47):
+    /// archiving a stale copy must not delete the newer task. Web `isStaleDelete`, Android
+    /// `remoteEditedAfterQueued` and `remoteEditedAfterArchive`. A remote with no usable version
+    /// keeps the plain delete, which is today's behavior while owner decision D-9 is open.
+    private func isStaleDelete(_ item: SyncQueueItem, remoteUpdated: Date?) -> Bool {
+        guard let remoteUpdated else { return false }
+        let queuedAt = Date(timeIntervalSince1970: Double(item.timestamp) / 1000)
+        if LWW.isRemoteNewer(remoteUpdated, than: queuedAt, now: now()) { return true }
+        guard let archived = item.payload else { return false }
+        return LWW.isRemoteNewer(remoteUpdated, than: archived.updatedAt, now: now())
     }
 
     /// Spend one retry on `item`: kept `.pending` for the next due sync, `.failed` after 5 (kept).
@@ -466,13 +484,17 @@ public actor SyncEngine {
     /// A remote copy of a task with no live row here. If the task was archived or trashed on this
     /// device, the archive or delete stands unless the remote edit is strictly newer (web
     /// `isRemoteNewerThanArchive`, Android `resolveTombstone`), and a far-future stamp never is.
-    /// Even then a delete still queued here wins, as on the realtime path: bringing the row back
-    /// would let that delete, then reconcile, remove the task and its Trash copy for good.
+    /// A queued delete that push will still send wins even then: bringing the row back would let
+    /// that delete, then reconcile, remove the task and its copy here for good. A stale one doesn't.
+    /// Push drops it, so suppressing this record would strand the task here once the cursor moves on.
     private func applyOverTombstone(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> TombstoneLanding {
         guard let buriedAt = try await tombstones.tombstoneDate(id: record.taskId) else { return .noTombstone }
         guard LWW.isRemoteNewer(remoteUpdated, than: buriedAt, now: now()) else { return .suppressed }
         let queued = try await queue.all()
-        if queued.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return .suppressed }
+        let deleteWillLand = queued.contains {
+            $0.taskId == record.taskId && $0.operation == .delete && !isStaleDelete($0, remoteUpdated: remoteUpdated)
+        }
+        if deleteWillLand { return .suppressed }
         try await tombstones.resurrect(TaskWireMapper.toDomain(record, mergingInto: nil))
         return .resurrected
     }

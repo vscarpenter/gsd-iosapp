@@ -80,7 +80,7 @@ struct SyncEngineEraseTests {
     @Test func flushDeletesDrainsPendingDeletes() async throws {
         let db = try AppDatabase.inMemory(); let exec = DeleteExecutor()
         let (eng, _, queue) = make(db, exec)
-        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "t1", operation: .delete, timestamp: 1))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "t1", operation: .delete, timestamp: 2_000_000_000_000))
         let result = await eng.flushDeletes()
         #expect(result.pushed == 1)
         #expect(exec.writes.contains { $0.method == "DELETE" })
