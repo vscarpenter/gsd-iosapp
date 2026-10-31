@@ -180,3 +180,21 @@ public enum FeedbackPayloadBuilder {
                                clientSubmittedAt: timestamp(from: submittedAt))
     }
 }
+
+/// The feedback form's on-device state, kept in standard `UserDefaults` (deliberately NOT the
+/// App Group: extensions have no feedback surface). One home for the keys so the form and
+/// Erase All Data cannot drift apart. Mirrors web `resetFeedbackState()`.
+public enum FeedbackLocalState {
+    public enum Key {
+        public static let draft = "feedback.draft"
+        public static let submissionID = "feedback.submissionID"
+        public static let lastSentAt = "feedback.lastSentAt"
+    }
+
+    /// Forget the draft, its submission id and the last-sent marker.
+    public static func reset(in defaults: UserDefaults) {
+        for key in [Key.draft, Key.submissionID, Key.lastSentAt] {
+            defaults.removeObject(forKey: key)
+        }
+    }
+}
