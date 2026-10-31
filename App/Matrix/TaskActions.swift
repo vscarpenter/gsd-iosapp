@@ -45,6 +45,16 @@ struct TaskActions {
         }
     }
 
+    /// Escalation's one action: set urgent through the ordinary move, then offer Undo.
+    /// No celebration; the card simply changes quadrant.
+    func markUrgent(_ t: Task, target: Escalation.Target) {
+        run(String(localized: "Couldn’t mark that task urgent")) {
+            try await store.move(t, to: target.quadrant)
+        } onSuccess: {
+            NotificationCenter.default.post(name: .gsdTaskMarkedUrgent, object: t)
+        }
+    }
+
     func moveToSaved(_ task: Task) {
         run(String(localized: "Couldn’t move that task to Saved")) {
             let saved = try await store.moveToSaved(task)

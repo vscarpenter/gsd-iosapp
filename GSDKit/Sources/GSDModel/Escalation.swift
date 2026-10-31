@@ -16,6 +16,12 @@ public enum Escalation {
             case .urgentNotImportant: return .urgentNotImportant
             }
         }
+
+        /// The hint shown beside Mark urgent; same words as web.
+        public var markUrgentHint: String { "Moves to \(quadrant.title)" }
+
+        /// The action's one-line spoken name, hint lowercased to read mid-sentence (same as web).
+        public var markUrgentAccessibilityLabel: String { "Mark urgent, moves to \(quadrant.title)" }
     }
 
     public struct Result: Sendable, Equatable {
@@ -45,6 +51,19 @@ public enum Escalation {
         return Result(escalating: true, daysUntilDue: days,
                       reason: days < 0 ? .overdue : .dueSoon,
                       target: task.important ? .urgentImportant : .urgentNotImportant)
+    }
+}
+
+extension Escalation {
+    /// The marker's accessible name, built from the due chip's own phrases (same as web).
+    public static func accessibilityLabel(daysUntilDue days: Int) -> String {
+        "Escalating: \(duePhrase(days)), not marked urgent."
+    }
+
+    private static func duePhrase(_ days: Int) -> String {
+        if days < 0 { return "\(-days) \(days == -1 ? "day" : "days") overdue" }
+        if days == 0 { return "due today" }
+        return days == 1 ? "due tomorrow" : "due in \(days) days"
     }
 }
 

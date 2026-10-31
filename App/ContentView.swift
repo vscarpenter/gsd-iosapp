@@ -18,6 +18,8 @@ struct ContentView: View {
     @Environment(SessionStore.self) private var session
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
+    @AppStorage(AppGroupDefaults.Key.escalationWindowDays, store: .shared)
+    private var escalationWindowRaw = EscalationWindow.default.rawValue
 
     @State private var palette = PaletteController()
     @State private var undo = UndoTaskController()
@@ -33,6 +35,7 @@ struct ContentView: View {
     var body: some View {
         rootContent
             .environment(palette)
+            .environment(\.escalationWindow, EscalationWindow(rawValue: escalationWindowRaw) ?? .default)
             // Hidden ⌘K trigger — a zero-size button carrying the keyboard shortcut so the
             // hardware ⌘K opens the palette anywhere in the app.
             .background { keyboardShortcuts }
@@ -50,6 +53,10 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .gsdTaskSaved)) { note in
                 guard let task = note.object as? Task else { return }
                 undo.noteSaved(task)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdTaskMarkedUrgent)) { note in
+                guard let task = note.object as? Task else { return }
+                undo.noteMarkedUrgent(task)
             }
             .taskActionFailureAlert($undo.failure)
             // An iPhone Duo closes and opens mid-session (an iPad window resizes), and each root
