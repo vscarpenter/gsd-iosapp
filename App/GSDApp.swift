@@ -100,7 +100,8 @@ struct GSDApp: App {
             deviceId: DeviceIdentity.current(nameProvider: { deviceName }).deviceId,
             tokenProvider: { try await authService.validToken() },
             rawToken: { tokenStore.load() },   // health-only: lets an expired session say so
-            history: historyRepo)
+            history: historyRepo,
+            reminders: scheduler)              // reconcile cancels as it removes a task
         _syncEngine = State(initialValue: syncEngine)
         // SyncCoordinator (Phase 5d) owns when sync fires (cadence/foreground/network/debounced push/SSE)
         // and the status surface; SessionStore delegates start/stop to it on sign-in/out.
