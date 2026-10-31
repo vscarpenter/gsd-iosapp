@@ -177,10 +177,13 @@ struct TaskEditorView: View {
             // A swipe-down would drop the draft with no prompt (SwiftUI has no hook for the
             // attempt), so while there are edits the sheet closes only through Cancel or Save.
             .interactiveDismissDisabled(hasUnsavedChanges)
-            .confirmationDialog(String(localized: "Discard changes?"), isPresented: $confirmingDiscard,
-                                titleVisibility: .visible) {
+            // An alert, not a confirmationDialog: on iOS 26 a dialog anchors to Cancel as a popover and
+            // drops its cancel-role row, which leaves no visible "Keep Editing".
+            .alert(String(localized: "Discard changes?"), isPresented: $confirmingDiscard) {
                 Button(String(localized: "Discard Changes"), role: .destructive) { dismiss() }
                 Button(String(localized: "Keep Editing"), role: .cancel) {}
+            } message: {
+                Text(String(localized: "Your edits to this task will be lost."))
             }
         }
         .sheet(isPresented: $showingDependencyPicker) {
