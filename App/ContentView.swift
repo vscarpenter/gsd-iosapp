@@ -143,6 +143,9 @@ struct ContentView: View {
                 .keyboardShortcut("f", modifiers: .command)
             Button("", action: { palette.editor = .new(.urgentImportant, prefill: nil) })
                 .keyboardShortcut("n", modifiers: .command)
+            // Help lists ⌘? ("Open this field guide"); on Mac the Help menu binds it.
+            Button("", action: { showHelp = true })
+                .keyboardShortcut("?", modifiers: .command)
             Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.urgentImportant).url) })
                 .keyboardShortcut("1", modifiers: .command)
             Button("", action: { handleDeepLink(DeepLinkRoute.quadrant(.notUrgentImportant).url) })
@@ -283,7 +286,8 @@ struct ContentView: View {
         } else {
             switch dest {
             case .matrix: palette.regularSelection = .matrix
-            case .browse: break   // iPad has no Browse tab; the sidebar is always visible
+            // iPad has no Browse tab: the sidebar is the browse list. Land on its Library section.
+            case .browse: palette.regularSelection = .saved
             case .archive: palette.regularSelection = .archive
             case .saved: palette.regularSelection = .saved
             case .dashboard: palette.regularSelection = .dashboard
