@@ -104,4 +104,31 @@ final class EscalationFlowTests: XCTestCase {
         XCTAssertTrue(app.buttons["Duplicate"].firstMatch.waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["Mark urgent"].firstMatch.exists)
     }
+
+    func testEditorShowsTheHintWhileEscalatingAndFollowsTheQuadrant() throws {
+        let app = launch(windowDays: 7)
+        let card = card(app)
+        XCTAssertTrue(card.waitForExistence(timeout: 35))
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
+            .waitForExistence(timeout: 5))
+        let hint = app.descendants(matching: .any).matching(identifier: "escalation-editor-hint").firstMatch
+        XCTAssertTrue(hint.waitForExistence(timeout: 5), "escalating task should show the hint")
+        XCTAssertTrue(hint.label.contains("Moves to Do First"), hint.label)
+
+        // Moving the draft to Do First (urgent) stops it escalating, so the hint goes.
+        app.buttons["Do First"].firstMatch.tap()
+        XCTAssertTrue(hint.waitForNonExistence(timeout: 5), "an urgent draft must not show the hint")
+    }
+
+    func testEditorHasNoHintWhenOff() throws {
+        let app = launch(windowDays: 0)
+        let card = card(app)
+        XCTAssertTrue(card.waitForExistence(timeout: 35))
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
+            .waitForExistence(timeout: 5))
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "escalation-editor-hint").firstMatch
+            .waitForExistence(timeout: 2))
+    }
 }
