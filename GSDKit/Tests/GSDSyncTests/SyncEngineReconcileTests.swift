@@ -9,7 +9,8 @@ struct SyncEngineReconcileTests {
     final class IndexExecutor: RequestExecuting, @unchecked Sendable {
         var indexJSON = #"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-            (Data(indexJSON.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            let body = request.url!.path.hasSuffix("/auth-refresh") ? #"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"# : indexJSON
+            return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
     }
     private func task(_ id: String) -> Task {
@@ -27,7 +28,7 @@ struct SyncEngineReconcileTests {
         let exec = IndexExecutor()   // remote has a, b
         exec.indexJSON = #"{"page":1,"perPage":200,"totalItems":2,"totalPages":1,"items":[{"task_id":"a","id":"r1"},{"task_id":"b","id":"r2"}]}"#
         try await queue.enqueue(SyncQueueItem(id: "q", taskId: "c", operation: .update, timestamp: 1, payload: task("c")))  // c is queued
-        let deleted = try await engine(tasks: tasks, queue: queue, exec: exec).reconcileDeletions(token: "TOK")
+        let deleted = try await engine(tasks: tasks, queue: queue, exec: exec).reconcileDeletions(token: "TOK", owner: "u1")
         #expect(deleted == 1)                                   // only d (absent-remote AND not-queued)
         let survivingD = try await tasks.fetch(id: "d")
         let survivingA = try await tasks.fetch(id: "a")
@@ -39,7 +40,7 @@ struct SyncEngineReconcileTests {
     @Test func seedScenarioDeletesNothing() async throws {     // first-sync seed protects everything
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         for id in ["a", "b"] { try await tasks.upsert(task(id)); try await queue.enqueue(SyncQueueItem(id: "q-\(id)", taskId: id, operation: .update, timestamp: 1, payload: task(id))) }
-        let deleted = try await engine(tasks: tasks, queue: queue, exec: IndexExecutor()).reconcileDeletions(token: "TOK")  // empty remote
+        let deleted = try await engine(tasks: tasks, queue: queue, exec: IndexExecutor()).reconcileDeletions(token: "TOK", owner: "u1")  // empty remote
         #expect(deleted == 0)                                   // all queued → none deleted
     }
 
