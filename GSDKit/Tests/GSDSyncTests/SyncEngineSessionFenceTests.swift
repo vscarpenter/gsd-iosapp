@@ -296,6 +296,34 @@ struct SyncEngineSessionFenceTests {
         #expect(cursor.needsBackfill())
     }
 
+    // MARK: History
+
+    // A run the user ended isn't a sync outcome. Android records an error here, so this difference is
+    // deliberate, and these pin it.
+    private func recordingEngine(_ db: AppDatabase, _ exec: Executor, _ session: Session) -> SyncEngine {
+        SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
+                   tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
+                   tombstones: GRDBTombstoneRepository(db), cursor: cursor(), deviceId: "dev-A",
+                   tokenProvider: { session.token }, rawToken: { session.token }, throttleMs: 0,
+                   history: GRDBSyncHistoryRepository(db))
+    }
+
+    @Test func aRunStoppedBySignOutLeavesNoHistoryRow() async throws {
+        let db = try AppDatabase.inMemory(); let session = Session(); let exec = Executor()
+        exec.items = [record()]
+        exec.onList = { _ in session.token = nil }
+        _ = await recordingEngine(db, exec, session).sync(trigger: .periodic)
+        #expect(try await GRDBSyncHistoryRepository(db).recent(limit: 10).isEmpty)
+    }
+
+    @Test func aDrainStoppedBySignOutLeavesNoHistoryRow() async throws {
+        let db = try AppDatabase.inMemory(); let session = Session(); let exec = Executor()
+        try await GRDBSyncQueueRepository(db).enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: task()))
+        exec.onList = { _ in session.token = nil }
+        _ = await recordingEngine(db, exec, session).pushNow()
+        #expect(try await GRDBSyncHistoryRepository(db).recent(limit: 10).isEmpty)
+    }
+
     // MARK: Unchanged
 
     @Test func anIntactSessionSyncsNormally() async throws {
