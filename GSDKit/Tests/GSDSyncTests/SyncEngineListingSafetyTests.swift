@@ -49,7 +49,7 @@ struct SyncEngineListingSafetyTests {
         let exec = ScriptedExecutor()
         // b's `tags` is a string, so the full record can't decode. It is still on the server.
         exec.listJSON = page([#"{"id":"rec_a","task_id":"a"}"#, #"{"id":"rec_b","task_id":"b","tags":"oops"}"#])
-        let deleted = try await engine(db, exec).reconcileDeletions(token: Self.jwt)
+        let deleted = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
         #expect(deleted == 0)
         #expect(try await tasks.fetch(id: "b") != nil)
     }
@@ -60,7 +60,7 @@ struct SyncEngineListingSafetyTests {
         let exec = ScriptedExecutor()
         exec.listJSON = page([#"{"id":"rec_a","task_id":"a"}"#, #"{"id":"rec_x","title":"no task_id"}"#])
         await #expect(throws: RemoteListingIncomplete.self) {
-            _ = try await engine(db, exec).reconcileDeletions(token: Self.jwt)
+            _ = try await engine(db, exec).reconcileDeletions(token: Self.jwt, owner: "u1")
         }
         #expect(try await tasks.fetch(id: "b") != nil)
     }

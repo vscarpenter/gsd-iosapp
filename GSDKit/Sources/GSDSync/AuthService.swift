@@ -61,18 +61,27 @@ public struct AuthService: Sendable {
         }
     }
 
-    /// Deletes the signed-in user's PocketBase account record (App Store 5.1.1(v)). Requires a live
-    /// token. On a confirmed delete — and on a 401/403, where the session is already dead — the
-    /// Keychain token is cleared; a transient/network failure leaves it so the user can retry.
-    /// The caller MUST erase the user's tasks (SyncEngine.eraseAllRemote) BEFORE this — once the
-    /// record is gone the token is invalid and tasks can no longer be removed.
+    /// Preferred account deletion (B-08): `DELETE /api/gsd/account` erases tasks and the user in one
+    /// server transaction. The route is absent on api.vinny.io today (404), so the 404 is thrown
+    /// untouched with the token kept: `AccountDeleter` falls back to the client-side erase.
+    public func deleteAccountViaRoute() async throws {
+        try await deleteAuthed(path: "/api/gsd/account")
+    }
+
+    /// Fallback step: deletes the signed-in user's PocketBase account record (App Store 5.1.1(v)).
+    /// The caller MUST have erased the user's tasks first: once the record is gone the token is
+    /// invalid and tasks can no longer be removed.
     public func deleteAccount() async throws {
         guard let id = currentUserId() else { throw AuthError.notSignedIn }
-        guard let token = try await validToken() else { throw AuthError.notSignedIn }
-        let request = client.authedRequest(
-            path: "/api/collections/users/records/\(id)", method: "DELETE", token: token)
+        try await deleteAuthed(path: "/api/collections/users/records/\(id)")
+    }
+
+    /// On a confirmed delete, and on a 401/403 where the session is already dead, the Keychain token
+    /// is cleared; any other failure leaves it so the user can retry.
+    private func deleteAuthed(path: String) async throws {
+        guard currentUserId() != nil, let token = try await validToken() else { throw AuthError.notSignedIn }
         do {
-            try await client.sendNoContent(request)
+            try await client.sendNoContent(client.authedRequest(path: path, method: "DELETE", token: token))
         } catch {
             if Self.isAuthRejection(error) { tokenStore.clear() }
             throw error

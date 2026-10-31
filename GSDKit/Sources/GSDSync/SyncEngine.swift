@@ -19,6 +19,9 @@ public struct SyncResult: Equatable, Sendable {
 /// items — a background loop must not hammer a persistently-rejecting server.
 public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, periodic, networkRegained, mutation, background }
 
+/// The server confirmed a session, but for a different account than the token's owner claim.
+struct SyncIdentityMismatch: Error {}
+
 /// What the internal test initializer passes for `tombstones`: no task is archived or trashed.
 private struct NoTombstones: TombstoneRepository {
     func tombstoneDate(id: String) async throws -> Date? { nil }
@@ -213,15 +216,18 @@ public actor SyncEngine {
     /// in the snapshot already has its protection visible to this later read (Fix E). The index
     /// fails closed (parity S10): an incomplete or unidentifiable listing throws before anything
     /// is deleted, instead of reading a record it couldn't decode as deleted on the server.
-    func reconcileDeletions(token: String) async throws -> Int {
+    func reconcileDeletions(token: String, owner: String) async throws -> Int {
         let remoteIds = Set(try await client.remoteIndex(token: token).keys)
         let snapshot = try await tasks.fetchAll()
         let queuedIds = try await queue.allTaskIds()
-        var deleted = 0
-        for task in snapshot where !remoteIds.contains(task.id) && !queuedIds.contains(task.id) {
-            try await tasks.delete(id: task.id); deleted += 1
-        }
-        return deleted
+        let absent = snapshot.filter { !remoteIds.contains($0.id) && !queuedIds.contains($0.id) }
+        if absent.isEmpty { return 0 }
+        // The list rule filters rows, so a token the server rejects lists as 200 with zero items, just
+        // like an empty account. Only auth-refresh tells them apart. Any failure throws before a delete.
+        // The fresh token it returns is not kept. Android `confirmIdentity`.
+        guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
+        for task in absent { try await tasks.delete(id: task.id) }
+        return absent.count
     }
 
     /// Reset every `.failed` queue item to `.pending` (fresh retry budget) so the next push drains
@@ -285,7 +291,7 @@ public actor SyncEngine {
             result.pulled = pulled
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
-            result.deleted = try await reconcileDeletions(token: token)    // destructive — last
+            result.deleted = try await reconcileDeletions(token: token, owner: owner)    // destructive — last
             cursor.advance(maxApplied: maxApplied)
             await record(trigger: trigger, result: result, conflicts: conflicts, start: start)
         } catch {

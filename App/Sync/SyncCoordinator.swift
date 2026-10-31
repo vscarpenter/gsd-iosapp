@@ -142,10 +142,10 @@ final class SyncCoordinator {
         return true
     }
 
-    /// Account-deletion step 1: delete only the user's REMOTE tasks (no local wipe — the caller
-    /// decides the local fate). Mirrors `eraseEverywhere`'s remote half. Returns true if the remote
-    /// is now clear (or there was nothing/no session to erase).
-    func eraseRemoteTasks() async -> Bool {
+    /// One remote task-erase pass for account deletion (no local wipe; the caller decides the local
+    /// fate). A pass that deletes nothing means a complete listing came back empty. A single-flight
+    /// skip is retried a few times, then reported as a retryable failure.
+    func eraseRemoteTasksPass() async -> AccountDeleter.ErasePass {
         var result = await engine.eraseAllRemote()
         var tries = 0
         while result.skipped && tries < 5 {
@@ -153,9 +153,10 @@ final class SyncCoordinator {
             result = await engine.eraseAllRemote()
             tries += 1
         }
-        let ok = result.notSignedIn || (result.error == nil && !result.skipped)
         await refreshStatus()
-        return ok
+        if result.notSignedIn { return .empty }   // nothing synced to erase for a signed-out user
+        if result.skipped || result.error != nil { return .failed }
+        return result.pushed == 0 ? .empty : .erased
     }
 
     /// §3.4 after a destructive import-replace: drain the cleared-task deletes under the gate.
