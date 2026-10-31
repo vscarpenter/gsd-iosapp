@@ -55,6 +55,17 @@ public enum Escalation {
 }
 
 extension Escalation {
+    /// The editor's hint ("Moves to Do First") while the unsaved draft is escalating, else nil.
+    /// Built from the draft's own quadrant and due date, so it follows edits made in the sheet.
+    public static func editorHint(quadrant: Quadrant, dueDate: Date?, isCompleted: Bool, isSaved: Bool,
+                                  now: Date, window: EscalationWindow, timeZone: TimeZone) -> String? {
+        let epoch = Date(timeIntervalSince1970: 0)
+        let draft = Task(id: "draft", title: "draft", urgent: quadrant.isUrgent, important: quadrant.isImportant,
+                         completed: isCompleted, createdAt: epoch, updatedAt: epoch, dueDate: dueDate,
+                         savedAt: isSaved ? epoch : nil)
+        return evaluate(draft, now: now, windowDays: window.days, timeZone: timeZone).target?.markUrgentHint
+    }
+
     /// The marker's accessible name, built from the due chip's own phrases (same as web).
     public static func accessibilityLabel(daysUntilDue days: Int) -> String {
         "Escalating: \(duePhrase(days)), not marked urgent."

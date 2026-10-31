@@ -7,6 +7,7 @@ struct TaskEditorView: View {
     @Environment(TaskStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.demoClock) private var demoClock
 
     /// iPhone-only: which detent the sheet is at. Drives the "Show all details"
     /// affordance — 10 of the editor's 12 sections live below the medium fold.
@@ -22,6 +23,10 @@ struct TaskEditorView: View {
     @State private var tags: [String]
     @State private var tagDraft = ""
     @State private var saveError: String?
+    /// Read straight from defaults (not the root's environment value), so the hint also works in
+    /// the Catalyst sheet, which does not inherit the presenter's environment.
+    @AppStorage(AppGroupDefaults.Key.escalationWindowDays, store: .shared)
+    private var escalationWindowRaw = EscalationWindow.default.rawValue
     /// B-18: the draft as the sheet opened, captured once on first appear. Close asks
     /// "Discard changes?" only when the live draft differs from it.
     @State private var baseline: EditorDraft?
@@ -87,6 +92,15 @@ struct TaskEditorView: View {
         }
     }
 
+    /// "Moves to Do First" / "Moves to Delegate" while the draft escalates (spec-escalation §5).
+    private var escalationHint: String? {
+        Escalation.editorHint(quadrant: quadrant, dueDate: dueDate,
+                              isCompleted: original?.completed ?? false, isSaved: original?.isSaved ?? false,
+                              now: demoClock ?? .now,
+                              window: EscalationWindow(rawValue: escalationWindowRaw) ?? .default,
+                              timeZone: .current)
+    }
+
     private var currentDraft: EditorDraft {
         EditorDraft(title: title, description: description, quadrant: quadrant, tags: tags,
                     dueDate: dueDate, recurrence: recurrence, snoozedUntil: snoozedUntil,
@@ -128,7 +142,18 @@ struct TaskEditorView: View {
                         TextField(String(localized: "Title"), text: $title)
                             .onChange(of: title) { _, _ in saveError = nil }
                     }
-                    Section(String(localized: "Quadrant")) { quadrantPicker }
+                    Section {
+                        quadrantPicker
+                    } header: {
+                        Text(String(localized: "Quadrant"))
+                    } footer: {
+                        if let escalationHint {
+                            Label(escalationHint, systemImage: "arrow.up")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(QuadrantStyle.accent(.urgentImportant))
+                                .accessibilityIdentifier("escalation-editor-hint")
+                        }
+                    }
                     Section(String(localized: "Tags")) { tagField }
                     Section(String(localized: "Notes")) {
                         TextField(String(localized: "Description"), text: $description, axis: .vertical)
