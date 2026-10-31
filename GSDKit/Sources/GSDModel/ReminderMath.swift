@@ -7,7 +7,7 @@ import Foundation
 public enum ReminderMath {
     /// The local hour an all-day task is reminded, on its due day (owner decision 6). One constant,
     /// so a change of hour is one line here and the matching one on web and Android.
-    public static let allDayReminderHour = 8
+    public static let allDayReminderHour = 9
 
     /// The slice of `NotificationSettings` that fire-time math needs. Kept separate from
     /// `NotificationSettings` so `ReminderMath` has no type dependency on it (and stays in

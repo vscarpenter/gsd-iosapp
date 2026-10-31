@@ -98,7 +98,7 @@ struct DueTimeCorpusTests {
                                                  withExtension: "json",
                                                  subdirectory: "Fixtures"))
         let corpus = try JSONDecoder().decode(Corpus.self, from: Data(contentsOf: url))
-        #expect(corpus.cases.count == 111)
+        #expect(corpus.cases.count == 117)
         for c in corpus.cases { try check(c) }
     }
 }
