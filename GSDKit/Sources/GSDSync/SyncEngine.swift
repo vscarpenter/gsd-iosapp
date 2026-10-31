@@ -104,11 +104,14 @@ public actor SyncEngine {
             }
             // Upsert when there's no local copy, or the remote is strictly newer (LWW). A same-version
             // remote is the version this device already holds; it is merged only while backfilling.
-            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
+            let ingested = LWW.capped(remoteUpdated, now: now())
+            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: ingested)
             let accepted = local == nil || decision == .takeRemote || (mergeSameVersion && decision == .noOp)
             guard accepted else { continue }
             if local != nil && decision == .takeRemote { conflicts += 1 }   // a real conflict resolved in remote's favor
-            try await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
+            var incoming = TaskWireMapper.toDomain(record, mergingInto: local)
+            incoming.updatedAt = ingested
+            try await tasks.upsert(incoming)
             applied += 1
         }
         return (applied, conflicts, maxApplied)
@@ -150,7 +153,7 @@ public actor SyncEngine {
             }
             // payload-LWW-guard (upserts only): remote strictly newer than what we'd write → drop, let pull win.
             if item.operation != .delete, let payload = item.payload, let remoteUpdated = remote?.clientUpdatedAt,
-               Int(remoteUpdated.timeIntervalSince1970 * 1000) > Int(payload.updatedAt.timeIntervalSince1970 * 1000) {
+               LWW.isRemoteNewer(remoteUpdated, than: payload.updatedAt, now: now()) {
                 try await queue.remove(id: item.id); continue
             }
             do {
@@ -401,9 +404,12 @@ public actor SyncEngine {
                 guard let landing = try? await applyOverTombstone(record, remoteUpdated: remoteUpdated) else { return }
                 if landing != .noTombstone { return }
             }
-            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
+            let ingested = LWW.capped(remoteUpdated, now: now())
+            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: ingested)
             guard local == nil || decision == .takeRemote else { return }
-            try? await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
+            var incoming = TaskWireMapper.toDomain(record, mergingInto: local)
+            incoming.updatedAt = ingested
+            try? await tasks.upsert(incoming)
         case .delete:
             if pending.contains(where: { $0.taskId == record.taskId }) { return }   // queue-aware
             // No live row: the task is archived or trashed here (an archive's own delete echoes
@@ -420,14 +426,12 @@ public actor SyncEngine {
 
     /// A remote copy of a task with no live row here. If the task was archived or trashed on this
     /// device, the archive or delete stands unless the remote edit is strictly newer (web
-    /// `isRemoteNewerThanArchive`, Android `resolveTombstone`). Even then a delete still queued here
-    /// wins, as on the realtime path: bringing the row back would let that delete, then reconcile,
-    /// remove the task and its Trash copy for good.
+    /// `isRemoteNewerThanArchive`, Android `resolveTombstone`), and a far-future stamp never is.
+    /// Even then a delete still queued here wins, as on the realtime path: bringing the row back
+    /// would let that delete, then reconcile, remove the task and its Trash copy for good.
     private func applyOverTombstone(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> TombstoneLanding {
         guard let buriedAt = try await tombstones.tombstoneDate(id: record.taskId) else { return .noTombstone }
-        guard LWW.resolve(localUpdatedAt: buriedAt, remoteClientUpdatedAt: remoteUpdated) == .takeRemote else {
-            return .suppressed
-        }
+        guard LWW.isRemoteNewer(remoteUpdated, than: buriedAt, now: now()) else { return .suppressed }
         let queued = try await queue.all()
         if queued.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return .suppressed }
         try await tombstones.resurrect(TaskWireMapper.toDomain(record, mergingInto: nil))
