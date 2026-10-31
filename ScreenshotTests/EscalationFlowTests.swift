@@ -38,11 +38,17 @@ final class EscalationFlowTests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: taskID).firstMatch
     }
 
-    /// The moved card can land below the fold in a lazy list (iPhone), so scroll until it is in the tree.
+    /// After the move the card can sit outside the viewport (iPhone: the list has scrolled, and a
+    /// card below or above the fold is not in the accessibility tree). Look at the top first,
+    /// then work down in small steps; a default swipe flings straight past it.
     private func scrollTo(_ card: XCUIElement, in app: XCUIApplication) -> Bool {
-        for _ in 0..<4 {
-            if card.waitForExistence(timeout: 2) { return true }
-            app.swipeUp()
+        for _ in 0..<3 {
+            if card.waitForExistence(timeout: 1) { return true }
+            app.swipeDown(velocity: .slow)
+        }
+        for _ in 0..<8 {
+            if card.waitForExistence(timeout: 1) { return true }
+            app.swipeUp(velocity: .slow)
         }
         return card.exists
     }
@@ -59,11 +65,14 @@ final class EscalationFlowTests: XCTestCase {
         XCTAssertTrue(markUrgent.waitForExistence(timeout: 5))
         markUrgent.tap()
 
+        // The Undo toast lasts 6 seconds, and finding a card that has moved off screen can take
+        // longer, so read the toast, tap Undo, and only then scroll. The swipe test checks the
+        // card's new quadrant directly.
         let undo = app.buttons["Undo"].firstMatch
         XCTAssertTrue(undo.waitForExistence(timeout: 8), "Undo never offered")
-        XCTAssertTrue(scrollTo(card, in: app))
-        XCTAssertTrue(card.label.contains("Do First"), card.label)
-        XCTAssertFalse(card.label.contains("Escalating"), "an urgent task must stop escalating")
+        let message = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label BEGINSWITH 'Marked' AND label CONTAINS 'Do First'")).firstMatch
+        XCTAssertTrue(message.exists, "toast should say the task moved to Do First")
 
         undo.tap()
         XCTAssertTrue(scrollTo(card, in: app))

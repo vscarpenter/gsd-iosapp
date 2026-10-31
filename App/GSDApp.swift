@@ -82,6 +82,7 @@ struct GSDApp: App {
             syncQueue: queueRepo
         )
         _store = State(initialValue: store)
+        ReminderActionInbox.attach(store: store)   // reminder Complete / Snooze buttons (B-17)
         // Auth + transport (Phase 5b). Live seams; the pure AuthService logic is unit-tested.
         let tokenStore: any TokenStore = isolated ? SignedOutTokenStore() : KeychainTokenStore()
         let authService = AuthService(
@@ -100,7 +101,8 @@ struct GSDApp: App {
             deviceId: DeviceIdentity.current(nameProvider: { deviceName }).deviceId,
             tokenProvider: { try await authService.validToken() },
             rawToken: { tokenStore.load() },   // health-only: lets an expired session say so
-            history: historyRepo)
+            history: historyRepo,
+            reminders: scheduler)              // reconcile cancels as it removes a task
         _syncEngine = State(initialValue: syncEngine)
         // SyncCoordinator (Phase 5d) owns when sync fires (cadence/foreground/network/debounced push/SSE)
         // and the status surface; SessionStore delegates start/stop to it on sign-in/out.
@@ -213,6 +215,11 @@ struct GSDApp: App {
                         coordinator.enteredForeground()
                         _Concurrency.Task { await store.refreshBadge() }
                         _Concurrency.Task { await shareDrainer.drain() }
+                        // Reminders that fired while the app was closed free slots under the
+                        // 60-reminder cap, and a resync otherwise runs only on task changes.
+                        // Skipped before the first snapshot: the launch emission does that sweep,
+                        // and sweeping an empty snapshot would wipe live reminders.
+                        if store.hasLoadedTasks { reminderResyncer.schedule() }
                     case .background:
                         coordinator.enteredBackground()
                         BackgroundRefresh.schedule()

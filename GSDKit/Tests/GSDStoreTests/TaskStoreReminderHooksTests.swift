@@ -28,8 +28,8 @@ struct TaskStoreReminderHooksTests {
     private func utc() -> Calendar {
         var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone(identifier: "UTC")!; return c
     }
-    private func makeStore(_ rec: RecordingReminderScheduler) throws -> TaskStore {
-        let db = try AppDatabase.inMemory()
+    private func makeStore(_ rec: RecordingReminderScheduler, db: AppDatabase? = nil) throws -> TaskStore {
+        let db = try db ?? AppDatabase.inMemory()
         let fixed = now
         nonisolated(unsafe) var idCount = 0
         return TaskStore(repository: GRDBTaskRepository(db),
@@ -161,6 +161,36 @@ struct TaskStoreReminderHooksTests {
         await store.resyncReminders()
         let expected = (0..<60).map { RecordingReminderScheduler.Call.schedule("c\(String(format: "%02d", $0))") }
         #expect(rec.scheduleCancelCalls == [.cancelAll] + expected)
+    }
+
+    // B-07, foreground half: sync moves the row straight through the repository, so no §9.1 hook runs.
+    // The observer still fires `onTasksChanged`, which the App debounces into this resync.
+    @Test func aTaskSyncAbandonsToTrashNotifiesTheObserverAndLeavesTheResync() async throws {
+        let db = try AppDatabase.inMemory()
+        let rec = RecordingReminderScheduler()
+        let store = try makeStore(rec, db: db)
+        nonisolated(unsafe) var changes = 0
+        store.onTasksChanged = { changes += 1 }
+        store.start()
+        try await GRDBTaskRepository(db).upsert(task("a", due: now.addingTimeInterval(3600)))
+        try await GRDBTaskRepository(db).upsert(task("b", due: now.addingTimeInterval(3600)))
+        var waited = 0
+        while store.tasks.count != 2 && waited < 200 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        let changesBefore = changes
+
+        let moved = try await GRDBTombstoneRepository(db).abandonToTrash(id: "a", at: now)
+        waited = 0
+        while store.tasks.count != 1 && waited < 200 {
+            try await _Concurrency.Task.sleep(for: .milliseconds(10)); waited += 1
+        }
+        rec.calls = []
+        await store.resyncReminders()
+
+        #expect(moved)
+        #expect(changes > changesBefore)
+        #expect(rec.scheduleCancelCalls == [.cancelAll, .schedule("b")])
     }
 
     @Test func archiveCancelsReminder() async throws {

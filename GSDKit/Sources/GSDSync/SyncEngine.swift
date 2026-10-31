@@ -19,6 +19,11 @@ public struct SyncResult: Equatable, Sendable {
 /// items — a background loop must not hammer a persistently-rejecting server.
 public enum SyncTrigger: Sendable { case launch, signIn, manual, foreground, periodic, networkRegained, mutation, background }
 
+/// The account a run started for signed out, or another signed in, before a write (B-14, web #538,
+/// Android `StaleSyncSession`). The run stops where it is: nothing pulled lands, nothing is deleted,
+/// no retry is spent, and the cursor stays where the sign-out left it.
+struct StaleSyncSession: Error {}
+
 /// The server confirmed a session, but for a different account than the token's owner claim.
 struct SyncIdentityMismatch: Error {}
 
@@ -26,6 +31,7 @@ struct SyncIdentityMismatch: Error {}
 private struct NoTombstones: TombstoneRepository {
     func tombstoneDate(id: String) async throws -> Date? { nil }
     func resurrect(_ task: Task) async throws {}
+    func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool { false }
 }
 
 /// Bidirectional active-task sync (§7.4–7.5). Writes pulled tasks DIRECTLY via the repository
@@ -40,32 +46,36 @@ public actor SyncEngine {
     private let deviceId: String
     private let tokenProvider: @Sendable () async throws -> String?
     private let rawToken: @Sendable () -> String?
+    private let fenced: Bool
     private let now: @Sendable () -> Date
     private let throttleMs: Int
     private let history: any SyncHistoryRepository
+    private let reminders: any ReminderScheduling
     private var isSyncing = false
     private var isErasing = false      // §3.4: suppresses pull during a destructive erase/replace drain (Group D)
 
-    /// `rawToken` reads the STORED token without validation/refresh — only `health()` uses it, so
-    /// an expired-but-present session can still be reported as "session expired" (the validating
-    /// `tokenProvider` throws in that state and carries no expiry). `tombstones` is the archive and
-    /// trash, so pull and realtime don't bring back a task archived or trashed here (parity S9).
+    /// `rawToken` reads the STORED token without validation/refresh. `health()` uses it so an
+    /// expired-but-present session can still be reported as "session expired" (the validating
+    /// `tokenProvider` throws in that state and carries no expiry), and the session fence uses it
+    /// because it never touches the network. `tombstones` is the archive and trash, so pull and
+    /// realtime don't bring back a task archived or trashed here (parity S9). `reminders` lets
+    /// reconcile cancel as it removes a task. `rawToken` is required here so the fence can't be left out.
     public init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
                 tombstones: any TombstoneRepository,
                 cursor: SyncCursor, deviceId: String,
                 tokenProvider: @escaping @Sendable () async throws -> String?,
-                rawToken: @escaping @Sendable () -> String? = { nil },
+                rawToken: @escaping @Sendable () -> String?,
                 now: @escaping @Sendable () -> Date = { Date() },
                 throttleMs: Int = 100,
-                history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
-        self.client = client; self.tasks = tasks; self.queue = queue; self.tombstones = tombstones
-        self.cursor = cursor
-        self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.rawToken = rawToken
-        self.now = now; self.throttleMs = throttleMs; self.history = history
+                history: any SyncHistoryRepository = NoopSyncHistoryRepository(),
+                reminders: any ReminderScheduling = NoopReminderScheduler()) {
+        self.init(client: client, tasks: tasks, queue: queue, tombstones: tombstones, cursor: cursor,
+                  deviceId: deviceId, tokenProvider: tokenProvider, rawToken: rawToken, fenced: true,
+                  now: now, throttleMs: throttleMs, history: history, reminders: reminders)
     }
 
-    /// Test seam for the many engine tests that never archive or trash a task. Internal, so the
-    /// App can't reach it and must pass real tombstones to the public initializer.
+    /// Test seam for the many engine tests that never archive or trash a task or end a session.
+    /// Internal, so the App can't reach it and must pass real tombstones and a real token read.
     init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
          cursor: SyncCursor, deviceId: String,
          tokenProvider: @escaping @Sendable () async throws -> String?,
@@ -73,9 +83,34 @@ public actor SyncEngine {
          now: @escaping @Sendable () -> Date = { Date() },
          throttleMs: Int = 100,
          history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
-        self.init(client: client, tasks: tasks, queue: queue, tombstones: NoTombstones(),
-                  cursor: cursor, deviceId: deviceId, tokenProvider: tokenProvider, rawToken: rawToken,
-                  now: now, throttleMs: throttleMs, history: history)
+        self.init(client: client, tasks: tasks, queue: queue, tombstones: NoTombstones(), cursor: cursor,
+                  deviceId: deviceId, tokenProvider: tokenProvider, rawToken: rawToken, fenced: false,
+                  now: now, throttleMs: throttleMs, history: history, reminders: NoopReminderScheduler())
+    }
+
+    private init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
+                 tombstones: any TombstoneRepository, cursor: SyncCursor, deviceId: String,
+                 tokenProvider: @escaping @Sendable () async throws -> String?,
+                 rawToken: @escaping @Sendable () -> String?, fenced: Bool,
+                 now: @escaping @Sendable () -> Date, throttleMs: Int,
+                 history: any SyncHistoryRepository, reminders: any ReminderScheduling) {
+        self.client = client; self.tasks = tasks; self.queue = queue; self.tombstones = tombstones
+        self.cursor = cursor
+        self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.rawToken = rawToken
+        self.fenced = fenced
+        self.now = now; self.throttleMs = throttleMs; self.history = history; self.reminders = reminders
+    }
+
+    // MARK: Session fence (B-14)
+
+    private func sessionOwner() -> String? { rawToken().flatMap { JWT.userId($0) } }
+
+    /// Call just before each write, with no suspension between. The session lives in the token store,
+    /// not the database, so a sign-out can still land during the write itself, and that one write
+    /// goes through. A nil `owner` is a test calling a phase directly, with no run to fence.
+    private func fence(_ owner: String?) throws {
+        guard fenced, let owner, sessionOwner() != owner else { return }
+        throw StaleSyncSession()
     }
 
     private static let epoch = "1970-01-01 00:00:00.000Z"
@@ -84,7 +119,7 @@ public actor SyncEngine {
     /// mapper merge. `mergeSameVersion` also applies records at the local row's own version: the
     /// one full pull after a contract bump (`SyncCursor.contractVersion`), when the local copy may
     /// lack a field an older build never read. Returns the applied count + the max `updated` seen.
-    func pull(token: String, since: String, mergeSameVersion: Bool = false) async throws -> (applied: Int, conflicts: Int, maxApplied: Date?) {
+    func pull(token: String, since: String, mergeSameVersion: Bool = false, owner: String? = nil) async throws -> (applied: Int, conflicts: Int, maxApplied: Date?) {
         if isErasing { return (0, 0, nil) }       // §3.4 pull-suppression gate (set during a destructive drain)
         let records = try await client.listTasks(updatedSince: since, token: token)
         var applied = 0
@@ -92,6 +127,7 @@ public actor SyncEngine {
         var maxApplied: Date?
         for record in records {
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { continue }
+            if try await hasQueuedWriteHoldingOff(record, remoteUpdated: remoteUpdated) { continue }
             // Cursor advances on SERVER stamps (Fix B); LWW below stays on client stamps.
             // Records with an unparseable `updated` apply but don't advance the cursor.
             if let serverUpdated = WireDate.parse(record.updated) {
@@ -99,7 +135,7 @@ public actor SyncEngine {
             }
             let local = try await tasks.fetch(id: record.taskId)
             if local == nil {
-                switch try await applyOverTombstone(record, remoteUpdated: remoteUpdated) {
+                switch try await applyOverTombstone(record, remoteUpdated: remoteUpdated, owner: owner) {
                 case .noTombstone: break
                 case .suppressed: continue
                 case .resurrected: applied += 1; continue
@@ -107,21 +143,39 @@ public actor SyncEngine {
             }
             // Upsert when there's no local copy, or the remote is strictly newer (LWW). A same-version
             // remote is the version this device already holds; it is merged only while backfilling.
-            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
+            let ingested = LWW.capped(remoteUpdated, now: now())
+            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: ingested)
             let accepted = local == nil || decision == .takeRemote || (mergeSameVersion && decision == .noOp)
             guard accepted else { continue }
             if local != nil && decision == .takeRemote { conflicts += 1 }   // a real conflict resolved in remote's favor
-            try await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
+            var incoming = TaskWireMapper.toDomain(record, mergingInto: local)
+            incoming.updatedAt = ingested
+            try fence(owner)
+            try await tasks.upsert(incoming)
             applied += 1
         }
         return (applied, conflicts, maxApplied)
     }
 
+    /// A far-future stamp must not overwrite a row whose edit is still queued (S-AND-02). The web
+    /// never faces this because it pushes before it pulls, so the edit has already healed the record.
+    /// This engine pulls first, so it leaves the row for the push, and a failed row counts too: a later
+    /// retry pushes it. A stamp inside the window follows the normal rules.
+    private func hasQueuedWriteHoldingOff(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> Bool {
+        guard LWW.isPastCeiling(remoteUpdated, now: now()) else { return false }
+        return try await queue.all().contains { isQueuedWrite($0, for: record) }
+    }
+
+    private func isQueuedWrite(_ item: SyncQueueItem, for record: PocketBaseTaskRecord) -> Bool {
+        item.taskId == record.taskId && item.operation != .delete
+    }
+
     /// First-sign-in data-wipe guard (§7.4/§7.5): enqueue every existing local active task as a push
     /// BEFORE any pull/reconcile, so pre-sign-in tasks are both uploaded and protected (they're then
     /// "in the queue" → deletion-reconcile skips them). Called by `sync()` only when the cursor is unset.
-    func seedExistingTasks() async throws {
+    func seedExistingTasks(owner: String? = nil) async throws {
         for task in try await tasks.fetchAll() {
+            try fence(owner)
             try await queue.enqueue(SyncQueueItem(
                 id: UUID().uuidString, taskId: task.id, operation: .update,
                 timestamp: Int(now().timeIntervalSince1970 * 1000), payload: task))
@@ -136,13 +190,15 @@ public actor SyncEngine {
     }
 
     /// Drain the pending queue → remote (§7.5). Payload-LWW-guard (skip+drop a stale upsert iff remote
-    /// `client_updated_at` > the payload's `updatedAt`); create(no recordId)/update(by recordId)/delete;
+    /// `client_updated_at` > the payload's `updatedAt`); stale-delete guard (`isStaleDelete`);
+    /// create(no recordId)/update(by recordId)/delete;
     /// ~throttle; 429 aborts the loop; across-sync retry (5/10/30/60/300 s) → `failed` after 5 (kept).
     func push(token: String, owner: String) async throws -> (pushed: Int, failed: Int) {
         var index = try await client.remoteIndex(token: token)
         let nowMs = Int(now().timeIntervalSince1970 * 1000)
         var pushed = 0, failed = 0
         for item in try await queue.pending() where isDue(item, nowMs: nowMs) {
+            try fence(owner)   // outside the item's `do`: a session that ended must not spend this item's retries
             let remote = index[item.taskId]
             // Parity S11 (Android `MalformedRemoteVersion`): a remote copy whose version is missing or
             // unparseable can't be shown to be older, so an upsert must not overwrite it. Skip it and
@@ -153,7 +209,11 @@ public actor SyncEngine {
             }
             // payload-LWW-guard (upserts only): remote strictly newer than what we'd write → drop, let pull win.
             if item.operation != .delete, let payload = item.payload, let remoteUpdated = remote?.clientUpdatedAt,
-               Int(remoteUpdated.timeIntervalSince1970 * 1000) > Int(payload.updatedAt.timeIntervalSince1970 * 1000) {
+               LWW.isRemoteNewer(remoteUpdated, than: payload.updatedAt, now: now()) {
+                try await queue.remove(id: item.id); continue
+            }
+            // Resolved, not retried: the newer remote edit stays, and the next pull delivers it.
+            if item.operation == .delete, isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt) {
                 try await queue.remove(id: item.id); continue
             }
             do {
@@ -185,6 +245,19 @@ public actor SyncEngine {
         return (pushed, failed)
     }
 
+    /// A delete is stale when the remote changed after it was queued (B-42). An archive's delete also
+    /// carries the task as archived, and is stale when the remote is newer than that version (B-47):
+    /// archiving a stale copy must not delete the newer task. Web `isStaleDelete`, Android
+    /// `remoteEditedAfterQueued` and `remoteEditedAfterArchive`. A remote with no usable version
+    /// keeps the plain delete, which is today's behavior while owner decision D-9 is open.
+    private func isStaleDelete(_ item: SyncQueueItem, remoteUpdated: Date?) -> Bool {
+        guard let remoteUpdated else { return false }
+        let queuedAt = Date(timeIntervalSince1970: Double(item.timestamp) / 1000)
+        if LWW.isRemoteNewer(remoteUpdated, than: queuedAt, now: now()) { return true }
+        guard let archived = item.payload else { return false }
+        return LWW.isRemoteNewer(remoteUpdated, than: archived.updatedAt, now: now())
+    }
+
     /// Spend one retry on `item`: kept `.pending` for the next due sync, `.failed` after 5 (kept).
     private func recordFailedAttempt(_ item: SyncQueueItem, reason: String, nowMs: Int) async throws {
         var f = item; f.retryCount += 1; f.lastAttemptAt = nowMs; f.lastError = String(reason.prefix(200))
@@ -192,31 +265,48 @@ public actor SyncEngine {
         try await queue.update(f)
     }
 
-    /// §7.4 step 5 (destructive — runs LAST, over a FRESH post-push remote index): delete local
-    /// ACTIVE tasks absent remotely AND not in the queue. `fetchAll()` is the active table only
-    /// (archived is a separate repo, out of scope). `allTaskIds()` = pending + failed (both
-    /// protect) and is read AFTER `fetchAll` — TaskStore enqueues before it upserts, so any task
-    /// in the snapshot already has its protection visible to this later read (Fix E). The index
-    /// fails closed (parity S10): an incomplete or unidentifiable listing throws before anything
-    /// is deleted, instead of reading a record it couldn't decode as deleted on the server.
+    /// §7.4 step 5 (destructive — runs LAST, over a FRESH post-push remote index). Three verdicts
+    /// for a local ACTIVE task the server no longer lists (B-07; web `classifyRemoteDeletion`,
+    /// Android `reconcileDeletions`): a pending row PROTECTS it, because a push will still try;
+    /// only failed rows ABANDON it to Trash, because its content never reached the server; no
+    /// rows APPLY the remote delete locally. `fetchAll()` is the active table only. The queue is
+    /// read AFTER `fetchAll`: TaskStore enqueues before it upserts, so any task in the snapshot
+    /// already has its protection visible to this later read (Fix E). The index fails closed
+    /// (parity S10): an incomplete or unidentifiable listing throws before anything is deleted,
+    /// instead of reading a record it couldn't decode as deleted on the server.
     func reconcileDeletions(token: String, owner: String) async throws -> Int {
         let remoteIds = Set(try await client.remoteIndex(token: token).keys)
         let snapshot = try await tasks.fetchAll()
-        let queuedIds = try await queue.allTaskIds()
-        let absent = snapshot.filter { !remoteIds.contains($0.id) && !queuedIds.contains($0.id) }
-        if absent.isEmpty { return 0 }
+        let rows = try await queue.all()
+        let queuedIds = Set(rows.map(\.taskId))
+        let pendingIds = Set(rows.filter { $0.status == .pending }.map(\.taskId))
+        let unprotected = snapshot.filter { !remoteIds.contains($0.id) && !pendingIds.contains($0.id) }
+        if unprotected.isEmpty { return 0 }
         // The list rule filters rows, so a token the server rejects lists as 200 with zero items, just
         // like an empty account. Only auth-refresh tells them apart. Any failure throws before a delete.
         // The fresh token it returns is not kept. Android `confirmIdentity`.
         guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
-        for task in absent { try await tasks.delete(id: task.id) }
-        return absent.count
+        var deleted = 0
+        for task in unprotected {
+            try fence(owner)
+            if queuedIds.contains(task.id) {
+                guard try await tombstones.abandonToTrash(id: task.id, at: now()) else { continue }
+            } else {
+                try await tasks.delete(id: task.id)
+            }
+            // Cancel here, not in the app's debounced resync: a background refresh can end before
+            // that runs, and the OS fires a pending reminder while the app is suspended.
+            await reminders.cancel(taskID: task.id)
+            deleted += 1
+        }
+        return deleted
     }
 
     /// Reset every `.failed` queue item to `.pending` (fresh retry budget) so the next push drains
     /// it. Without this, `.failed` is a terminal state and the affected edits never leave the device.
-    func requeueFailed() async throws {
+    func requeueFailed(owner: String? = nil) async throws {
         for item in try await queue.all() where item.status == .failed {
+            try fence(owner)
             var revived = item
             revived.status = .pending; revived.retryCount = 0
             revived.lastAttemptAt = nil; revived.failedAt = nil
@@ -253,7 +343,7 @@ public actor SyncEngine {
         }
         let start = now()
         do {
-            if cursor.load() == nil { try await seedExistingTasks() }      // first-sync seed BEFORE pull/reconcile
+            if cursor.load() == nil { try await seedExistingTasks(owner: owner) }      // first-sync seed BEFORE pull/reconcile
             // Revive `.failed` items so the push loop drains them again. Done on any user-app-open
             // event (manual Sync Now, cold launch, return-to-foreground) and when the network
             // returns — but NOT on the in-session `.periodic` timer or `.mutation`, which would
@@ -261,7 +351,7 @@ public actor SyncEngine {
             // explicit/contextual user action, not a background loop; a poison item stays `.failed`
             // (kept, never dropped) and re-surfaces in the sync-health warning between attempts.
             switch trigger {
-            case .manual, .networkRegained, .launch, .foreground: try await requeueFailed()
+            case .manual, .networkRegained, .launch, .foreground: try await requeueFailed(owner: owner)
             case .signIn, .periodic, .mutation, .background: break
             }
             // An older build's cursor sits past records it stored without a field this build reads,
@@ -269,14 +359,18 @@ public actor SyncEngine {
             // cursor is set, so nothing re-pushes those rows with the field still empty.
             let backfill = cursor.needsBackfill()
             let since = backfill ? Self.epoch : (cursor.load() ?? Self.epoch)
-            let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since, mergeSameVersion: backfill)
+            let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since, mergeSameVersion: backfill, owner: owner)
+            try fence(owner)
             if backfill { cursor.markBackfilled() }
             result.pulled = pulled
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
             result.deleted = try await reconcileDeletions(token: token, owner: owner)    // destructive — last
+            try fence(owner)                                               // sign-out cleared the cursor; keep it clear
             cursor.advance(maxApplied: maxApplied)
             await record(trigger: trigger, result: result, conflicts: conflicts, start: start)
+        } catch is StaleSyncSession {
+            result.notSignedIn = true   // the session ended, so there's no sync outcome to report or record
         } catch {
             result.error = String("\(error)".prefix(200))
             await record(trigger: trigger, result: result, conflicts: 0, start: start)
@@ -314,6 +408,8 @@ public actor SyncEngine {
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
             await record(trigger: trigger, result: result, conflicts: 0, start: start)
+        } catch is StaleSyncSession {
+            result.notSignedIn = true   // see sync()
         } catch {
             result.error = String("\(error)".prefix(200))
             await record(trigger: trigger, result: result, conflicts: 0, start: start)
@@ -388,6 +484,10 @@ public actor SyncEngine {
         guard let data = rawData.data(using: .utf8),
               let event = try? JSONDecoder().decode(RealtimeEvent.self, from: data),
               let record = event.record else { return }
+        // A late event from a session that already ended writes nothing. Checked again before each
+        // write, because the awaits below can outlast a sign-out.
+        let sessionAtStart = sessionOwner()
+        if fenced && sessionAtStart == nil { return }
         if !record.owner.isEmpty {
             guard let token = try? await tokenProvider(),
                   let owner = JWT.userId(token),
@@ -401,21 +501,27 @@ public actor SyncEngine {
             // Don't resurrect a task the user just deleted locally (its .delete is queued, not yet pushed).
             if pending.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return }
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { return }
+            if LWW.isPastCeiling(remoteUpdated, now: now()), pending.contains(where: { isQueuedWrite($0, for: record) }) { return }
             let local = try? await tasks.fetch(id: record.taskId)
             if local == nil {
                 // A failed archive or trash read skips the event (fail closed); the next pull retries.
-                guard let landing = try? await applyOverTombstone(record, remoteUpdated: remoteUpdated) else { return }
+                guard let landing = try? await applyOverTombstone(record, remoteUpdated: remoteUpdated, owner: sessionAtStart) else { return }
                 if landing != .noTombstone { return }
             }
-            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: remoteUpdated)
+            let ingested = LWW.capped(remoteUpdated, now: now())
+            let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: ingested)
             guard local == nil || decision == .takeRemote else { return }
-            try? await tasks.upsert(TaskWireMapper.toDomain(record, mergingInto: local))
+            var incoming = TaskWireMapper.toDomain(record, mergingInto: local)
+            incoming.updatedAt = ingested
+            guard (try? fence(sessionAtStart)) != nil else { return }
+            try? await tasks.upsert(incoming)
         case .delete:
             if pending.contains(where: { $0.taskId == record.taskId }) { return }   // queue-aware
             // No live row: the task is archived or trashed here (an archive's own delete echoes
             // back), or already gone. Deleting anyway would still scrub its id from other tasks'
             // dependencies and restamp them with nothing queued, so they'd drift from the server.
             guard (try? await tasks.fetch(id: record.taskId)) != nil else { return }
+            guard (try? fence(sessionAtStart)) != nil else { return }
             try? await tasks.delete(id: record.taskId)
         }
     }
@@ -426,16 +532,19 @@ public actor SyncEngine {
 
     /// A remote copy of a task with no live row here. If the task was archived or trashed on this
     /// device, the archive or delete stands unless the remote edit is strictly newer (web
-    /// `isRemoteNewerThanArchive`, Android `resolveTombstone`). Even then a delete still queued here
-    /// wins, as on the realtime path: bringing the row back would let that delete, then reconcile,
-    /// remove the task and its Trash copy for good.
-    private func applyOverTombstone(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> TombstoneLanding {
+    /// `isRemoteNewerThanArchive`, Android `resolveTombstone`), and a far-future stamp never is.
+    /// A queued delete that push will still send wins even then: bringing the row back would let
+    /// that delete, then reconcile, remove the task and its copy here for good. A stale one doesn't.
+    /// Push drops it, so suppressing this record would strand the task here once the cursor moves on.
+    private func applyOverTombstone(_ record: PocketBaseTaskRecord, remoteUpdated: Date, owner: String?) async throws -> TombstoneLanding {
         guard let buriedAt = try await tombstones.tombstoneDate(id: record.taskId) else { return .noTombstone }
-        guard LWW.resolve(localUpdatedAt: buriedAt, remoteClientUpdatedAt: remoteUpdated) == .takeRemote else {
-            return .suppressed
-        }
+        guard LWW.isRemoteNewer(remoteUpdated, than: buriedAt, now: now()) else { return .suppressed }
         let queued = try await queue.all()
-        if queued.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return .suppressed }
+        let deleteWillLand = queued.contains {
+            $0.taskId == record.taskId && $0.operation == .delete && !isStaleDelete($0, remoteUpdated: remoteUpdated)
+        }
+        if deleteWillLand { return .suppressed }
+        try fence(owner)
         try await tombstones.resurrect(TaskWireMapper.toDomain(record, mergingInto: nil))
         return .resurrected
     }

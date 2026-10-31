@@ -1,6 +1,7 @@
 import UIKit
 import UserNotifications
 import GSDSnapshot
+import GSDStore
 
 /// Routes a tapped reminder to its task. Reminders are scheduled with the task id in
 /// `userInfo["taskID"]` (`LiveReminderScheduler`), but nothing consumed it: with no
@@ -19,6 +20,7 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().setNotificationCategories([Self.reminderCategory])
         return true
     }
 
@@ -27,11 +29,35 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        defer { completionHandler() }
-        // Only a tap (default action) opens the task — a swipe-away dismiss must not navigate.
-        guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
-              let taskID = response.notification.request.content.userInfo["taskID"] as? String
-        else { return }
-        DeepLinkHandoff.open(.task(taskID))
+        guard let taskID = response.notification.request.content.userInfo["taskID"] as? String else {
+            completionHandler()
+            return
+        }
+        switch response.actionIdentifier {
+        case ReminderAction.completeID, ReminderAction.snoozeID:
+            // The system keeps a background launch alive until this handler is called, so hold it
+            // until the store write lands.
+            ReminderActionInbox.deliver(action: response.actionIdentifier, taskID: taskID, done: completionHandler)
+        case UNNotificationDefaultActionIdentifier:
+            // Only a tap opens the task. A swipe-away dismiss must not navigate.
+            DeepLinkHandoff.open(.task(taskID))
+            completionHandler()
+        default:
+            completionHandler()
+        }
+    }
+
+    /// The buttons under a reminder: Complete and Snooze 1 hour (B-17). No `.foreground`, so
+    /// neither opens the app; both act in place through `ReminderActionInbox`.
+    private static var reminderCategory: UNNotificationCategory {
+        UNNotificationCategory(
+            identifier: ReminderAction.categoryID,
+            actions: [
+                UNNotificationAction(identifier: ReminderAction.completeID,
+                                     title: String(localized: "Complete"), options: []),
+                UNNotificationAction(identifier: ReminderAction.snoozeID,
+                                     title: String(localized: "Snooze 1 hour"), options: []),
+            ],
+            intentIdentifiers: [])
     }
 }

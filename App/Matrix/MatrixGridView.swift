@@ -86,6 +86,9 @@ private struct MatrixGridContent: View {
                     .onAppear { consumeQuadrantFocus(proxy) }
                 }
             }
+            .overlay {
+                if !store.hasLoadedTasks { MatrixGridSkeleton() }
+            }
         }
         .background(Surface.paper)
         .navigationTitle("Matrix")

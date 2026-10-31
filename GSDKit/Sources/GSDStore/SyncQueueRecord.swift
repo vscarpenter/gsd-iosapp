@@ -2,7 +2,7 @@ import Foundation
 import GRDB
 import GSDModel
 
-/// GRDB row for a `SyncQueueItem` (§7.5). `payload` is the JSON-encoded `Task` (nil for delete),
+/// GRDB row for a `SyncQueueItem` (§7.5). `payload` is the JSON-encoded `Task` (nil for most deletes),
 /// stored as a nullable JSON string via `GSDJSON` (matching the embedded-collection convention in
 /// `TaskRecord`). `operation`/`status` persist as their raw strings.
 struct SyncQueueRecord: Codable, FetchableRecord, PersistableRecord {
@@ -13,7 +13,7 @@ struct SyncQueueRecord: Codable, FetchableRecord, PersistableRecord {
     var operation: String
     var timestamp: Int
     var retryCount: Int
-    var payload: String?          // JSON-encoded Task, or NULL for delete
+    var payload: String?          // JSON-encoded Task, or NULL for a delete that isn't an archive
     var status: String
     var lastError: String?
     var lastAttemptAt: Int?
