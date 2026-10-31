@@ -51,6 +51,7 @@ final class LiveReminderScheduler: ReminderScheduling, @unchecked Sendable {
         if !task.description.isEmpty { content.body = task.description }
         content.sound = settings.soundEnabled ? .default : nil
         content.userInfo = ["taskID": task.id]
+        content.categoryIdentifier = ReminderAction.categoryID
 
         let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: deferred)
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
