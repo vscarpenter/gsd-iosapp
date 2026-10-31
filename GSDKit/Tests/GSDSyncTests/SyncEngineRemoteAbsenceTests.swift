@@ -37,7 +37,17 @@ struct SyncEngineRemoteAbsenceTests {
     private static let jwt = "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InUxIiwiZXhwIjo5OTk5OTk5OTk5fQ.x"
     private static let now = Date(timeIntervalSince1970: 2_000_000_000)
 
-    private func engine(_ db: AppDatabase, _ exec: Executor = Executor()) -> SyncEngine {
+    final class RecordingReminders: ReminderScheduling, @unchecked Sendable {
+        private(set) var cancelled: [String] = []
+        func schedule(_ task: Task) async {}
+        func cancel(taskID: String) async { cancelled.append(taskID) }
+        func cancelAll() async {}
+        func requestAuthorizationIfNeeded() async -> Bool { true }
+        func setBadge(_ count: Int) async {}
+    }
+
+    private func engine(_ db: AppDatabase, _ exec: Executor = Executor(),
+                        reminders: any ReminderScheduling = NoopReminderScheduler()) -> SyncEngine {
         let defaults = UserDefaults(suiteName: "t.\(UUID().uuidString)")!
         let cursor = SyncCursor(defaults: defaults)
         cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000))   // not a first sync, so no seed
@@ -45,7 +55,7 @@ struct SyncEngineRemoteAbsenceTests {
                           tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
                           tombstones: GRDBTombstoneRepository(db), cursor: cursor,
                           deviceId: "dev-A", tokenProvider: { Self.jwt },
-                          now: { Self.now }, throttleMs: 0)
+                          now: { Self.now }, throttleMs: 0, reminders: reminders)
     }
     private func task(_ id: String = "a") -> Task {
         Task(id: id, title: id, urgent: false, important: false,
@@ -137,6 +147,52 @@ struct SyncEngineRemoteAbsenceTests {
         #expect(result.pushed == 1)
         #expect(exec.writes == ["POST"])
         #expect(try await GRDBTrashRepository(db).fetchAll().isEmpty)
+    }
+
+    // MARK: Reminders
+
+    // A background refresh can end before the app's debounced reminder resync runs, and the OS fires
+    // a pending reminder with the app suspended, so reconcile cancels as it removes the task.
+    @Test func abandoningATaskCancelsItsReminder() async throws {
+        let db = try AppDatabase.inMemory(); let reminders = RecordingReminders()
+        try await GRDBTaskRepository(db).upsert(task())
+        try await GRDBSyncQueueRepository(db).enqueue(failedRow())
+        _ = try await engine(db, reminders: reminders).reconcileDeletions(token: Self.jwt, owner: "u1")
+        #expect(reminders.cancelled == ["a"])
+    }
+
+    @Test func aRemoteDeleteCancelsTheReminder() async throws {
+        let db = try AppDatabase.inMemory(); let reminders = RecordingReminders()
+        try await GRDBTaskRepository(db).upsert(task())
+        _ = try await engine(db, reminders: reminders).reconcileDeletions(token: Self.jwt, owner: "u1")
+        #expect(reminders.cancelled == ["a"])
+    }
+
+    @Test func aBackgroundSyncCancelsTheReminderBeforeItReturns() async throws {
+        let db = try AppDatabase.inMemory(); let reminders = RecordingReminders()
+        try await GRDBTaskRepository(db).upsert(task())
+        try await GRDBSyncQueueRepository(db).enqueue(failedRow())
+        let result = await engine(db, reminders: reminders).sync(trigger: .background)
+        #expect(result.deleted == 1)
+        #expect(reminders.cancelled == ["a"])
+    }
+
+    @Test func aProtectedTaskKeepsItsReminder() async throws {
+        let db = try AppDatabase.inMemory(); let reminders = RecordingReminders()
+        try await GRDBTaskRepository(db).upsert(task())
+        try await GRDBSyncQueueRepository(db).enqueue(pendingRow())
+        _ = try await engine(db, reminders: reminders).reconcileDeletions(token: Self.jwt, owner: "u1")
+        #expect(reminders.cancelled.isEmpty)
+    }
+
+    @Test func aRejectedSessionKeepsEveryReminder() async throws {
+        let db = try AppDatabase.inMemory(); let reminders = RecordingReminders()
+        try await seedOneOfEachDestructiveVerdict(db)
+        let exec = Executor(); exec.identityStatus = 401
+        await #expect(throws: (any Error).self) {
+            _ = try await engine(db, exec, reminders: reminders).reconcileDeletions(token: Self.jwt, owner: "u1")
+        }
+        #expect(reminders.cancelled.isEmpty)
     }
 
     // MARK: Identity (Android `confirmIdentity`)

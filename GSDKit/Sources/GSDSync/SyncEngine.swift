@@ -44,6 +44,7 @@ public actor SyncEngine {
     private let now: @Sendable () -> Date
     private let throttleMs: Int
     private let history: any SyncHistoryRepository
+    private let reminders: any ReminderScheduling
     private var isSyncing = false
     private var isErasing = false      // §3.4: suppresses pull during a destructive erase/replace drain (Group D)
 
@@ -58,11 +59,12 @@ public actor SyncEngine {
                 rawToken: @escaping @Sendable () -> String? = { nil },
                 now: @escaping @Sendable () -> Date = { Date() },
                 throttleMs: Int = 100,
-                history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
+                history: any SyncHistoryRepository = NoopSyncHistoryRepository(),
+                reminders: any ReminderScheduling = NoopReminderScheduler()) {
         self.client = client; self.tasks = tasks; self.queue = queue; self.tombstones = tombstones
         self.cursor = cursor
         self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.rawToken = rawToken
-        self.now = now; self.throttleMs = throttleMs; self.history = history
+        self.now = now; self.throttleMs = throttleMs; self.history = history; self.reminders = reminders
     }
 
     /// Test seam for the many engine tests that never archive or trash a task. Internal, so the
@@ -220,10 +222,14 @@ public actor SyncEngine {
         var deleted = 0
         for task in unprotected {
             if queuedIds.contains(task.id) {
-                if try await tombstones.abandonToTrash(id: task.id, at: now()) { deleted += 1 }
+                guard try await tombstones.abandonToTrash(id: task.id, at: now()) else { continue }
             } else {
-                try await tasks.delete(id: task.id); deleted += 1
+                try await tasks.delete(id: task.id)
             }
+            // Cancel here, not in the app's debounced resync: a background refresh can end before
+            // that runs, and the OS fires a pending reminder while the app is suspended.
+            await reminders.cancel(taskID: task.id)
+            deleted += 1
         }
         return deleted
     }
