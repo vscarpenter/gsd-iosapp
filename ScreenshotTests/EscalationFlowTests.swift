@@ -24,6 +24,12 @@ final class EscalationFlowTests: XCTestCase {
         }
     }
 
+    /// An editor sheet left open by one walk made the next iPad launch miss its menus, so end
+    /// each walk with the app closed.
+    override func tearDown() async throws {
+        XCUIApplication().terminate()
+    }
+
     private func launch(windowDays: Int) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--demo-seed", "--demo-clock", "1789146000",
@@ -112,9 +118,8 @@ final class EscalationFlowTests: XCTestCase {
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
             .waitForExistence(timeout: 5))
-        let hint = app.descendants(matching: .any).matching(identifier: "escalation-editor-hint").firstMatch
+        let hint = app.staticTexts["Moves to Do First"].firstMatch
         XCTAssertTrue(hint.waitForExistence(timeout: 5), "escalating task should show the hint")
-        XCTAssertTrue(hint.label.contains("Moves to Do First"), hint.label)
 
         // Moving the draft to Do First (urgent) stops it escalating, so the hint goes.
         app.buttons["Do First"].firstMatch.tap()
@@ -128,7 +133,6 @@ final class EscalationFlowTests: XCTestCase {
         card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
         XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
             .waitForExistence(timeout: 5))
-        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "escalation-editor-hint").firstMatch
-            .waitForExistence(timeout: 2))
+        XCTAssertFalse(app.staticTexts["Moves to Do First"].firstMatch.waitForExistence(timeout: 2))
     }
 }
