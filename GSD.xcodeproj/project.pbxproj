@@ -50,6 +50,7 @@
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
 		608EC64CFB5500B4EACD3467 /* TaskListSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA709F7D76DD1A4951BD326 /* TaskListSkeleton.swift */; };
 		65F938AD7F2AD90B26C4E67A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AE084189B67CD4EE1370674E /* PrivacyInfo.xcprivacy */; };
+		6A4AD5FB25EE433098CB7293 /* MatrixSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E964818A1E1646D86A6966 /* MatrixSkeleton.swift */; };
 		6CAFA93976207C55ECB637C0 /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4667A49C453FFA30BFAF349B /* FeedbackView.swift */; };
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
 		753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
@@ -228,6 +229,7 @@
 		AB571C8749323E0E3C429823 /* RefreshBaseline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefreshBaseline.swift; sourceTree = "<group>"; };
 		ABCFD2CB1A7F53B54E6E1725 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AE084189B67CD4EE1370674E /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B4E964818A1E1646D86A6966 /* MatrixSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixSkeleton.swift; sourceTree = "<group>"; };
 		B64E529DD477AC5E05C0EB91 /* TaskEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskEditorView.swift; sourceTree = "<group>"; };
 		B6988BDFABF5E325C967D8EA /* TaskCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskCardView.swift; sourceTree = "<group>"; };
 		B93691C9CC9D87C7E8FEB5B8 /* SavedEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SavedEditorView.swift; sourceTree = "<group>"; };
@@ -635,6 +637,7 @@
 				30A03169462530BB59EC808C /* CaptureBar.swift */,
 				3552A0A16FD0BB873EEFE999 /* EscalationSupport.swift */,
 				BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */,
+				B4E964818A1E1646D86A6966 /* MatrixSkeleton.swift */,
 				BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */,
 				58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */,
 				6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */,
@@ -876,6 +879,7 @@
 				34A8E574358FAB0570162302 /* LiveReminderScheduler.swift in Sources */,
 				83388C6EE74A09C1F6C7AC1E /* LiveWebAuthPresenter.swift in Sources */,
 				359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */,
+				6A4AD5FB25EE433098CB7293 /* MatrixSkeleton.swift in Sources */,
 				8004840C42749CB157F55F18 /* MatrixView.swift in Sources */,
 				C7854CD1ECE9945875A2F9F6 /* NotificationResponder.swift in Sources */,
 				3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */,
