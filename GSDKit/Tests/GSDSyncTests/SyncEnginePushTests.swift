@@ -181,8 +181,8 @@ struct SyncEnginePushTests {
         exec.missingRecords = true
         let t = Task(id: "a", title: "restored", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 1_900_000_000), updatedAt: Date(timeIntervalSince1970: 1_900_000_000))
-        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1, payload: nil))
-        try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 2, payload: t))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1_900_000_000_000, payload: nil))
+        try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 1_900_000_000_001, payload: t))
         let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
         let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
         #expect(exec.writes.map { $0.method } == ["DELETE", "POST"])
@@ -199,8 +199,8 @@ struct SyncEnginePushTests {
         exec.deleteStatus = 500
         let t = Task(id: "a", title: "restored", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 1_900_000_000), updatedAt: Date(timeIntervalSince1970: 1_900_000_000))
-        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1, payload: nil))
-        try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 2, payload: t))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1_900_000_000_000, payload: nil))
+        try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 1_900_000_000_001, payload: t))
         let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
         let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
         #expect(exec.writes.map { $0.method } == ["DELETE", "PATCH"])

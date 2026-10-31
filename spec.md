@@ -579,7 +579,7 @@ Every local mutation (create/update/delete/archive/restore/import) enqueues a `S
 | `operation` | enum | `create` / `update` / `delete` |
 | `timestamp` | Int (ms) | when queued |
 | `retryCount` | Int | |
-| `payload` | Task? | full task for create/update; nil for delete |
+| `payload` | Task? | full task for create/update; on delete, the task as archived, or nil for trash and import replace |
 | `status` | enum | `pending` / `failed` |
 | `lastError` | String? | truncated |
 | `lastAttemptAt` | Int? (ms) | |
@@ -588,7 +588,7 @@ Every local mutation (create/update/delete/archive/restore/import) enqueues a `S
 Push algorithm:
 1. **Bulk-fetch** the remote index once per push: a map `task_id → { recordId, client_updated_at }` (avoids per-item round-trips and 429s).
 2. For each pending item, apply the **LWW guard**: if a remote record exists and its `client_updated_at` is newer than the queued item's timestamp, **skip** the write (the next pull delivers the remote version).
-3. Otherwise upsert (create if no `recordId`, else update by `recordId`) or delete.
+3. Otherwise upsert (create if no `recordId`, else update by `recordId`) or delete. A queued delete is **stale**, and dropped without a retry, when the remote `client_updated_at` is newer than when it was queued or, for an archive's delete, newer than the payload's `updatedAt`. A remote stamp more than 5 minutes in the future is never newer.
 4. **Throttle ~100 ms between requests.** On HTTP **429**, abort the push loop immediately (back off; don't hammer).
 5. **Retry policy:** exponential backoff at **5s, 10s, 30s, 60s, 300s**; after **5** failed attempts, mark the item `failed` (kept in the queue, surfaced for manual retry — not silently dropped).
 

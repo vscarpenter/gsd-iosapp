@@ -590,7 +590,7 @@ public final class TaskStore {
         else { await reminders.schedule(task) }
     }
 
-    /// Enqueue a sync op for a local mutation (§7.5). `.delete` carries no payload. Best-effort —
+    /// Enqueue a sync op for a local mutation (§7.5). Only an archive's `.delete` carries a payload. Best-effort —
     /// a queue failure must not fail the user's mutation (the next sync's seed/reconcile
     /// self-heals). Returns the queue-item id so a failed companion write can remove the orphan.
     @discardableResult
@@ -598,7 +598,7 @@ public final class TaskStore {
         let item = SyncQueueItem(id: IDGenerator.generate(size: IDGenerator.Size.task),
                                  taskId: taskId, operation: op,
                                  timestamp: Int(clock().timeIntervalSince1970 * 1000),
-                                 payload: op == .delete ? nil : payload)
+                                 payload: payload)
         do { try await syncQueue.enqueue(item) } catch { return nil }
         onMutation?()
         return item.id
@@ -716,7 +716,8 @@ public final class TaskStore {
     public func archive(_ task: Task) async throws {
         let task = try await repository.fetch(id: task.id) ?? task
         try await archiveRepository.archive(task)
-        guard await enqueue(task.id, .delete, payload: nil) != nil else {
+        // The delete carries the task as archived, so push can skip it if the server copy moved on (B-47).
+        guard await enqueue(task.id, .delete, payload: task) != nil else {
             try? await archiveRepository.restore(id: task.id)
             throw TaskStoreError.archiveNotRecorded
         }
