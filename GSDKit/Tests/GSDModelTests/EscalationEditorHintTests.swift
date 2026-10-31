@@ -9,10 +9,22 @@ struct EscalationEditorHintTests {
     private var now: Date { ISO8601DateFormatter().date(from: "2026-10-29T10:00:00-05:00")! }
     private var tomorrow: Date { ISO8601DateFormatter().date(from: "2026-10-30T12:00:00-05:00")! }
 
+    private func target(_ quadrant: Quadrant, due: Date?, window: EscalationWindow = .twoDays,
+                        completed: Bool = false, saved: Bool = false) -> Escalation.Target? {
+        Escalation.editorTarget(quadrant: quadrant, dueDate: due, isCompleted: completed, isSaved: saved,
+                                now: now, window: window, timeZone: zone)
+    }
+
     private func hint(_ quadrant: Quadrant, due: Date?, window: EscalationWindow = .twoDays,
                       completed: Bool = false, saved: Bool = false) -> String? {
-        Escalation.editorHint(quadrant: quadrant, dueDate: due, isCompleted: completed, isSaved: saved,
-                              now: now, window: window, timeZone: zone)
+        target(quadrant, due: due, window: window, completed: completed, saved: saved)?.markUrgentHint
+    }
+
+    /// The hint takes the target quadrant's ink, like the card marker: Do First's for Schedule,
+    /// Delegate's for Eliminate.
+    @Test func theTargetNamesWhichQuadrantInkTheHintWears() {
+        #expect(target(.notUrgentImportant, due: tomorrow)?.quadrant == .urgentImportant)
+        #expect(target(.notUrgentNotImportant, due: tomorrow)?.quadrant == .urgentNotImportant)
     }
 
     @Test func aScheduleDraftDueTomorrowHintsDoFirst() {
