@@ -20,25 +20,21 @@ enum LWW {
     /// so a value past this can't be trusted and must not win every comparison from then on.
     private static let maxClockSkewMs = 5 * 60 * 1000
 
+    /// Whether a remote stamp is too far ahead to trust. Exactly at the ceiling is still trusted.
+    static func isPastCeiling(_ remote: Date, now: Date) -> Bool { ms(remote) > ceilingMs(now) }
+
     /// A remote stamp as ingested: anything past the ceiling comes down to it (web
     /// `clampClientTimestamp`). Compare and store this value, or a stored far-future stamp would
     /// beat every later edit from other devices.
     static func capped(_ remote: Date, now: Date) -> Date {
-        let ceiling = ceilingMs(now)
-        return ms(remote) > ceiling ? Date(timeIntervalSince1970: Double(ceiling) / 1000) : remote
+        isPastCeiling(remote, now: now) ? Date(timeIntervalSince1970: Double(ceilingMs(now)) / 1000) : remote
     }
 
     /// Whether a remote stamp may overrule a queued write or a tombstone (web `isRemoteNewer`,
     /// `isRemoteNewerThanArchive`). A far-future stamp is never newer. Comparing its capped value
     /// here would resurrect tombstones and block the local edit that heals the record.
     static func isRemoteNewer(_ remote: Date, than local: Date, now: Date) -> Bool {
-        isRemoteNewer(remote, thanMs: ms(local), now: now)
-    }
-
-    /// The same rule against a stamp already in milliseconds, like a queue row's `timestamp`. A round
-    /// trip through `Date` can lose a millisecond, which would make an equal stamp read as newer.
-    static func isRemoteNewer(_ remote: Date, thanMs localMs: Int, now: Date) -> Bool {
-        ms(remote) <= ceilingMs(now) && ms(remote) > localMs
+        !isPastCeiling(remote, now: now) && ms(remote) > ms(local)
     }
 
     private static func ceilingMs(_ now: Date) -> Int { ms(now) + maxClockSkewMs }
