@@ -240,3 +240,8 @@ field across, because an equal stamp is a no-op on both clients. Stamp the curso
 a contract version, and when it predates the build, pull everything once and merge
 same-version rows. Never clear the cursor to force that pull: a nil cursor triggers the
 first-sign-in seed, which pushes every local row with the field still empty.
+
+## Tasks leaving the server read as deletes to anything still syncing (2026-10-31)
+
+An erase that runs under a live session looks like remote deletes to realtime and to reconcile, and either one removes the local row. Hold sync for the whole operation, and end the session if it fails after removing anything. Stopping sync in memory isn't enough, because a relaunch restarts it.
+
