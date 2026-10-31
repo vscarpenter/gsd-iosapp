@@ -59,6 +59,23 @@ struct SmartViewImportBoundsTests {
         #expect(r.skipped == 0)
     }
 
+    @Test func descriptionOverSixHundredIsSkipped() throws {
+        var long = view(id: "long")
+        long.description = String(repeating: "d", count: 601)
+        var edge = view(id: "edge")
+        edge.description = String(repeating: "d", count: 600)
+        let r = try parse([long, edge])
+        #expect(r.smartViews?.map(\.id) == ["edge"])
+        #expect(r.skipped == 1)
+    }
+
+    @Test func pinToADroppedViewIsRemovedAndFreesItsSlot() throws {
+        let dropped = view(id: "dropped", name: String(repeating: "n", count: 81))
+        let r = try parse([view(id: "kept"), dropped], pins: ["dropped", "kept", "today-focus", "b", "c", "d"])
+        // "dropped" has nothing behind it; built-in and not-in-file ids are left alone.
+        #expect(r.pinnedSmartViewIds == ["kept", "today-focus", "b", "c", "d"])
+    }
+
     @Test func pinnedIdsAreCappedAtFive() throws {
         let r = try parse([], pins: ["a", "b", "c", "d", "e", "f", "g"])
         #expect(r.pinnedSmartViewIds == ["a", "b", "c", "d", "e"])
