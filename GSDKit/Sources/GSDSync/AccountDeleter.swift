@@ -14,7 +14,7 @@ public struct AccountDeleter: Sendable {
     public enum ErasePass: Equatable, Sendable {
         case empty                              // a complete listing came back empty
         case erased                             // deleted at least one task; re-list to confirm
-        case failed(authRejected: Bool)
+        case failed
     }
 
     public enum Outcome: Equatable, Sendable {
@@ -59,14 +59,15 @@ public struct AccountDeleter: Sendable {
                 }
             case .erased:
                 erased = true
-            case .failed(let authRejected):
-                return authRejected ? .sessionExpired : .failed(remoteTasksErased: erased)
+            case .failed:
+                return .failed(remoteTasksErased: erased)
             }
         }
         return .failed(remoteTasksErased: erased)
     }
 
     private static func outcome(for error: Error, erased: Bool) -> Outcome {
+        if case AuthError.notSignedIn = error { return .sessionExpired }
         let status = status(of: error)
         return status == 401 || status == 403 ? .sessionExpired : .failed(remoteTasksErased: erased)
     }

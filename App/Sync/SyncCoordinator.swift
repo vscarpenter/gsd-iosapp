@@ -155,7 +155,7 @@ final class SyncCoordinator {
         }
         await refreshStatus()
         if result.notSignedIn { return .empty }   // nothing synced to erase for a signed-out user
-        if result.skipped || result.error != nil { return .failed(authRejected: false) }
+        if result.skipped || result.error != nil { return .failed }
         return result.pushed == 0 ? .empty : .erased
     }
 

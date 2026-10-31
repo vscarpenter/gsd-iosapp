@@ -62,18 +62,31 @@ struct AccountDeleterTests {
     }
 
     @Test func firstPassFailureReportsNothingErased() async {
-        let p = Probe(); p.routeError = notFound; p.passes = [.failed(authRejected: false)]
+        let p = Probe(); p.routeError = notFound; p.passes = [.failed]
         #expect(await p.makeDeleter().delete() == .failed(remoteTasksErased: false))
         #expect(p.userRecordCalls == 0)
     }
 
     @Test func laterPassFailureReportsPartialErase() async {
-        let p = Probe(); p.routeError = notFound; p.passes = [.erased, .failed(authRejected: false)]
+        let p = Probe(); p.routeError = notFound; p.passes = [.erased, .failed]
         #expect(await p.makeDeleter().delete() == .failed(remoteTasksErased: true))
     }
 
-    @Test func passAuthRejectionReportsSessionExpired() async {
-        let p = Probe(); p.routeError = notFound; p.passes = [.failed(authRejected: true)]
+    @Test func routeNotSignedInReportsSessionExpired() async {
+        let p = Probe(); p.routeError = AuthError.notSignedIn
+        #expect(await p.makeDeleter().delete() == .sessionExpired)
+        #expect(p.passCalls == 0 && p.userRecordCalls == 0)
+    }
+
+    @Test func userRecordNotSignedInReportsSessionExpired() async {
+        let p = Probe(); p.routeError = notFound; p.passes = [.empty]
+        p.userRecordError = AuthError.notSignedIn
+        #expect(await p.makeDeleter().delete() == .sessionExpired)
+    }
+
+    @Test func userRecordAuthRejectionReportsSessionExpired() async {
+        let p = Probe(); p.routeError = notFound; p.passes = [.erased, .empty]
+        p.userRecordError = PocketBaseError.pocketBase(status: 401, message: "x")
         #expect(await p.makeDeleter().delete() == .sessionExpired)
     }
 
