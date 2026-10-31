@@ -34,7 +34,7 @@ struct SyncEngineClockSkewTests {
                    tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
                    tombstones: GRDBTombstoneRepository(db),
                    cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
-                   deviceId: "dev-A", tokenProvider: { Self.jwt },
+                   deviceId: "dev-A", tokenProvider: { Self.jwt }, rawToken: { Self.jwt },
                    now: { Self.now }, throttleMs: 0)
     }
     private func task(_ id: String = "a", updatedAt: Date = Date(timeIntervalSince1970: 1)) -> Task {
@@ -156,7 +156,7 @@ struct SyncEngineClockSkewTests {
         return SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
                           tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
                           tombstones: GRDBTombstoneRepository(db), cursor: cursor,
-                          deviceId: "dev-A", tokenProvider: { Self.jwt }, now: { Self.now }, throttleMs: 0)
+                          deviceId: "dev-A", tokenProvider: { Self.jwt }, rawToken: { Self.jwt }, now: { Self.now }, throttleMs: 0)
     }
 
     // iOS pulls before it pushes, so the capped pull would overwrite the edit still in the queue. The

@@ -27,7 +27,7 @@ struct SyncEngineTombstoneTests {
                    tasks: GRDBTaskRepository(db), queue: GRDBSyncQueueRepository(db),
                    tombstones: GRDBTombstoneRepository(db),
                    cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
-                   deviceId: "dev-A", tokenProvider: { Self.jwt },
+                   deviceId: "dev-A", tokenProvider: { Self.jwt }, rawToken: { Self.jwt },
                    now: { Date(timeIntervalSince1970: 2_000_000_000) }, throttleMs: 0)
     }
     private func task(_ id: String) -> Task {
