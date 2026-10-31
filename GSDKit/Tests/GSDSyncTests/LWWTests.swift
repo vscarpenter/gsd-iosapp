@@ -32,4 +32,31 @@ struct LWWTests {
         let b = Date(timeIntervalSince1970: 1000.5004)   // same ms bucket
         #expect(LWW.resolve(localUpdatedAt: a, remoteClientUpdatedAt: b) == .noOp)
     }
+
+    // MARK: Far-future stamps (B-44, web MAX_CLIENT_CLOCK_SKEW_MS)
+
+    private let now = Date(timeIntervalSince1970: 2_000_000_000)
+    private let ceiling = Date(timeIntervalSince1970: 2_000_000_300)     // now + 5 minutes
+    private let pastCeiling = Date(timeIntervalSince1970: 2_000_000_300.001)
+
+    @Test func cappedLeavesAStampAtTheCeilingAlone() {
+        #expect(LWW.capped(ceiling, now: now) == ceiling)
+    }
+
+    @Test func cappedBringsAStampPastTheCeilingDownToIt() {
+        #expect(LWW.capped(pastCeiling, now: now) == ceiling)
+    }
+
+    @Test func aStampAtTheCeilingCanBeNewer() {
+        #expect(LWW.isRemoteNewer(ceiling, than: now, now: now))
+    }
+
+    @Test func aStampPastTheCeilingIsNeverNewer() {
+        #expect(!LWW.isRemoteNewer(pastCeiling, than: now, now: now))
+    }
+
+    @Test func anOlderOrEqualStampIsNotNewer() {
+        #expect(!LWW.isRemoteNewer(t0, than: t1, now: now))
+        #expect(!LWW.isRemoteNewer(t0, than: t0, now: now))
+    }
 }
