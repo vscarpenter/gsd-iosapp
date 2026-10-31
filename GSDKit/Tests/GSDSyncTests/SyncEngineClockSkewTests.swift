@@ -233,6 +233,18 @@ struct SyncEngineClockSkewTests {
         #expect(try await tasks.fetch(id: "a")?.title == "my edit")
     }
 
+    // The hold is for an edit that push will send. A queued delete has no content to protect, so the
+    // row still caps and applies. Pull is the place to pin this: realtime returns earlier for a delete.
+    @Test func aQueuedDeleteDoesNotHoldOffAFarFutureRemote() async throws {
+        let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db)
+        try await tasks.upsert(edit())
+        try await GRDBSyncQueueRepository(db).enqueue(queuedEdit(operation: .delete))
+        let (applied, _, _) = try await engine(db, listing(updated: Self.farFuture)).pull(token: Self.jwt, since: Self.epoch)
+        let stored = try await tasks.fetch(id: "a")
+        #expect(applied == 1)
+        #expect(stored?.title == "remote" && stored?.updatedAt == Self.ceiling)
+    }
+
     // Only the far-future case changes: a stamp inside the window follows today's rules.
     @Test func aQueuedEditDoesNotHoldOffAStampInsideTheWindow() async throws {
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db)
