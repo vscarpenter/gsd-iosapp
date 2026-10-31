@@ -9,6 +9,7 @@ struct TaskRowMenu: View {
     let task: Task
     let actions: TaskActions
     var onEdit: (Task) -> Void
+    @Environment(\.escalationWindow) private var escalationWindow
 
     var body: some View {
         Button { onEdit(task) } label: { Label(String(localized: "Edit"), systemImage: "pencil") }
@@ -30,6 +31,12 @@ struct TaskRowMenu: View {
             Button(String(localized: "Start Timer")) { actions.startTimer(task) }
         } else {
             Button(String(localized: "Stop Timer")) { actions.stopTimer(task) }
+        }
+        if let target = task.escalation(window: escalationWindow).target {
+            Button { actions.markUrgent(task, target: target) } label: {
+                Label(String(localized: "Mark urgent"), systemImage: "arrow.up")
+                Text(target.markUrgentHint)
+            }
         }
         Menu(String(localized: "Snooze")) {
             ForEach(snoozeMenuPresets.indices, id: \.self) { i in

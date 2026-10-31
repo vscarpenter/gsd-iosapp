@@ -14,6 +14,8 @@ struct SettingsView: View {
     @Environment(PaletteController.self) private var palette
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage("appTheme", store: .shared) private var themeRaw = AppTheme.system.rawValue
+    @AppStorage(AppGroupDefaults.Key.escalationWindowDays, store: .shared)
+    private var escalationWindowRaw = EscalationWindow.default.rawValue
     @AppStorage("hasOnboarded", store: .shared) private var hasOnboarded = false
     @AppStorage(AppGroupDefaults.Key.fetchShareTitles, store: .shared) private var fetchShareTitles = false
 
@@ -67,13 +69,21 @@ struct SettingsView: View {
     }
 
     private var appearanceSection: some View {
-        Section(String(localized: "Appearance")) {
+        Section {
             Picker(String(localized: "Theme"), selection: $themeRaw) {
                 ForEach(AppTheme.allCases) { theme in Text(theme.label).tag(theme.rawValue) }
             }
             .tint(Surface.ink3)   // value is information, not an action — read it graphite
             Toggle(String(localized: "Show Completed Tasks"), isOn: $showCompleted)
                 .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
+            Picker(String(localized: "Escalate tasks due within"), selection: $escalationWindowRaw) {
+                ForEach(EscalationWindow.allCases, id: \.rawValue) { Text($0.label).tag($0.rawValue) }
+            }
+            .tint(Surface.ink3)
+        } header: {
+            Text(String(localized: "Appearance"))
+        } footer: {
+            Text(String(localized: "Flags tasks that aren’t marked urgent when their due date gets this close. Nothing moves until you say so."))
         }
     }
 

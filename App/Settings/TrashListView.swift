@@ -4,7 +4,8 @@ import GSDStore
 
 /// The trash: tasks deleted in the last `TrashRetention.days` days, recoverable until the
 /// sweep takes them. Swipe to Restore (leading) or Delete permanently (trailing, confirmed),
-/// mirroring the Archive screen's gestures so the two read as the same kind of surface.
+/// mirroring the Archive screen's gestures so the two read as the same kind of surface. The
+/// context menu offers the same two actions for a Mac without a trackpad.
 ///
 /// Rows are read on appear rather than observed. The trash is a settings destination the
 /// user visits deliberately, not something the matrix renders, so a live query would cost
@@ -108,6 +109,16 @@ struct TrashListView: View {
                 Label(String(localized: "Delete"), systemImage: "trash")
             }
             .tint(Surface.alert)
+        }
+        // Right-click / Control-click on the Mac, long-press on touch. Swipe actions need a
+        // trackpad or touch, so this is the way to Restore and Delete with a plain mouse.
+        .contextMenu {
+            Button { restore(row) } label: {
+                Label(String(localized: "Restore"), systemImage: "arrow.uturn.backward")
+            }
+            Button(role: .destructive) { pendingDelete = row } label: {
+                Label(String(localized: "Delete Permanently"), systemImage: "trash")
+            }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(String(localized: "\(row.task.title), \(remainingLabel(row))"))
