@@ -105,6 +105,76 @@ struct ReminderActionHandlerTests {
         #expect(q.ops.isEmpty)
     }
 
+    // A fired reminder usually reaches a suspended app, and a suspended database rejects every read
+    // and write. The real suspension is a process-wide notification that would hit tests running
+    // alongside, so these record the window's order around the queue write instead.
+    final class WindowLog: @unchecked Sendable {
+        var events: [String] = []
+        var backgrounded = true
+        var foregroundOnWrite = false
+    }
+
+    final class LoggingQueue: SyncQueueRepository, @unchecked Sendable {
+        let log: WindowLog
+        init(log: WindowLog) { self.log = log }
+        func enqueue(_ item: SyncQueueItem) async throws {
+            log.events.append("write")
+            if log.foregroundOnWrite { log.backgrounded = false }
+        }
+        func pending() async throws -> [SyncQueueItem] { [] }
+        func update(_ item: SyncQueueItem) async throws {}
+        func remove(id: String) async throws {}
+        func allTaskIds() async throws -> Set<String> { [] }
+        func all() async throws -> [SyncQueueItem] { [] }
+    }
+
+    private func windowedHandler(_ log: WindowLog) async throws -> ReminderActionHandler {
+        let db = try AppDatabase.inMemory()
+        let now = self.now
+        let store = TaskStore(repository: GRDBTaskRepository(db),
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db),
+                              trashRepository: GRDBTrashRepository(db),
+                              defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!,
+                              clock: { now },
+                              syncQueue: LoggingQueue(log: log))
+        try await seed(store)
+        return ReminderActionHandler(store: store,
+                                     isBackgrounded: { log.backgrounded },
+                                     resumeDatabase: { log.events.append("resume") },
+                                     suspendDatabase: { log.events.append("suspend") })
+    }
+
+    @Test(arguments: [ReminderAction.completeID, ReminderAction.snoozeID])
+    func aBackgroundActionOpensTheDatabaseForItsWorkThenClosesIt(action: String) async throws {
+        let log = WindowLog()
+        let handler = try await windowedHandler(log)
+        _ = try await handler.handle(actionIdentifier: action, taskID: "t1")
+        #expect(log.events == ["resume", "write", "suspend"])
+    }
+
+    @Test func aForegroundActionLeavesTheLiveDatabaseAlone() async throws {
+        let log = WindowLog(); log.backgrounded = false
+        let handler = try await windowedHandler(log)
+        _ = try await handler.handle(actionIdentifier: ReminderAction.completeID, taskID: "t1")
+        #expect(log.events == ["write"])
+    }
+
+    @Test func anUnknownActionOpensNothing() async throws {
+        let log = WindowLog()
+        let handler = try await windowedHandler(log)
+        _ = try await handler.handle(actionIdentifier: "unrelated", taskID: "t1")
+        #expect(log.events.isEmpty)
+    }
+
+    @Test func anAppThatCameForwardDuringTheActionIsNotSuspended() async throws {
+        let log = WindowLog()
+        let handler = try await windowedHandler(log)
+        log.foregroundOnWrite = true
+        _ = try await handler.handle(actionIdentifier: ReminderAction.completeID, taskID: "t1")
+        #expect(log.events == ["resume", "write"])
+    }
+
     @Test func otherActionsAreIgnored() async throws {
         let q = RecordingQueue(); let store = try makeStore(q)
         try await seed(store)
