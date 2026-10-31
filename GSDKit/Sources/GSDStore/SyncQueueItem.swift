@@ -3,7 +3,7 @@ import GSDModel
 
 /// A queued local mutation awaiting push to PocketBase (§7.5). Persisted in the `syncQueue` table;
 /// the 5c push engine drains the `.pending` items. `payload` is the full task for create/update,
-/// nil for delete. Built in 5a; enqueue-on-mutation wiring lands in 5c.
+/// and on a delete the task as archived, or nil for trash and import replace. Built in 5a; enqueue-on-mutation wiring lands in 5c.
 public struct SyncQueueItem: Sendable, Identifiable, Equatable {
     public enum Operation: String, Codable, Sendable { case create, update, delete }
     public enum Status: String, Codable, Sendable { case pending, failed }
@@ -13,7 +13,7 @@ public struct SyncQueueItem: Sendable, Identifiable, Equatable {
     public var operation: Operation
     public var timestamp: Int          // ms when queued
     public var retryCount: Int
-    public var payload: Task?          // full task for create/update; nil for delete
+    public var payload: Task?          // full task for create/update; on delete, the task as archived or nil
     public var status: Status
     public var lastError: String?
     public var lastAttemptAt: Int?     // ms
