@@ -13,6 +13,9 @@ struct TaskListRow: View {
     var onEdit: (Task) -> Void
     @Environment(\.editMode) private var editMode
     @Environment(\.demoClock) private var demoClock
+    @Environment(\.escalationWindow) private var escalationWindow
+
+    private var markUrgentTarget: Escalation.Target? { task.escalation(window: escalationWindow).target }
 
     private var isSelecting: Bool { editMode?.wrappedValue.isEditing == true }
 
@@ -38,6 +41,12 @@ struct TaskListRow: View {
             .tint(Surface.success)
         }
         .swipeActions(edge: .trailing) {
+            if let target = markUrgentTarget {
+                Button { actions.markUrgent(task, target: target) } label: {
+                    Label(String(localized: "Mark urgent"), systemImage: "arrow.up")
+                }
+                .tint(target.accent)
+            }
             Button(String(localized: "Snooze")) { actions.snooze(task, by: .oneHour) }
                 .tint(QuadrantStyle.accent(.notUrgentNotImportant)) // slate
             Button(role: .destructive) { actions.delete(task) } label: {
@@ -52,6 +61,9 @@ struct TaskListRow: View {
             Button(String(localized: "Duplicate")) { actions.duplicate(task) }
             Button(String(localized: "Delete")) { actions.delete(task) }
             Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
+            if let target = markUrgentTarget {
+                Button(String(localized: "Mark urgent, \(target.markUrgentHint)")) { actions.markUrgent(task, target: target) }
+            }
             if TimeTracking.runningEntry(task.timeEntries) == nil {
                 Button(String(localized: "Start timer")) { actions.startTimer(task) }
             } else {

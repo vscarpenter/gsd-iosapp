@@ -5,6 +5,7 @@ import GSDStore
 struct QuadrantCell: View {
     @Environment(TaskStore.self) private var store
     @Environment(\.demoClock) private var demoClock
+    @Environment(\.escalationWindow) private var escalationWindow
     let quadrant: Quadrant
     let showCompleted: Bool
     let actions: TaskActions
@@ -145,6 +146,12 @@ struct QuadrantCell: View {
             .tint(Surface.success)
         }
         .swipeActions(edge: .trailing) {
+            if let target = task.escalation(window: escalationWindow).target {
+                Button { actions.markUrgent(task, target: target) } label: {
+                    Label(String(localized: "Mark urgent"), systemImage: "arrow.up")
+                }
+                .tint(target.accent)
+            }
             Button(String(localized: "Snooze")) { actions.snooze(task, by: .oneHour) }
                 .tint(QuadrantStyle.accent(.notUrgentNotImportant)) // slate
             Button(role: .destructive) { actions.delete(task) } label: {
@@ -186,6 +193,9 @@ struct QuadrantCell: View {
         Button(String(localized: "Duplicate")) { actions.duplicate(task) }
         Button(String(localized: "Delete")) { actions.delete(task) }
         Button(String(localized: "Snooze 1 hour")) { actions.snooze(task, by: .oneHour) }
+        if let target = task.escalation(window: escalationWindow).target {
+            Button(String(localized: "Mark urgent, \(target.markUrgentHint)")) { actions.markUrgent(task, target: target) }
+        }
         if TimeTracking.runningEntry(task.timeEntries) == nil {
             Button(String(localized: "Start timer")) { actions.startTimer(task) }
         } else {

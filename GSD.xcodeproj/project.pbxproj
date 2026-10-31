@@ -67,6 +67,7 @@
 		8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */; };
 		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
+		983DA110817AB2C20438BDA1 /* EscalationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3552A0A16FD0BB873EEFE999 /* EscalationSupport.swift */; };
 		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
 		9CD308BFBB0E718A9CCB091E /* SavedListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8531EBF76F33EB7D4F3D3D6 /* SavedListView.swift */; };
 		9D045973ADABC27A5E62E5C4 /* RefreshBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB571C8749323E0E3C429823 /* RefreshBaseline.swift */; };
@@ -169,6 +170,7 @@
 		30A03169462530BB59EC808C /* CaptureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBar.swift; sourceTree = "<group>"; };
 		3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		341D1D06F9C4F12D204BDF12 /* ShareInboxDrainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInboxDrainer.swift; sourceTree = "<group>"; };
+		3552A0A16FD0BB873EEFE999 /* EscalationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscalationSupport.swift; sourceTree = "<group>"; };
 		399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReminderScheduler.swift; sourceTree = "<group>"; };
 		3D312C99EDD96DCCCA77715B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3D8E3161EF21EF57F6E08CB8 /* GSDMenuCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDMenuCommands.swift; sourceTree = "<group>"; };
@@ -628,6 +630,7 @@
 			isa = PBXGroup;
 			children = (
 				30A03169462530BB59EC808C /* CaptureBar.swift */,
+				3552A0A16FD0BB873EEFE999 /* EscalationSupport.swift */,
 				BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */,
 				BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */,
 				58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */,
@@ -859,6 +862,7 @@
 				607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */,
 				9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */,
 				8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */,
+				983DA110817AB2C20438BDA1 /* EscalationSupport.swift in Sources */,
 				6CAFA93976207C55ECB637C0 /* FeedbackView.swift in Sources */,
 				58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */,
 				BFF54FAF7C196285832779A2 /* GSDApp.swift in Sources */,
