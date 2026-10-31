@@ -111,13 +111,22 @@ final class EscalationFlowTests: XCTestCase {
         XCTAssertFalse(app.buttons["Mark urgent"].firstMatch.exists)
     }
 
+    /// On iPad the first tap on a card sometimes lands while the card is still re-rendering and opens
+    /// nothing (the walk then failed before it reached the hint), so tap again.
+    private func openEditor(_ card: XCUIElement, _ app: XCUIApplication) {
+        let editor = app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
+        for _ in 0..<3 {
+            card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
+            if editor.waitForExistence(timeout: 4) { return }
+        }
+        XCTFail("the editor never opened")
+    }
+
     func testEditorShowsTheHintWhileEscalatingAndFollowsTheQuadrant() throws {
         let app = launch(windowDays: 7)
         let card = card(app)
         XCTAssertTrue(card.waitForExistence(timeout: 35))
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
-            .waitForExistence(timeout: 5))
+        openEditor(card, app)
         let hint = app.staticTexts["Moves to Do First"].firstMatch
         XCTAssertTrue(hint.waitForExistence(timeout: 5), "escalating task should show the hint")
 
@@ -130,9 +139,7 @@ final class EscalationFlowTests: XCTestCase {
         let app = launch(windowDays: 0)
         let card = card(app)
         XCTAssertTrue(card.waitForExistence(timeout: 35))
-        card.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "task-editor").firstMatch
-            .waitForExistence(timeout: 5))
+        openEditor(card, app)
         XCTAssertFalse(app.staticTexts["Moves to Do First"].firstMatch.waitForExistence(timeout: 2))
     }
 }

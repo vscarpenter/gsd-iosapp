@@ -92,9 +92,10 @@ struct TaskEditorView: View {
         }
     }
 
-    /// "Moves to Do First" / "Moves to Delegate" while the draft escalates (spec-escalation §5).
-    private var escalationHint: String? {
-        Escalation.editorHint(quadrant: quadrant, dueDate: dueDate,
+    /// Where the draft would move while it escalates (spec-escalation §5). The hint shows the target's
+    /// words ("Moves to Do First") in the target's ink, like the card marker.
+    private var escalationTarget: Escalation.Target? {
+        Escalation.editorTarget(quadrant: quadrant, dueDate: dueDate,
                               isCompleted: original?.completed ?? false, isSaved: original?.isSaved ?? false,
                               now: demoClock ?? .now,
                               window: EscalationWindow(rawValue: escalationWindowRaw) ?? .default,
@@ -147,10 +148,10 @@ struct TaskEditorView: View {
                     } header: {
                         Text(String(localized: "Quadrant"))
                     } footer: {
-                        if let escalationHint {
-                            Label(escalationHint, systemImage: "arrow.up")
+                        if let target = escalationTarget {
+                            Label(target.markUrgentHint, systemImage: "arrow.up")
                                 .font(.footnote.weight(.semibold))
-                                .foregroundStyle(QuadrantStyle.accent(.urgentImportant))
+                                .foregroundStyle(target.accent)
                                 .accessibilityIdentifier("escalation-editor-hint")
                         }
                     }
