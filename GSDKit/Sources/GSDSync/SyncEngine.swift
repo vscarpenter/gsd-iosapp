@@ -89,6 +89,7 @@ public actor SyncEngine {
         var maxApplied: Date?
         for record in records {
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { continue }
+            if try await hasQueuedWriteHoldingOff(record, remoteUpdated: remoteUpdated) { continue }
             // Cursor advances on SERVER stamps (Fix B); LWW below stays on client stamps.
             // Records with an unparseable `updated` apply but don't advance the cursor.
             if let serverUpdated = WireDate.parse(record.updated) {
@@ -115,6 +116,19 @@ public actor SyncEngine {
             applied += 1
         }
         return (applied, conflicts, maxApplied)
+    }
+
+    /// A far-future stamp must not overwrite a row whose edit is still queued (S-AND-02). The web
+    /// never faces this because it pushes before it pulls, so the edit has already healed the record.
+    /// This engine pulls first, so it leaves the row for the push, and a failed row counts too: a later
+    /// retry pushes it. A stamp inside the window follows the normal rules.
+    private func hasQueuedWriteHoldingOff(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> Bool {
+        guard LWW.isPastCeiling(remoteUpdated, now: now()) else { return false }
+        return try await queue.all().contains { isQueuedWrite($0, for: record) }
+    }
+
+    private func isQueuedWrite(_ item: SyncQueueItem, for record: PocketBaseTaskRecord) -> Bool {
+        item.taskId == record.taskId && item.operation != .delete
     }
 
     /// First-sign-in data-wipe guard (§7.4/§7.5): enqueue every existing local active task as a push
@@ -398,6 +412,7 @@ public actor SyncEngine {
             // Don't resurrect a task the user just deleted locally (its .delete is queued, not yet pushed).
             if pending.contains(where: { $0.taskId == record.taskId && $0.operation == .delete }) { return }
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { return }
+            if LWW.isPastCeiling(remoteUpdated, now: now()), pending.contains(where: { isQueuedWrite($0, for: record) }) { return }
             let local = try? await tasks.fetch(id: record.taskId)
             if local == nil {
                 // A failed archive or trash read skips the event (fail closed); the next pull retries.
