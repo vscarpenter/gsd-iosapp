@@ -136,6 +136,18 @@ struct SyncEngineSessionFenceTests {
         #expect(cursor.load() == nil)
     }
 
+    // The same reset landing late, in reconcile's listing, with nothing left to delete. Only the check
+    // right before the cursor write can catch this one.
+    @Test func aCursorResetDuringTheLastListingAlsoHolds() async throws {
+        let db = try AppDatabase.inMemory(); let session = Session(); let exec = Executor()
+        let cursor = cursor()
+        exec.items = [record()]
+        exec.onList = { call in if call == 3 { session.token = nil; cursor.clear() } }   // pull, push index, reconcile
+        let result = await engine(db, exec, session, cursor: cursor).sync(trigger: .periodic)
+        #expect(cursor.load() == nil)
+        #expect(result.notSignedIn)
+    }
+
     @Test func aSessionEndedBeforeTheSeedQueuesNothing() async throws {
         let db = try AppDatabase.inMemory(); let session = Session()
         try await GRDBTaskRepository(db).upsert(task())
