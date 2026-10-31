@@ -82,6 +82,7 @@ struct GSDApp: App {
             syncQueue: queueRepo
         )
         _store = State(initialValue: store)
+        ReminderActionInbox.attach(store: store)   // reminder Complete / Snooze buttons (B-17)
         // Auth + transport (Phase 5b). Live seams; the pure AuthService logic is unit-tested.
         let tokenStore: any TokenStore = isolated ? SignedOutTokenStore() : KeychainTokenStore()
         let authService = AuthService(
