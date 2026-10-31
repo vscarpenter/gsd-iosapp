@@ -30,21 +30,15 @@ final class LiveReminderScheduler: ReminderScheduling, @unchecked Sendable {
             return
         }
         let settings = settingsProvider()
-        // A snoozed task fires at snoozedUntil (if still future); otherwise normal fireDate.
-        let baseFire: Date?
-        if let snoozed = task.snoozedUntil, snoozed > now(), !task.completed, settings.enabled, task.notificationEnabled {
-            baseFire = snoozed
-        } else {
-            let inputs = ReminderMath.Inputs(masterEnabled: settings.enabled, defaultReminder: settings.defaultReminder)
-            baseFire = ReminderMath.fireDate(for: task, inputs: inputs, now: now())
-        }
-        guard let fire = baseFire else {
+        let inputs = ReminderMath.Inputs(masterEnabled: settings.enabled, defaultReminder: settings.defaultReminder)
+        guard let deferred = ReminderMath.nextFire(for: task, inputs: inputs,
+                                                   quietStart: settings.quietHoursStart,
+                                                   quietEnd: settings.quietHoursEnd,
+                                                   now: now(), calendar: calendar) else {
             // Nothing to fire → ensure no stale pending request lingers.
             center.removePendingNotificationRequests(withIdentifiers: [id])
             return
         }
-        let deferred = ReminderMath.applyQuietHours(fire, quietStart: settings.quietHoursStart,
-                                                    quietEnd: settings.quietHoursEnd, calendar: calendar)
 
         let content = UNMutableNotificationContent()
         content.title = task.title

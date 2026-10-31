@@ -283,6 +283,9 @@ struct TaskEditorView: View {
         }
     }
 
+    /// The time picked when All day is switched off; the user can change it right away.
+    private static let defaultDueTime: (hour: Int, minute: Int) = (9, 0)
+
     private var dueDateSection: some View {
         Section(String(localized: "Due Date")) {
             Toggle(String(localized: "Has due date"), isOn: Binding(
@@ -290,10 +293,27 @@ struct TaskEditorView: View {
                 set: { dueDate = $0 ? (dueDate ?? Calendar.current.startOfDay(for: .now)) : nil }
             ))
             .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
-            if dueDate != nil {
+            if let due = dueDate {
+                // Picking a day keeps the time already set (D-1), like Android's date picker.
                 DatePicker(String(localized: "Due"),
-                           selection: Binding(get: { dueDate ?? .now }, set: { dueDate = $0 }),
+                           selection: Binding(get: { dueDate ?? .now }, set: { picked in
+                               dueDate = DueTime.onDate(dueDate, to: Calendar.current.dateComponents([.year, .month, .day], from: picked),
+                                                        calendar: .current)
+                           }),
                            displayedComponents: .date)
+                Toggle(String(localized: "All day"), isOn: Binding(
+                    get: { DueTime.isAllDay(due, calendar: .current) },
+                    set: { allDay in dueDate = DueTime.atTime(due, allDay ? nil : Self.defaultDueTime, calendar: .current) }
+                ))
+                .tint(Surface.tint)
+                if !DueTime.isAllDay(due, calendar: .current) {
+                    DatePicker(String(localized: "Due time"),
+                               selection: Binding(get: { due }, set: { picked in
+                                   let t = Calendar.current.dateComponents([.hour, .minute], from: picked)
+                                   dueDate = DueTime.atTime(due, (t.hour ?? 0, t.minute ?? 0), calendar: .current)
+                               }),
+                               displayedComponents: .hourAndMinute)
+                }
             }
             HStack(spacing: 8) {
                 ForEach(DueDatePreset.allCases, id: \.self) { preset in
