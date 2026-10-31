@@ -147,14 +147,36 @@ public enum TaskImporter {
         }
         let archived = validated(envelope.archivedTasks)
         let deleted = validated(envelope.deletedTasks)
+        let views = admittedSmartViews(envelope.smartViews, skipped: &skipped)
         return ImportResult(
             tasks: tasks, skipped: skipped,
             archivedTasks: archived,
             deletedTasks: deleted,
-            smartViews: envelope.smartViews,
+            smartViews: views,
             notificationSettings: envelope.notificationSettings?.settings,
             archiveSettings: envelope.archiveSettings.map { ($0.enabled, $0.archiveAfterDays) },
-            pinnedSmartViewIds: envelope.appPreferences?.pinnedSmartViewIds)
+            pinnedSmartViewIds: envelope.appPreferences.map {
+                Array($0.pinnedSmartViewIds.prefix(SmartViewLimits.maxPinned))
+            })
+    }
+
+    /// Drops custom views that break a bound and any past the cap, counting each drop.
+    /// Built-ins are derived at read time and never stored, so they pass through uncounted
+    /// (the store ignores them).
+    private static func admittedSmartViews(_ views: [SmartViewWire]?, skipped: inout Int) -> [SmartViewWire]? {
+        guard let views else { return nil }
+        var admitted: [SmartViewWire] = []
+        var customCount = 0
+        for view in views {
+            if view.isBuiltIn { admitted.append(view); continue }
+            guard SmartViewLimits.isWithinBounds(view), customCount < SmartViewLimits.maxViews else {
+                skipped += 1
+                continue
+            }
+            customCount += 1
+            admitted.append(view)
+        }
+        return admitted
     }
 
     /// Envelope whose `tasks` are decoded one-at-a-time via `LenientTask` so a single
