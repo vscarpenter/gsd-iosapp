@@ -1,4 +1,5 @@
 import Foundation
+import GSDModel
 
 /// Relative due-date phrasing for cards (product spec §6.10): "Due today",
 /// overdue, or a relative future string. `reference` (now) is injected so the
@@ -14,6 +15,14 @@ enum RelativeDate {
     /// DAY-granular phrasing for DUE DATES (product spec §6.10): "Due today",
     /// "in 3 days", "2 days ago". Both dates are floored to start-of-day.
     static func dueString(for dueDate: Date, reference: Date = .now, calendar: Calendar = .current) -> String {
+        let day = dayString(for: dueDate, reference: reference, calendar: calendar)
+        // A due date with a time of day (D-1) names it; an all-day one stays day-granular.
+        guard !DueTime.isAllDay(dueDate, calendar: calendar) else { return day }
+        let time = dueDate.formatted(Date.FormatStyle(time: .shortened).locale(.current))
+        return String(localized: "\(day), \(time)")
+    }
+
+    private static func dayString(for dueDate: Date, reference: Date, calendar: Calendar) -> String {
         switch state(for: dueDate, reference: reference, calendar: calendar) {
         case .today:
             return String(localized: "Due today")

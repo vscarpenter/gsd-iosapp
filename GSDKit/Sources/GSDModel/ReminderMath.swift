@@ -5,6 +5,10 @@ import Foundation
 /// live scheduler (App layer) calls these; the store calls only `badgeCount`. All rules
 /// are PROBE-VERIFIED (firedate 11/11, quiethours 14/14, badge 8/8).
 public enum ReminderMath {
+    /// The local hour an all-day task is reminded, on its due day (owner decision 6). One constant,
+    /// so a change of hour is one line here and the matching one on web and Android.
+    public static let allDayReminderHour = 8
+
     /// The slice of `NotificationSettings` that fire-time math needs. Kept separate from
     /// `NotificationSettings` so `ReminderMath` has no type dependency on it (and stays in
     /// `GSDModel` with zero ordering constraints). The live scheduler adapts settings → this.
@@ -23,15 +27,47 @@ public enum ReminderMath {
         inputs.masterEnabled && task.notificationEnabled && !task.completed && !task.isSaved && task.dueDate != nil
     }
 
-    /// The local fire time = `dueDate − (notifyBefore ?? defaultReminder)` minutes, or nil
-    /// when the task shouldn't fire (`shouldSchedule` false) OR the fire time is already past
-    /// (the `fire >= now` boundary is inclusive). Quiet-hours deferral is applied separately.
-    public static func fireDate(for task: Task, inputs: Inputs, now: Date) -> Date? {
+    /// The local fire time, or nil when the task shouldn't fire (`shouldSchedule` false) OR the fire
+    /// time is already past (the `fire >= now` boundary is inclusive). Quiet-hours deferral is
+    /// applied separately. A timed task fires at `dueDate − (notifyBefore ?? defaultReminder)`
+    /// minutes. An all-day task fires at `allDayReminderHour` local on its due day, one day earlier
+    /// per whole day of offset (D-1: a due date at local midnight is all day).
+    public static func fireDate(for task: Task, inputs: Inputs, now: Date,
+                                calendar: Calendar = .current) -> Date? {
         guard shouldSchedule(task, inputs: inputs), let due = task.dueDate else { return nil }
         let offsetMinutes = task.notifyBefore ?? inputs.defaultReminder
-        let fire = due.addingTimeInterval(TimeInterval(-offsetMinutes * 60))
+        let fire = DueTime.isAllDay(due, calendar: calendar)
+            ? allDayFire(due: due, offsetMinutes: offsetMinutes, calendar: calendar)
+            : due.addingTimeInterval(TimeInterval(-offsetMinutes * 60))
         guard fire >= now else { return nil }   // past-due rule: SKIP
         return fire
+    }
+
+    /// When the reminder will fire, with a future snooze winning and quiet hours deferring either.
+    /// This is the one rule the live scheduler and the shared due-time corpus both run.
+    public static func nextFire(for task: Task, inputs: Inputs, quietStart: String?, quietEnd: String?,
+                                now: Date, calendar: Calendar) -> Date? {
+        let base: Date?
+        if let snoozed = task.snoozedUntil, snoozed > now, !task.completed, inputs.masterEnabled,
+           task.notificationEnabled {
+            base = snoozed
+        } else {
+            base = fireDate(for: task, inputs: inputs, now: now, calendar: calendar)
+        }
+        return base.map { applyQuietHours($0, quietStart: quietStart, quietEnd: quietEnd, calendar: calendar) }
+    }
+
+    /// `allDayReminderHour` local on the due day, minus one day per whole day of offset. The day
+    /// arithmetic runs from noon so a DST change can't move it across a date.
+    private static func allDayFire(due: Date, offsetMinutes: Int, calendar: Calendar) -> Date {
+        var noon = calendar.dateComponents([.year, .month, .day], from: due)
+        noon.hour = 12
+        let dueNoon = calendar.date(from: noon)!
+        let day = calendar.date(byAdding: .day, value: -(offsetMinutes / (24 * 60)), to: dueNoon)!
+        var fire = calendar.dateComponents([.year, .month, .day], from: day)
+        fire.hour = allDayReminderHour
+        fire.minute = 0
+        return calendar.date(from: fire)!
     }
 
     /// Defer an in-window fire to the next occurrence of `quietEnd` at-or-after `fire`;
