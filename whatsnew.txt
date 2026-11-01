@@ -1,15 +1,19 @@
 iOS (recommended)
 
-▎ GSD 3.6.3 fixes the matrix on iPad. A task card now keeps its own size instead of stretching to match a busier quadrant beside it. All four quadrants also stay in view, and a long list scrolls inside its own quadrant.
+▎ GSD 3.7 adds due times and puts buttons on your reminders. Set a time of day on a due date, and its reminder follows that time. All-day tasks remind you at 9 a.m. Each reminder now has Complete and Snooze 1 hour buttons, so you can act on it without opening the app.
 ▎
-▎ GSD 3.6 added Saved, a place to set a task aside with a short note or a link and return it to the matrix when you're ready. GSD 3.6.1 made Saved sync across your devices.
+▎ GSD can also flag a task that isn't marked urgent as its due date gets close. You choose how close in Settings, or turn it off. Nothing moves until you choose Mark urgent.
+▎
+▎ The task editor now asks before discarding your changes, and only when you made some. On iPad, ⌘? opens Help. Several fixes also protect the tasks on your device during sync and when you delete your account.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
 
 macOS (recommended)
 
-▎ GSD 3.6.3 fixes the matrix. A task card now keeps its own size instead of stretching to match a busier quadrant beside it. All four quadrants also stay in the window, and a long list scrolls inside its own quadrant.
+▎ GSD 3.7 adds due times and puts buttons on your reminders. Set a time of day on a due date, and its reminder follows that time. All-day tasks remind you at 9 a.m. Each reminder now has Complete and Snooze 1 hour buttons, so you can act on it without opening the app.
 ▎
-▎ GSD 3.6 added Saved, a place to set a task aside with a short note or a link and return it to the matrix when you're ready. GSD 3.6.1 made Saved sync across your devices.
+▎ GSD can also flag a task that isn't marked urgent as its due date gets close. You choose how close in Settings, or turn it off. Nothing moves until you choose Mark urgent.
+▎
+▎ The task editor now asks before discarding your changes, and only when you made some. Trash now has a right-click menu to restore or delete a task. Several fixes also protect the tasks on your device during sync and when you delete your account.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
