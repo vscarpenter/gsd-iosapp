@@ -167,11 +167,12 @@ struct HelpView: View {
                 ShortcutRow(keys: ["⌘", "K"], label: String(localized: "Open the command palette"))
                 ShortcutRow(keys: ["⌘", "F"], label: String(localized: "Open the command palette to search"))
                 ShortcutRow(keys: ["⌘", "N"], label: String(localized: "New task"))
+                ShortcutRow(keys: ["⌘", "S"], label: String(localized: "Save the task you're editing"))
                 ShortcutRow(keys: ["⌘", "1–4"], label: String(localized: "Jump to a quadrant"))
                 ShortcutRow(keys: ["⌘", "?"], label: String(localized: "Open this field guide"))
                 ShortcutRow(keys: ["esc"], label: String(localized: "Close any sheet or drawer"))
             }
-            Text(String(localized: "⌘F is left to the system text-find layer on Mac. Shortcuts are suppressed while you're typing in a field, so the capture bar won't hijack keys."))
+            Text(String(localized: "⌘F is left to the system text-find layer on Mac. ⌘S works from any field in the task editor, so you don't have to leave the field you're typing in."))
                 .font(.footnote)
                 .foregroundStyle(Surface.ink3)
                 .fixedSize(horizontal: false, vertical: true)

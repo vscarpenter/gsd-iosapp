@@ -706,7 +706,7 @@ Replaces the web app's PWA share-target. Accept **URLs and text** shared from ot
 
 - **Handoff / `NSUserActivity`** for continuing on another device (optional but cheap given activities are defined for Spotlight/Siri).
 - **Quick Actions** (Home-Screen long-press): "New Task," "Today's Focus."
-- **Keyboard shortcuts** (iPad): the §6.14 set, plus ⌘N (new), ⌘F (search), ⌘1–4 (jump to quadrant), etc.
+- **Keyboard shortcuts** (iPad): the §6.14 set, plus ⌘N (new), ⌘F (search), ⌘S (save in the task editor), ⌘1–4 (jump to quadrant), etc.
 
 ---
 

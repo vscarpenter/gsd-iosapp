@@ -1,3 +1,70 @@
+# Save the task editor with a keyboard shortcut (issue #39, planned 2026-11-01)
+
+Branch: `feat/editor-save-shortcut` off `origin/main`. Standard tier: about 10 lines of app code, one new UI test file, and docs. No package, sync, or wire change. Record: `docs/2026-11-01-editor-save-shortcut.md`.
+
+## Resuming From Here
+
+- **Done:** ⌘S, `isSaving`, and `canSave` in `TaskEditorView`; `EditorSaveShortcutTests`; the Field Guide row and footnote; `spec.md`. `swift test` 312 tests pass. Seven UI tests pass on iPhone 17 Pro Max and iPad Air 13-inch (M4), both iOS 26.5, used because the iPad Pro 13-inch (M5) only has iOS 27.0 here. iPhone, iPad, and Mac Catalyst build clean.
+- **Next:** the owner runs the Mac walk (command in the record), hand-checks a real iPad, a held ⌘S, and dead-key composition, then marks the draft PR ready.
+- **Blocked:** macOS refused the test runner's UI automation authorization twice ("System authentication is running"), so nothing has run on the Mac beyond a build. `testSavesOnTheFirstPressAfterOpeningByTap` has never run.
+- **Open:** the simulators drop the first ⌘ key after a launch, for every shortcut. Cause not diagnosed. Esc does nothing in an edited task editor, though the Field Guide says it closes any sheet.
+- **Changed from the plan:** the failing tests answered the unknowns instead of pressing keys by hand, and a failed-save test was added. The plan below stands as written otherwise.
+- **Assumption:** the PR is a draft because the Mac is the platform the reporter most likely uses and it's unverified.
+
+## Spec
+
+Pressing ⌘S in the task editor does exactly what tapping Save does, on iPhone with a keyboard, iPad, and Mac Catalyst, with focus in any field.
+
+- Text typed in the tag or subtask field and not yet added gets saved. `save()` already flushes both drafts, so this is the reporter's "after adding a tag" case.
+- An empty or whitespace-only title does nothing, matching the disabled button.
+- A validation or missing-task failure keeps the sheet open and shows the same message.
+- ⌘S does nothing while the "Discard changes?" alert or the dependency picker is up.
+- A held or repeated ⌘S saves once.
+- The Field Guide lists ⌘S and stops saying something false about typing.
+
+Out of scope: ⌘↩ (see decision), a File menu item, the Saved and smart view editors, and web and Android.
+
+## Decision: ⌘S only (default, owner can change)
+
+The reporter offered either key. ⌘S goes on the visible Save button with one modifier, is the standard Save key on Mac and iPad, and appears in the iPad hold-⌘ overlay. A button takes one shortcut, so ⌘↩ would need a second hidden button, and the Notes field is multi-line, so it has a real chance of conflicting. Adding ⌘↩ later is cheap if anyone asks.
+
+## Plan
+
+1. **Spike the unknowns on iPad and Mac, no commit.** Add the modifier and press it by hand. Record the results in the implementation notes.
+   - Does ⌘S reach a toolbar button inside a sheet with focus in Title, Tags, and Notes? If Catalyst doesn't route it, fall back to the hidden-button pattern in `ContentView.swift:132`.
+   - Does the default Catalyst File menu already claim ⌘S?
+   - Does it fire behind the dependency picker or the discard alert, and does holding it repeat?
+   - Does a dead-key or IME composition in progress reach the binding before the save?
+   - Report only: do ⌘N and ⌘K fire behind an open editor with edits, and does esc close it? The Field Guide says esc closes any sheet, and Cancel has no `.cancelAction`.
+2. **Write the failing test.** Add `ScreenshotTests/EditorSaveShortcutTests.swift`, gated on `TEST_RUNNER_EDITOR_SAVE_SHORTCUT=1`, launching with `--demo-seed`, modeled on `EditorDiscardTests`, and using `app.typeKey("s", modifierFlags: .command)`. Run `xcodegen generate` for the new file. It must fail because the editor stays open.
+   - Edit a task, type a tag without Return, press ⌘S: the sheet closes and the tag is there on reopen.
+   - ⌘N, type a title, press ⌘S with focus in the title: one new card appears.
+   - ⌘N with no title, press ⌘S: the editor stays open.
+   - Type in Notes, press ⌘S: the note saved.
+   - Discard alert up, and dependency picker up: ⌘S changes nothing.
+3. **Implement in `App/Editor/TaskEditorView.swift`.**
+   - Add `.keyboardShortcut("s", modifiers: .command)` to the Save button at line 196.
+   - Add `isSaving`, as `SavedEditorView` and `SmartViewEditorView` already have.
+   - Add `canSave`: non-empty title, not saving, no discard alert, no picker. Use it for `.disabled` and as a `guard` at the top of `save()`.
+   - Set `isSaving = false` on all three failure paths in `save()`, including the "no longer exists" return, or a failed save locks the button.
+4. **Update the docs.**
+   - `App/Help/HelpView.swift`: add a ⌘S row and correct the footnote at line 174, using what the spike found about typing.
+   - `spec.md:709`: add ⌘S to the shortcut list.
+   - Add `docs/2026-11-01-editor-save-shortcut.md` with the decision and results, like the other dated records.
+5. **Verify and open the PR.**
+   - `cd GSDKit && swift test`.
+   - Build iPhone 17 Pro Max, iPad Pro 13-inch (M5), and Mac Catalyst. Run the new test on both simulators on iOS 26.5, since iOS 27.0 simulators won't boot under Xcode 27.2.
+   - Run the new test on Catalyst from an unlocked session. Every `--demo-` launch uses the in-memory store from `docs/2026-10-25-demo-seed-isolation.md`, so it's safe while signed in. Never add this test to `ReleaseReadinessTests`, which uses the live store.
+   - Card taps don't register in Mac UI tests (`RefreshBaseline.swift:215`), so on Catalyst the unadded-tag case opens the editor with ⌘N. Saving an edit to an existing task on the Mac gets a hand check with a throwaway task.
+   - The PR closes #39.
+
+## Risks
+
+- **No test proves the double-save guard.** A double save wouldn't duplicate the row, because `create` upserts on the same id. It would queue a second sync operation and move `createdAt`. That isn't visible from a UI test and `App/` has no unit test target, so the guard gets a build and a read.
+- **The Help footnote may already be wrong.** It says shortcuts are suppressed while typing. ⌘S has to work while typing, and I found no suppression code on the hidden buttons, though I haven't pressed them to confirm.
+- **Editors stay inconsistent.** ⌘S won't work in the Saved or smart view editors, which also have a Save button. This follows the issue's scope.
+- **Release timing.** This goes out after 3.7.0. It doesn't belong on `chore/whatsnew-3.7.0`.
+
 # Release must-fixes from the Sprint 1 deployment review (2026-10-31)
 
 Branch: `fix/release-must-fixes` off `main` (`b440db8`). Standard tier. Same branch name in `gsd-taskmanager`. Not pushed.

@@ -23,6 +23,7 @@ struct TaskEditorView: View {
     @State private var tags: [String]
     @State private var tagDraft = ""
     @State private var saveError: String?
+    @State private var isSaving = false
     /// Read straight from defaults (not the root's environment value), so the hint also works in
     /// the Catalyst sheet, which does not inherit the presenter's environment.
     @AppStorage(AppGroupDefaults.Key.escalationWindowDays, store: .shared)
@@ -118,6 +119,13 @@ struct TaskEditorView: View {
         if hasUnsavedChanges { confirmingDiscard = true } else { dismiss() }
     }
 
+    /// ⌘S reaches this sheet's Save button from behind the discard alert and the dependency
+    /// picker, and it can repeat while a save is running, so those states disable it too.
+    private var canSave: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+            && !isSaving && !confirmingDiscard && !showingDependencyPicker
+    }
+
     var body: some View {
         // Compact presenter (iPhone, a narrow iPad or Mac window): the half-height quick edit
         // with an explicit path to the full form. Accessibility sizes start expanded so the
@@ -194,7 +202,8 @@ struct TaskEditorView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "Save"), action: save)
-                        .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .keyboardShortcut("s", modifiers: .command)
+                        .disabled(!canSave)
                         .accessibilityIdentifier("editor-save")
                 }
             }
@@ -622,6 +631,8 @@ struct TaskEditorView: View {
     }
 
     private func save() {
+        guard canSave else { return }
+        isSaving = true
         // Flush typed-but-unsubmitted draft entries: the tag/subtask fields only commit
         // on return (or a trailing comma, for tags), so tapping Save with a pending draft
         // would otherwise silently drop it. Both adders no-op when their draft is empty.
@@ -679,6 +690,7 @@ struct TaskEditorView: View {
                     // sheet was open survives (parity C10).
                     guard try await store.saveEdits(task, openedAs: EditorMerge.untouched(original)) else {
                         saveError = String(localized: "That task no longer exists, so your changes weren't saved.")
+                        isSaving = false
                         return
                     }
                 } else {
@@ -687,8 +699,10 @@ struct TaskEditorView: View {
                 dismiss()
             } catch let error as ValidationError {
                 saveError = error.message
+                isSaving = false
             } catch {
                 saveError = String(localized: "Couldn't save. Please try again.")
+                isSaving = false
             }
         }
     }
