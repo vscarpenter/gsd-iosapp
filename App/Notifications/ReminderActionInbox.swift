@@ -1,6 +1,7 @@
 import Foundation
 import os
 import GSDStore
+import UIKit
 
 /// Delivers a tapped reminder button to the store. The store is built in `GSDApp.init`, but a
 /// button tap can cold-launch the app in the background, so a response may reach the
@@ -14,12 +15,24 @@ enum ReminderActionInbox {
     private static let log = Logger(subsystem: "dev.vinny.gsd", category: "reminder-actions")
     private static var handler: ReminderActionHandler?
     private static var waiting: [Pending] = []
+    /// One action at a time: each opens and closes the database, and the database is process-wide.
+    private static var lastAction: _Concurrency.Task<Void, Never>?
 
     static func attach(store: TaskStore) {
-        handler = ReminderActionHandler(store: store)
+        handler = ReminderActionHandler(store: store, isBackgrounded: isBackgrounded)
         let queued = waiting
         waiting.removeAll()
         queued.forEach(run)
+    }
+
+    /// Mac Catalyst never suspends the database (see `withDatabaseResumedForIntent`), and a Mac app
+    /// is routinely `.inactive` with its window live, so the iOS check would misread it.
+    private static func isBackgrounded() -> Bool {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        UIApplication.shared.applicationState != .active
+        #endif
     }
 
     static func deliver(action: String, taskID: String, done: @escaping () -> Void) {
@@ -29,7 +42,9 @@ enum ReminderActionInbox {
 
     private static func run(_ item: Pending) {
         guard let handler else { return }
-        _Concurrency.Task { @MainActor in
+        let previous = lastAction
+        lastAction = _Concurrency.Task { @MainActor in
+            await previous?.value
             defer { item.done() }
             do {
                 _ = try await handler.handle(actionIdentifier: item.action, taskID: item.taskID)

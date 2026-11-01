@@ -21,15 +21,33 @@ public struct ReminderActionHandler {
     public enum Outcome: Equatable, Sendable { case completed, snoozed, ignored }
 
     private let store: TaskStore
+    private let isBackgrounded: @MainActor () -> Bool
+    private let resumeDatabase: @MainActor () -> Void
+    private let suspendDatabase: @MainActor () -> Void
 
-    public init(store: TaskStore) { self.store = store }
+    public init(store: TaskStore,
+                isBackgrounded: @escaping @MainActor () -> Bool = { false },
+                resumeDatabase: @escaping @MainActor () -> Void = AppDatabase.resume,
+                suspendDatabase: @escaping @MainActor () -> Void = AppDatabase.suspend) {
+        self.store = store
+        self.isBackgrounded = isBackgrounded
+        self.resumeDatabase = resumeDatabase
+        self.suspendDatabase = suspendDatabase
+    }
 
     public func handle(actionIdentifier: String, taskID: String) async throws -> Outcome {
-        guard actionIdentifier == ReminderAction.completeID || actionIdentifier == ReminderAction.snoozeID,
-              let task = try await store.fetchTask(id: taskID),
-              !task.completed, !task.isSaved
-        else { return .ignored }
+        guard actionIdentifier == ReminderAction.completeID || actionIdentifier == ReminderAction.snoozeID else {
+            return .ignored
+        }
+        // A fired reminder usually reaches a suspended app, and a suspended database rejects every
+        // read and write. Close it again unless the app came forward, which needs it live.
+        let backgrounded = isBackgrounded()
+        if backgrounded { resumeDatabase() }
+        defer { if backgrounded && isBackgrounded() { suspendDatabase() } }
 
+        guard let task = try await store.fetchTask(id: taskID), !task.completed, !task.isSaved else {
+            return .ignored
+        }
         if actionIdentifier == ReminderAction.completeID {
             try await store.toggleComplete(task)
             return .completed

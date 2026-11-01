@@ -1,3 +1,18 @@
+# Release must-fixes from the Sprint 1 deployment review (2026-10-31)
+
+Branch: `fix/release-must-fixes` off `main` (`b440db8`). Standard tier. Same branch name in `gsd-taskmanager`. Not pushed.
+
+## Resuming From Here
+
+- [x] Reminder Complete and Snooze 1h open the suspended database for their work (`b120ddd`). Proven by a throwaway run against a real suspended file database, one action at a time. Real suspension is process-wide, so the committed tests record the window's order instead.
+- [x] Account deletion holds sync throughout and signs out when server tasks were removed (`2b4b800`).
+- [x] Version 3.7.0 (40) (`8f9ff31`). Release with `scripts/release.sh --no-bump`, or the script bumps the build again.
+- [x] Verify: `swift test` 901 across five runs, iPhone 17 Pro Max, iPad Pro 13-inch (M5), and Mac Catalyst build, nine UI walks on iOS 26.5.
+- **Next:** owner pushes and opens the PR, then the hand checks: reminder buttons on a real notification with the app backgrounded, and account deletion with a throwaway account.
+- **Not done, by design:** `App/` has no test target, so the sync hold in `SyncCoordinator` and the sign-out in `SessionStore` have a build and a read, no test. `whatsnew.txt` still describes 3.6.3.
+- **Assumptions:** 3.7.0 for the version, since this release adds features. On a partial failure the device signs out and signing back in uploads local tasks again before the user retries.
+- **Open elsewhere:** web and Android hold no sync during deletion either. From reading only, they have the same shape.
+
 # Matrix card fix and release 3.6.3 (39) to App Store Connect (2026-10-28)
 
 Branch: `chore/release-3.6.3` off `main` (`2854e66`), PR #38. Records: `docs/2026-10-28-matrix-card-stretch.md` and the October 28 section of `docs/2026-10-17-release-readiness.md`.

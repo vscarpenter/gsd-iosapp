@@ -61,6 +61,37 @@ struct AccountDeleterTests {
         #expect(p.passCalls == 3 && p.userRecordCalls == 0)
     }
 
+    @Test func aFirstPassThatDeletedSomeTasksThenFailedReportsThemErased() async {
+        let p = Probe(); p.routeError = notFound; p.passes = [.partial]
+        #expect(await p.makeDeleter().delete() == .failed(remoteTasksErased: true))
+        #expect(p.userRecordCalls == 0)
+    }
+
+    @Test func aPassIsClassifiedFromTheEraseResult() {
+        var result = SyncResult()
+        #expect(AccountDeleter.ErasePass(result) == .empty)
+        result.pushed = 2
+        #expect(AccountDeleter.ErasePass(result) == .erased)
+        result.error = "boom"
+        #expect(AccountDeleter.ErasePass(result) == .partial)
+        result.pushed = 0
+        #expect(AccountDeleter.ErasePass(result) == .failed)
+
+        var skipped = SyncResult(); skipped.skipped = true
+        #expect(AccountDeleter.ErasePass(skipped) == .failed)
+        var signedOut = SyncResult(); signedOut.notSignedIn = true
+        #expect(AccountDeleter.ErasePass(signedOut) == .empty)
+    }
+
+    // Reconcile deletes a local task that is absent from the server with nothing queued, so once
+    // tasks have left the server, a live session would remove the local copies on its next sync.
+    @Test func everyOutcomeThatRemovedServerTasksEndsTheSession() {
+        #expect(AccountDeleter.Outcome.deleted.endsSession)
+        #expect(AccountDeleter.Outcome.sessionExpired.endsSession)
+        #expect(AccountDeleter.Outcome.failed(remoteTasksErased: true).endsSession)
+        #expect(!AccountDeleter.Outcome.failed(remoteTasksErased: false).endsSession)
+    }
+
     @Test func firstPassFailureReportsNothingErased() async {
         let p = Probe(); p.routeError = notFound; p.passes = [.failed]
         #expect(await p.makeDeleter().delete() == .failed(remoteTasksErased: false))
