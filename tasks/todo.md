@@ -4,7 +4,7 @@ Branch: `feat/editor-save-shortcut` off `origin/main`. Standard tier: about 10 l
 
 ## Resuming From Here
 
-- **Done:** ⌘S, `isSaving`, and `canSave` in `TaskEditorView`; `EditorSaveShortcutTests`; the Field Guide row and footnote; `spec.md`. `swift test` 312 tests pass. Seven UI tests pass on iPhone 17 Pro Max and iPad Air 13-inch (M4), both iOS 26.5, used because the iPad Pro 13-inch (M5) only has iOS 27.0 here. iPhone, iPad, and Mac Catalyst build clean.
+- **Done:** ⌘S, `isSaving`, and `canSave` in `TaskEditorView`; `EditorSaveShortcutTests`; the Field Guide row and footnote; `spec.md`. `swift test` 901 tests pass across its five runs. Seven UI tests pass on iPhone 17 Pro Max and iPad Air 13-inch (M4), both iOS 26.5, used because the iPad Pro 13-inch (M5) only has iOS 27.0 here. iPhone, iPad, and Mac Catalyst build clean.
 - **Next:** the owner runs the Mac walk (command in the record), hand-checks a real iPad, a held ⌘S, and dead-key composition, then marks the draft PR ready.
 - **Blocked:** macOS refused the test runner's UI automation authorization twice ("System authentication is running"), so nothing has run on the Mac beyond a build. `testSavesOnTheFirstPressAfterOpeningByTap` has never run.
 - **Open:** the simulators drop the first ⌘ key after a launch, for every shortcut. Cause not diagnosed. Esc does nothing in an edited task editor, though the Field Guide says it closes any sheet.
