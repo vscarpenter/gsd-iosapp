@@ -4,7 +4,7 @@ iOS (recommended)
 ▎
 ▎ GSD can also flag a task that isn't marked urgent as its due date gets close. You choose how close in Settings, or turn it off. Nothing moves until you choose Mark urgent.
 ▎
-▎ The task editor now asks before discarding your changes, and only when you made some. On iPad, ⌘? opens Help. Several fixes also protect the tasks on your device during sync and when you delete your account.
+▎ The task editor now asks before discarding your changes, and only when you made some. With a keyboard, ⌘S saves the task from any field. On iPad, ⌘? opens Help. Several fixes also protect the tasks on your device during sync and when you delete your account.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
 
@@ -14,6 +14,6 @@ macOS (recommended)
 ▎
 ▎ GSD can also flag a task that isn't marked urgent as its due date gets close. You choose how close in Settings, or turn it off. Nothing moves until you choose Mark urgent.
 ▎
-▎ The task editor now asks before discarding your changes, and only when you made some. Trash now has a right-click menu to restore or delete a task. Several fixes also protect the tasks on your device during sync and when you delete your account.
+▎ The task editor now asks before discarding your changes, and only when you made some. ⌘S saves the task from any field. Trash now has a right-click menu to restore or delete a task. Several fixes also protect the tasks on your device during sync and when you delete your account.
 ▎
 ▎ As always, GSD works fully offline. Syncing is optional and only happens when you sign in.
