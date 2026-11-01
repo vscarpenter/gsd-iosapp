@@ -56,6 +56,7 @@
 		6CAFA93976207C55ECB637C0 /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4667A49C453FFA30BFAF349B /* FeedbackView.swift */; };
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
 		753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
+		76545B52D43B79FA49C3523A /* EditorSaveShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D986295B486E3122D21BC4C2 /* EditorSaveShortcutTests.swift */; };
 		7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ED783FE5C2324C295B0273 /* RelativeDate.swift */; };
 		8004840C42749CB157F55F18 /* MatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */; };
 		8036F79C226CB3A58EAD44E4 /* GSDWire in Frameworks */ = {isa = PBXBuildFile; productRef = E24393540B98A6395ECD91E2 /* GSDWire */; };
@@ -248,6 +249,7 @@
 		D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
 		D4AED0C7E688157BC1106906 /* DueTimeEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueTimeEditorTests.swift; sourceTree = "<group>"; };
 		D5C3752E464ACF9EDB1EE803 /* TaskRowMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowMenu.swift; sourceTree = "<group>"; };
+		D986295B486E3122D21BC4C2 /* EditorSaveShortcutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSaveShortcutTests.swift; sourceTree = "<group>"; };
 		DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
 		E0DF57F88856C1F3F177A577 /* SyncHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncHistoryView.swift; sourceTree = "<group>"; };
 		E77900FA416C5BD27D556B5F /* GSDWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -579,6 +581,7 @@
 				E859591AFA113674374C5700 /* DemoChoreography.swift */,
 				D4AED0C7E688157BC1106906 /* DueTimeEditorTests.swift */,
 				6C8E104EE6182557CF60E607 /* EditorDiscardTests.swift */,
+				D986295B486E3122D21BC4C2 /* EditorSaveShortcutTests.swift */,
 				263862633905FD14A543830B /* EscalationFlowTests.swift */,
 				79DBE02C7478A306C40B7B29 /* GlassSetting.swift */,
 				664E6FF5137DE167118E123D /* PreviewChoreography.swift */,
@@ -941,6 +944,7 @@
 				9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */,
 				B0E0777479FAA6CF0F55A049 /* DueTimeEditorTests.swift in Sources */,
 				485687599CEB0F40E2CC2AB0 /* EditorDiscardTests.swift in Sources */,
+				76545B52D43B79FA49C3523A /* EditorSaveShortcutTests.swift in Sources */,
 				E543A615D7278FC47442DC50 /* EscalationFlowTests.swift in Sources */,
 				258511F5108C63A1FCFE399D /* GlassSetting.swift in Sources */,
 				32AC8D69042D0AA6FEA03C34 /* PreviewChoreography.swift in Sources */,

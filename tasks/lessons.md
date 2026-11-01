@@ -1,5 +1,17 @@
 # Lessons
 
+## Keyboard tests on the simulator have two traps (2026-11-01)
+
+The simulators usually drop the first ⌘ key after a launch, whichever shortcut it is, and the second press works. A swipe that starts over the iPad's software keyboard types instead of scrolling: a form swipe turned a title into `File the receipts77777777`.
+
+**Rule:** retry a shortcut that's only the way into a test, and press the shortcut under test once. Priming with another ⌘ key hides a dropped first press, so test that flow where the keyboard is real. Start scroll drags above the keyboard.
+
+## A sheet's key commands fire from behind what it presents (2026-11-01)
+
+A `.keyboardShortcut` on a sheet's Save button fired behind the sheet's own alert and behind a nested sheet, and saved a draft the user was being asked to discard. Nothing dims or blocks it the way a modal blocks a tap.
+
+**Rule:** disable the button whenever the sheet presents something over itself, and test the shortcut with each presentation up.
+
 ## Opening the project in Xcode 27.1 rewrites generated files (2026-10-28)
 
 A working tree for a two-file matrix fix also held changes to `project.pbxproj` and both shared
