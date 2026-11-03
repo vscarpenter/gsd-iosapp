@@ -250,7 +250,7 @@ struct SettingsView: View {
         case .relaySeparateAccount:
             String(localized: "Signed in with a private relay email — this is a separate account from your web tasks.")
         case .appleMayDiffer:
-            String(localized: "Signed in with Apple. If you use Google or GitHub on the web, that’s a different account and won’t show the same tasks.")
+            String(localized: "Signed in with Apple. If your web account uses a different email, it won’t show the same tasks.")
         }
     }
 

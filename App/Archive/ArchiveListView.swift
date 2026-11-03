@@ -30,7 +30,7 @@ struct ArchiveListView: View {
             } else if results.isEmpty {
                 EmptyStateView(icon: "magnifyingglass",
                                title: String(localized: "No tasks match \"\(searchText)\""),
-                               message: String(localized: "Try a different word, tag, or quadrant."))
+                               message: String(localized: "Try a different word, tag, or subtask."))
             } else {
                 List(selection: $selection) {
                     ForEach(results) { task in

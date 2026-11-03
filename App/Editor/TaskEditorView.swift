@@ -508,7 +508,7 @@ struct TaskEditorView: View {
     /// Label for a reminder offset. Exact hour/day multiples read naturally; anything else
     /// stays in minutes so the label never misstates the stored value.
     private func reminderLabel(_ minutes: Int) -> String {
-        if minutes == 0 { return String(localized: "At time of event") }
+        if minutes == 0 { return String(localized: "At due time") }
         if minutes == 1 { return String(localized: "1 minute before") }
         if minutes < 60 || minutes % 60 != 0 { return String(localized: "\(minutes) minutes before") }
         if minutes < 1440 {

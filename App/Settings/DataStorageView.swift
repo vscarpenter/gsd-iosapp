@@ -52,7 +52,7 @@ struct DataStorageView: View {
                     Label(String(localized: "Erase All Data"), systemImage: "trash")
                 }
             } footer: {
-                Text(String(localized: "Erasing removes all tasks, Saved items, archived items, and custom views. Your appearance settings are kept. Export first if you want a backup."))
+                Text(String(localized: "Erasing removes all tasks, Saved items, archived items, the Trash, custom views, pins, and your feedback draft, and resets archive settings. If you're signed in, it also deletes your synced tasks, so they're gone from your other devices too. Your appearance, notification, and sharing settings are kept. Export first if you want a backup."))
             }
         }
         .onAppear { cleanupExportFile() }      // clear any stale export from a previous session

@@ -208,12 +208,13 @@ private struct AxesDiagram: View {
                     tile(.urgentNotImportant, String(localized: "Delegate"))
                     tile(.notUrgentNotImportant, String(localized: "Eliminate"))
                 }
-                Text(String(localized: "More urgent →"))
+                Text(String(localized: "← More urgent"))
                     .font(.caption.weight(.semibold)).foregroundStyle(Surface.ink3)
             }
         }
         .frame(width: 268)
-        .accessibilityHidden(true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(String(localized: "Do First and Schedule are important. Do First and Delegate are urgent."))
     }
 
     private func tile(_ q: Quadrant, _ name: String) -> some View {
