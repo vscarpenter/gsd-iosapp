@@ -15,7 +15,7 @@ struct GSDMenuCommands: Commands {
         }
         // Replace the empty stock Help menu with our Field Guide (ContentView shows the sheet).
         CommandGroup(replacing: .help) {
-            Button(String(localized: "GSD Help")) {
+            Button(String(localized: "GSD Field Guide")) {
                 NotificationCenter.default.post(name: .gsdShowHelp, object: nil)
             }
             .keyboardShortcut("?", modifiers: .command)
