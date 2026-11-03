@@ -18,10 +18,10 @@ public enum Escalation {
         }
 
         /// The hint shown beside Mark urgent; same words as web.
-        public var markUrgentHint: String { "Moves to \(quadrant.title)" }
+        public var markUrgentHint: String { String(localized: "Moves to \(quadrant.title)") }
 
         /// The action's one-line spoken name, hint lowercased to read mid-sentence (same as web).
-        public var markUrgentAccessibilityLabel: String { "Mark urgent, moves to \(quadrant.title)" }
+        public var markUrgentAccessibilityLabel: String { String(localized: "Mark urgent, moves to \(quadrant.title)") }
     }
 
     public struct Result: Sendable, Equatable {
@@ -69,13 +69,15 @@ extension Escalation {
 
     /// The marker's accessible name, built from the due chip's own phrases (same as web).
     public static func accessibilityLabel(daysUntilDue days: Int) -> String {
-        "Escalating: \(duePhrase(days)), not marked urgent."
+        String(localized: "Escalating: \(duePhrase(days)), not marked urgent.")
     }
 
     private static func duePhrase(_ days: Int) -> String {
-        if days < 0 { return "\(-days) \(days == -1 ? "day" : "days") overdue" }
-        if days == 0 { return "due today" }
-        return days == 1 ? "due tomorrow" : "due in \(days) days"
+        // One whole phrase per case, so a translation never has to assemble words.
+        if days == -1 { return String(localized: "1 day overdue") }
+        if days < 0 { return String(localized: "\(-days) days overdue") }
+        if days == 0 { return String(localized: "due today") }
+        return days == 1 ? String(localized: "due tomorrow") : String(localized: "due in \(days) days")
     }
 }
 
