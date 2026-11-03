@@ -31,7 +31,7 @@ struct FilteredTaskListView: View {
         if searching {
             EmptyStateView(icon: "magnifyingglass",
                            title: String(localized: "No tasks match \"\(searchText)\""),
-                           message: String(localized: "Try a different word, tag, or quadrant."))
+                           message: String(localized: "Try a different word, tag, or subtask."))
         } else if view.id == "overdue" {
             EmptyStateView(icon: "checkmark.circle", iconColor: Surface.success,
                            title: String(localized: "Nothing overdue."),

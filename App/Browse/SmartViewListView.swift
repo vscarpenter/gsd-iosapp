@@ -223,7 +223,7 @@ private struct BrowseSearchResults: View {
                 if tasks.isEmpty {
                     EmptyStateView(icon: "magnifyingglass",
                                    title: String(localized: "No tasks match \"\(query)\""),
-                                   message: String(localized: "Try a different word, tag, or quadrant."))
+                                   message: String(localized: "Try a different word, tag, or subtask."))
                 } else {
                     List {
                         ForEach(tasks) { task in
