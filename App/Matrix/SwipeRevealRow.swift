@@ -13,7 +13,8 @@ import GSDModel
 /// top is the fix — confirmed on a physical iPad (2026-06-05).
 ///
 /// - Leading (swipe right): Complete / Uncomplete, with full-swipe-to-complete.
-/// - Trailing (swipe left): Snooze (1 hour) + Delete — tap only, no full-swipe.
+/// - Trailing (swipe left): Snooze (1 hour) + Delete, plus Mark urgent while the task is
+///   escalating. Tap only, no full-swipe.
 struct SwipeRevealRow<Menu: View, Content: View>: View {
     let task: Task
     let actions: TaskActions

@@ -16,7 +16,7 @@ Every task is framed on two axes — *urgent* and *important* — and sorted int
 
 ## Features
 
-Natural-language capture parser (`!`, `!!`, `*`, `#tag`), recurrence, subtasks, dependency graphs, time tracking, snooze, archive, smart views, search, a ⌘K command palette, an analytics dashboard, import/export, and local notifications — plus native surfaces a web view can't deliver: Home/Lock-Screen **widgets**, **App Intents / Siri / Shortcuts**, a **Share Extension**, and **Spotlight**. Optional bidirectional sync runs against a [PocketBase](https://pocketbase.io/) backend, shared with the web app.
+One-line capture shorthand (`!`, `!!`, `*`, `#tag`, links), recurrence, subtasks, dependency graphs, time tracking, snooze, archive, smart views, search, a ⌘K command palette, an analytics dashboard, import/export, and local notifications. It also has due times with all-day reminders, Complete and Snooze buttons on reminders, due-date escalation with one-tap Mark urgent, a 30-day Trash, and multi-select bulk edits. Native surfaces a web view can't deliver include a Home Screen and desktop **Today's Focus widget** (small, medium, large), **App Intents / Siri / Shortcuts**, a **Share Extension**, and **Spotlight**. Optional bidirectional sync runs against a [PocketBase](https://pocketbase.io/) backend, shared with the web app.
 
 Saved keeps reading, ideas and reference outside the matrix, with short notes,
 reviewed return to a quadrant, and optional sync with the web app. Find it in
@@ -30,13 +30,14 @@ All testable logic lives in a layered Swift package (`GSDKit/`); the app and its
 |---|---|---|
 | **`GSDModel`** | Pure domain — `Task`, `Quadrant`, capture parser, recurrence, dependency graph, filtering, validation, analytics, import/export | _nothing_ |
 | **`GSDStore`** | [GRDB](https://github.com/groue/GRDB.swift) persistence — `AppDatabase` + migrations, repositories over `ValueObservation`, the `@Observable TaskStore` (single mutation path) | GSDModel + GRDB |
-| **`GSDSync`** | Foundation-only PocketBase REST + SSE sync — a pure `actor SyncEngine` (pull / push / last-write-wins), OAuth2-PKCE auth | GSDModel + GSDStore |
+| **`GSDWire`** | GRDB-free PocketBase wire layer: the request core, task record and mapper, JWT, a one-shot task push and the shared session token, so the Share Extension can push a task without the store | GSDModel only |
+| **`GSDSync`** | Foundation-only PocketBase REST + SSE sync — a pure `actor SyncEngine` (pull / push / last-write-wins), OAuth2-PKCE auth | GSDModel + GSDStore + GSDWire |
 | **`GSDSnapshot`** | GRDB-free app↔extension contract — `WidgetSnapshot`, Share-Extension outbox, `gsd://` deep links | GSDModel only |
 
 The **app** (`App/`) is SwiftUI organized by feature folder. **Extensions** (`Widgets/`, `ShareExtension/`) are GRDB-free and talk to the app through `GSDSnapshot` + a shared App Group.
 
 ```
-GSDKit/   Swift package — all testable logic (model, store, sync, snapshot)
+GSDKit/   Swift package — all testable logic (model, store, wire, sync, snapshot)
 App/      SwiftUI app, organized by feature (Matrix, Editor, Browse, Dashboard, Sync, …)
 Widgets/  WidgetKit extension
 ShareExtension/  Share-sheet target
