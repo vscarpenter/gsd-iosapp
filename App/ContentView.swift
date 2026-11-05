@@ -27,6 +27,9 @@ struct ContentView: View {
     /// so we don't dismiss + present in the same runloop (iOS drops the second present).
     @State private var pendingEditor: EditorRequest?
     @State private var pendingSavedTaskID: String?
+    /// Palette "What's new" — presented once the palette sheet has dismissed.
+    @State private var pendingWhatsNew = false
+    @State private var showWhatsNew = false
     /// Mac "About GSD" panel (app menu), posted by GSDMenuCommands on Catalyst.
     @State private var showAbout = false
     /// "Field Guide" help sheet, posted by Settings ▸ About (all platforms) and the Mac Help menu.
@@ -77,6 +80,15 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showAbout) { AboutView().presentationSizing(.fitted) }
             .sheet(isPresented: $showHelp) { HelpView(compactPresenter: sizeClass == .compact) }
+            .sheet(isPresented: $showWhatsNew) {
+                NavigationStack {
+                    WhatsNewView().toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(String(localized: "Done")) { showWhatsNew = false }
+                        }
+                    }
+                }
+            }
             .onOpenURL { handleDeepLink($0) }
             .onContinueUserActivity(CSSearchableItemActionType, perform: handleSpotlightActivity)
             .onReceive(NotificationCenter.default.publisher(for: .gsdOpenDeepLink)) { notification in
@@ -93,6 +105,9 @@ struct ContentView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .gsdShowHelp)) { _ in
                 showHelp = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .gsdShowWhatsNew)) { _ in
+                showWhatsNew = true
             }
             .onReceive(NotificationCenter.default.publisher(for: .gsdSyncNow)) { _ in
                 _Concurrency.Task { await session.syncNow() }
@@ -256,6 +271,7 @@ struct ContentView: View {
             // SettingsView owns the push (its own NavigationStack) — same handoff
             // pattern as the Help sheet.
             NotificationCenter.default.post(name: .gsdShowFeedback, object: nil)
+        case .whatsNew: pendingWhatsNew = true
         case .navigate(let dest): navigate(to: dest)
         case .openSmartView(let id): openSmartView(id)
         }
@@ -263,6 +279,11 @@ struct ContentView: View {
 
     /// The palette dismissed; if it picked an editor result, present it now (separate runloop).
     private func presentPendingEditor() {
+        if pendingWhatsNew {
+            pendingWhatsNew = false
+            showWhatsNew = true
+            return
+        }
         if let id = pendingSavedTaskID {
             pendingSavedTaskID = nil
             openSavedTask(id)

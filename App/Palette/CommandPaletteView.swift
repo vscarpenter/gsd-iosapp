@@ -11,6 +11,7 @@ enum PaletteResult {
     case toggleShowCompleted
     case toggleTheme
     case sendFeedback
+    case whatsNew
     case navigate(PaletteDestination)
 }
 enum PaletteDestination { case matrix, browse, saved, archive, dashboard, settings }
@@ -107,7 +108,8 @@ struct CommandPaletteView: View {
         [(String(localized: "New task"), "plus.circle", .newTask),
          (String(localized: "Toggle show completed"), "checkmark.circle", .toggleShowCompleted),
          (String(localized: "Toggle theme"), "circle.lefthalf.filled", .toggleTheme),
-         (String(localized: "Send feedback"), "bubble.left", .sendFeedback)]
+         (String(localized: "Send feedback"), "bubble.left", .sendFeedback),
+         (String(localized: "What's new"), "sparkles", .whatsNew)]
             .filter { match($0.0) }
     }
     private var navResults: [(String, String, PaletteResult)] {

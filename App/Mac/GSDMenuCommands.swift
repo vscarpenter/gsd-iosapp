@@ -19,6 +19,9 @@ struct GSDMenuCommands: Commands {
                 NotificationCenter.default.post(name: .gsdShowHelp, object: nil)
             }
             .keyboardShortcut("?", modifiers: .command)
+            Button(String(localized: "What's New in GSD")) {
+                NotificationCenter.default.post(name: .gsdShowWhatsNew, object: nil)
+            }
         }
         // Replace the default File ▸ New with "New Task" (⌘N).
         CommandGroup(replacing: .newItem) {
