@@ -77,8 +77,11 @@ private struct MatrixListContent: View {
             syncStatusChip(sync, palette)
         }
         .safeAreaInset(edge: .top) {
-            CaptureBar { parsed, ov in
-                palette.editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
+            VStack(spacing: 0) {
+                CaptureBar { parsed, ov in
+                    palette.editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
+                }
+                WhatsNewCue()
             }
         }
         // Bar visual sits in a bottom safeAreaInset; its prompts present from the main

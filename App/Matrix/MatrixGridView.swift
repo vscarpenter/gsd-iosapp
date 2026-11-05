@@ -56,6 +56,7 @@ private struct MatrixGridContent: View {
             CaptureBar { parsed, ov in
                 palette.editor = .new(ov ?? Quadrant(urgent: parsed.urgent, important: parsed.important), prefill: parsed)
             }
+            WhatsNewCue()
             ScrollViewReader { proxy in
                 GeometryReader { viewport in
                     let pinnedHeight = Self.pinnedRowHeight(for: viewport.size.height)

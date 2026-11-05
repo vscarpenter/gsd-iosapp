@@ -429,6 +429,12 @@ struct SettingsView: View {
                 .foregroundStyle(Surface.ink)   // reference link reads ink, not tide
             Link(String(localized: "Contact Support"), destination: URL(string: "mailto:gsdapp@vinny.dev?subject=GSD%20Task%20Manager%20Support")!)
                 .foregroundStyle(Surface.ink)
+            NavigationLink {
+                WhatsNewView()
+            } label: {
+                Label(String(localized: "What's New"), systemImage: "sparkles")
+            }
+            .foregroundStyle(Surface.ink)   // navigation reads ink, not tide
             Button {
                 // ContentView owns the Help sheet (one host for Settings + the Mac Help menu).
                 NotificationCenter.default.post(name: .gsdShowHelp, object: nil)

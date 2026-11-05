@@ -8,6 +8,7 @@ extension Notification.Name {
     static let gsdShowAbout = Notification.Name("dev.vinny.gsd.showAbout")
     static let gsdShowHelp = Notification.Name("dev.vinny.gsd.showHelp")
     static let gsdShowFeedback = Notification.Name("dev.vinny.gsd.showFeedback")
+    static let gsdShowWhatsNew = Notification.Name("dev.vinny.gsd.showWhatsNew")
     static let gsdSyncNow = Notification.Name("dev.vinny.gsd.syncNow")
 }
 

@@ -15,7 +15,9 @@ let package = Package(
         .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
     ],
     targets: [
-        .target(name: "GSDModel"),
+        // whats-new.json is a byte-identical copy of the web repo's lib/whats-new/whats-new.json
+        // (every client's release notes); it ships in the build so What's New works offline.
+        .target(name: "GSDModel", resources: [.copy("Resources/whats-new.json")]),
         .target(
             name: "GSDStore",
             dependencies: [
