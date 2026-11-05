@@ -110,7 +110,7 @@ public enum WhatsNew {
                 return (release, version)
             }
             .sorted { $0.1 > $1.1 }
-            .map(\.0)
+            .map { $0.0 }
     }
 
     /// Whether the post-update line shows. See the spec's section 4 for the reasoning; the
