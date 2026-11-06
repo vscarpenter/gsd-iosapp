@@ -27,6 +27,8 @@ public enum AppGroupDefaults {
         public static let deviceName = "deviceName"
         public static let fetchShareTitles = "fetchShareTitles"
         public static let escalationWindowDays = "escalationWindowDays"
+        /// The iPad and Mac matrix layout, a `MatrixLayout` raw value. Per device, never synced.
+        public static let matrixLayout = "matrixLayout"
         /// The newest release this device has acknowledged in What's New. Per device, never synced (D-15).
         public static let whatsNewLastSeenVersion = "whatsNewLastSeenVersion"
     }
