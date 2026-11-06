@@ -1,3 +1,13 @@
+# Release 3.9.0 (43) to App Store Connect (2026-11-06)
+
+Branch `chore/release-3.9.0` here and in gsd-taskmanager. 3.7.0 is live on both platforms. 3.8.0 builds 41 and 42 only reached TestFlight, so 3.9.0 is the next App Store version and its notes carry 3.8 too.
+
+## Resuming From Here
+
+- **Done:** gsd-taskmanager #674 adds the Apple 3.9.0 What's New entry, and its test, typecheck, lint, and build gates pass. The copy here is byte-identical (md5 `5e6aa012435964894c3d6704b6140738`). `whatsnew.txt` leads with columns and keeps the 3.8 notes. Bumped to 3.9.0 (43). Both uploads printed "UPLOAD SUCCEEDED with no errors": iOS Delivery UUID `490e1033-cc82-4814-92b3-d8bb95a5b363`, Mac `943df382-0c26-49d4-a02f-6749dd53d9f6`. The App Store Connect API shows both builds VALID. `swift test` passes 328 tests.
+- **Next (owner):** merge gsd-taskmanager #674 and this repo's release PR, then tag `v3.9.0` on the merged `main`. In App Store Connect, create the 3.9.0 version on iOS and macOS, attach build 43, paste `whatsnew.txt`, and submit for review.
+- **Open:** the Android copy of `whats-new.json` doesn't have the 3.9.0 entry. If #674's wording changes in review, the copy here goes stale until the next build.
+
 # Matrix adaptive columns with a List / Columns toggle (feedback, 2026-11-05)
 
 Merged 2026-11-06 as `3e2a254` (PR #73, squash). Built on `feat/matrix-adaptive-columns` off `d008520`. Non-trivial tier: shared `QuadrantCell`, a new persisted setting. Record: `docs/2026-11-05-matrix-adaptive-columns.md`. Plan: `docs/superpowers/plans/2026-11-05-matrix-adaptive-columns.md`. Mockup: https://claude.ai/artifact/7f79Qky2qJAeKmXFAmeKPc.
