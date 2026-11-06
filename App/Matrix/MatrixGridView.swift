@@ -25,6 +25,7 @@ private struct MatrixGridContent: View {
     @Environment(PaletteController.self) private var palette
     @Environment(SyncCoordinator.self) private var sync
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
+    @AppStorage(AppGroupDefaults.Key.matrixLayout, store: .shared) private var matrixLayout: MatrixLayout = .default
     @State private var actionFailure: TaskActionFailure?
     @State private var selection = Set<String>()
     @Environment(\.editMode) private var editMode
@@ -72,6 +73,7 @@ private struct MatrixGridContent: View {
                                     ),
                                     selection: $selection,
                                     isSelecting: isSelecting,
+                                    layout: matrixLayout,
                                     pinnedHeight: pinnedHeight,
                                     onEdit: { palette.editor = .edit($0) },
                                     onAdd: { palette.editor = .new(q, prefill: nil) }
@@ -98,6 +100,7 @@ private struct MatrixGridContent: View {
         .brandedNavigationTitle(String(localized: "Matrix"))
         .toolbar {
             showCompletedToggle($showCompleted)
+            columnsToggle
             ToolbarItem(placement: .topBarTrailing) { EditButton() }.overflowsFirst()
         }
         // Bar visual sits in a bottom safeAreaInset; its prompts present from the main
@@ -107,6 +110,21 @@ private struct MatrixGridContent: View {
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }
         }
+    }
+
+    /// Switches every quadrant between the list and adaptive columns. It stays enabled when only
+    /// one column fits: hiding it on every resize would confuse more than a no-op tap.
+    @ToolbarContentBuilder private var columnsToggle: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Toggle(isOn: Binding(get: { matrixLayout == .columns },
+                                 set: { matrixLayout = $0 ? .columns : .list })) {
+                Label("Columns", systemImage: "rectangle.split.3x1")
+            }
+            .toggleStyle(.button)
+            .help("Shows tasks in columns when there's room")
+            .accessibilityHint(String(localized: "Shows tasks in columns when there's room"))
+        }
+        .overflowsFirst()
     }
 
     /// ⌘1–⌘4 / `gsd://quadrant/<q>` land here: scroll to the requested cell, one-shot.
