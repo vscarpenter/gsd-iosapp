@@ -6,11 +6,13 @@ struct QuadrantCell: View {
     @Environment(TaskStore.self) private var store
     @Environment(\.demoClock) private var demoClock
     @Environment(\.escalationWindow) private var escalationWindow
+    @Environment(\.dynamicTypeSize) private var typeSize
     let quadrant: Quadrant
     let showCompleted: Bool
     let actions: TaskActions
     @Binding var selection: Set<String>
     let isSelecting: Bool
+    let layout: MatrixLayout
     /// The grid's row height: the cell takes exactly this height and scrolls its own list.
     /// Nil only before the grid's first layout, when the cell is content-sized.
     var pinnedHeight: CGFloat? = nil
@@ -20,6 +22,11 @@ struct QuadrantCell: View {
     @State private var isTargeted = false
     /// iOS 26 fallback only: which `SwipeRevealRow` is open, so opening one closes the others.
     @State private var openTaskID: String?
+    /// The cell's width inside its padding, which sets how many columns of cards fit.
+    @State private var contentWidth: CGFloat = 0
+    private var columnCount: Int {
+        layout.columnCount(forWidth: contentWidth, accessibilityTextSize: typeSize.isAccessibilitySize)
+    }
     private var items: [Task] { store.tasks(in: quadrant, showCompleted: showCompleted) }
     private var activeCount: Int { store.tasks(in: quadrant, showCompleted: false).count }
     /// Computed once per render from the full task snapshot; dependencies cross quadrants.
@@ -51,6 +58,7 @@ struct QuadrantCell: View {
                 Spacer(minLength: 0)
             }
         }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
         .padding(14)
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
         .frame(height: pinnedHeight)
@@ -69,17 +77,29 @@ struct QuadrantCell: View {
         } isTargeted: { isTargeted = $0 }
     }
 
-    /// The empty prompt or the cards with hairlines between them, in either layout.
+    /// The empty prompt or the cards in `columnCount` columns, with a hairline above every card
+    /// below the first row so each column reads as its own list. One column draws the list as it
+    /// always was: card, 10 points, hairline, 10 points, card.
     @ViewBuilder private var rows: some View {
         if items.isEmpty {
             QuadrantEmptyPrompt(quadrant: quadrant, action: onAdd)
         }
-        ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
-            // Natural height only: a cell's spare height belongs to the cell, never to a card.
-            cardRow(task)
-                .fixedSize(horizontal: false, vertical: true)
-            if index < items.count - 1 {
-                Rectangle().fill(Surface.hairline).frame(height: 1)
+        let columns = columnCount
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: MatrixLayout.columnSpacing, alignment: .top),
+                           count: columns),
+            alignment: .leading,
+            spacing: 10
+        ) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, task in
+                VStack(alignment: .leading, spacing: 10) {
+                    if index >= columns {
+                        Rectangle().fill(Surface.hairline).frame(height: 1)
+                    }
+                    // Natural height only: a cell's spare height belongs to the cell, never to a card.
+                    cardRow(task)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }
