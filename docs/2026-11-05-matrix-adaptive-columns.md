@@ -63,6 +63,19 @@ columns when there's room.
 - `App/Matrix/MatrixGridView.swift`: reads the setting with `@AppStorage`, adds the toolbar toggle,
   and passes the layout to each cell.
 
+## Verification
+
+- `swift test` passes, including seven new `MatrixLayoutTests` cases.
+- iPhone (iOS 26.5), iPad (iOS 26.5), and Mac Catalyst builds succeed with no new warnings.
+- iPad Air 13-inch (M4), iOS 26.5, portrait with the sidebar showing: one column. Next to a build
+  of `main` on the same simulator, the matrix is identical apart from the new toolbar button.
+- The same iPad in landscape with the sidebar hidden, driven by a throwaway UI test: two columns
+  per quadrant with per-column hairlines, then the one-column list after a tap on Columns, then
+  columns again. The toggle reported on before the tap and off after it, so Columns is the default.
+- Not verified here: the Mac window and the iOS 27 swipe path inside columns. This machine's
+  terminal can't capture the screen, so those are owner checks on a device or the Mac: swipe a
+  card in a two-column quadrant, drag a card to another quadrant, and use Edit to multi-select.
+
 ## Not in this change
 
 - **Web parity.** The web matrix would take the same rule as
