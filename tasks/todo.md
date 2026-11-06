@@ -1,13 +1,14 @@
 # Matrix adaptive columns with a List / Columns toggle (feedback, 2026-11-05)
 
-Branch: `feat/matrix-adaptive-columns` off `main` at `d008520`, not pushed. Non-trivial tier: shared `QuadrantCell`, a new persisted setting. Record: `docs/2026-11-05-matrix-adaptive-columns.md`. Plan: `docs/superpowers/plans/2026-11-05-matrix-adaptive-columns.md`. Mockup: https://claude.ai/artifact/7f79Qky2qJAeKmXFAmeKPc.
+Merged 2026-11-06 as `3e2a254` (PR #73, squash). Built on `feat/matrix-adaptive-columns` off `d008520`. Non-trivial tier: shared `QuadrantCell`, a new persisted setting. Record: `docs/2026-11-05-matrix-adaptive-columns.md`. Plan: `docs/superpowers/plans/2026-11-05-matrix-adaptive-columns.md`. Mockup: https://claude.ai/artifact/7f79Qky2qJAeKmXFAmeKPc.
 
 ## Resuming From Here
 
-- **Done:** `MatrixLayout` in GSDModel with seven tests; `AppGroupDefaults.Key.matrixLayout`; `QuadrantCell` lays cards out in a `LazyVGrid` of as many 280-point columns as fit; a Columns toolbar toggle in `MatrixGridView`, on by default; `spec.md` 6.1 updated. `swift test` passes (328 tests in the largest run). iPhone, iPad, and Mac Catalyst build clean. An iPad simulator smoke on iOS 26.5 showed one column in portrait matching `main`, two in landscape with the sidebar hidden, the toggle switching to the list and back, and a fresh matrix reaching two columns. A fresh Opus review found no Critical issues; its Important items are fixed in the docs or raised to the owner.
-- **Next:** the owner runs the device checks listed in the record (Mac window, long titles in two columns, resize with a scrolled quadrant, iOS 26 full swipe, VoiceOver), decides whether long titles need three lines in Columns, then chooses push and PR.
-- **Blocked:** nothing in the code. This terminal can't capture the screen, so no Mac screenshot exists.
-- **Open:** web parity. The web matrix needs `repeat(auto-fill, minmax(280px, 1fr))` or a line in each repo's `PRODUCT.md` before the next parity audit.
+- **Done:** `MatrixLayout` in GSDModel with seven tests; `AppGroupDefaults.Key.matrixLayout`; `QuadrantCell` lays cards out in a `LazyVGrid` of as many 280-point columns as fit; a Columns toolbar toggle in `MatrixGridView`, on by default; `spec.md` 6.1 updated. `swift test` passes (328 tests in the largest run). iPhone, iPad, and Mac Catalyst build clean. An iPad simulator smoke on iOS 26.5 showed one column in portrait matching `main`, two in landscape with the sidebar hidden, the toggle switching to the list and back, and a fresh matrix reaching two columns. A fresh Opus review found no Critical issues; its Important items are fixed in the docs or raised to the owner. The owner merged PR #73, and `swift test` on the merged `main` passes 328 tests.
+- **Next:** nothing owed in this repo. The change isn't in 3.8.0 (the `v3.8.0` tag is on `d008520`), so it ships in the next release, and the owner decides the What's New line then.
+- **Blocked:** nothing.
+- **Open:** web parity. The web matrix needs `repeat(auto-fill, minmax(280px, 1fr))` or a line in each repo's `PRODUCT.md` before the next parity audit. Long titles past about 35 characters truncate in a 280-point card. If feedback complains, three title lines in Columns is the suggested fix.
+- **Not recorded:** results of the owner's device checks listed in the record.
 - **Assumption:** the toggle stays enabled when only one column fits, which is most iPads with the sidebar showing.
 
 # Save the task editor with a keyboard shortcut (issue #39, planned 2026-11-01)
