@@ -257,3 +257,15 @@ first-sign-in seed, which pushes every local row with the field still empty.
 
 An erase that runs under a live session looks like remote deletes to realtime and to reconcile, and either one removes the local row. Hold sync for the whole operation, and end the session if it fails after removing anything. Stopping sync in memory isn't enough, because a relaunch restarts it.
 
+
+## Smoke a wide layout from the simulator when the screen can't be captured (2026-11-05)
+
+`screencapture` fails from this terminal ("could not create image from window") because it
+lacks Screen Recording permission, so a launched Mac Catalyst build can't be photographed. A
+throwaway XCUITest in `ScreenshotTests` reaches the same regular-width layout on the iPad
+simulator: rotate to landscape before launch, tap the sidebar's `ToggleSidebar` button, and save
+`XCUIScreen.main` shots to a folder passed as `TEST_RUNNER_SMOKE_DIR`, which the runner reads as
+`SMOKE_DIR`. `XCUIDevice.shared.system.open` with `gsd://dashboard` and
+`gsd://quadrant/urgent-important` rebuilds the matrix without showing the sidebar again. Mark the
+class `@MainActor`, keep the file out of every commit, and run `xcodegen generate` after removing
+it so the project file goes back to its committed state.
