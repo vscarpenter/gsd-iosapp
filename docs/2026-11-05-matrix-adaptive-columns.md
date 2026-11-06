@@ -72,9 +72,22 @@ columns when there's room.
 - The same iPad in landscape with the sidebar hidden, driven by a throwaway UI test: two columns
   per quadrant with per-column hairlines, then the one-column list after a tap on Columns, then
   columns again. The toggle reported on before the tap and off after it, so Columns is the default.
-- Not verified here: the Mac window and the iOS 27 swipe path inside columns. This machine's
-  terminal can't capture the screen, so those are owner checks on a device or the Mac: swipe a
-  card in a two-column quadrant, drag a card to another quadrant, and use Edit to multi-select.
+- A fresh matrix gets columns on its first layout. With the sidebar hidden, the same test opened
+  `gsd://dashboard`, then `gsd://quadrant/urgent-important`, and the new matrix drew two columns.
+- Not verified here, because this machine's terminal can't capture the screen. These are owner
+  checks on a device or the Mac:
+  - The Mac window, and the iOS 27 swipe path inside columns: swipe a card in a two-column
+    quadrant, drag a card to another quadrant, and use Edit to multi-select.
+  - Long titles in two columns. A 280-point card leaves about 143 points for a title that wraps
+    at two lines, so a title past roughly 35 characters ends in an ellipsis. The demo titles are
+    all shorter. If this bites, three title lines in Columns would help. A wider minimum would
+    cost a 1,280-point Mac window its second column.
+  - Resize the Mac window across the two-column threshold with a quadrant scrolled down. The
+    inner scroll keeps its point offset, so it may land on different cards.
+  - On iOS 26, a full swipe completes a task at half the card's width, which drops from about
+    226 points to 140 in a 280-point column.
+  - A VoiceOver walk through a long quadrant. The grid is lazy, so cards scrolled out of a
+    quadrant leave the accessibility tree until they scroll back in.
 
 ## Not in this change
 

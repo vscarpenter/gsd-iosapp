@@ -274,7 +274,7 @@ Each feature lists **Behavior** (the rule, authoritative and unchanged from the 
 **Behavior.** Tasks are grouped into the four quadrants (§5.8). Within a quadrant, incomplete tasks sort above completed ones; completed tasks render dimmed with a strikethrough title. A global **"show completed"** toggle hides/reveals completed tasks. Live counts (active / done / overdue) are shown per quadrant and/or in a summary.
 
 **Native reimagining.**
-- **iPad:** a true 2×2 grid filling the content column; each quadrant is a header + scrollable list. **Drag a task card across quadrant boundaries** to reclassify it (updates `urgent`/`important`); use SwiftUI `.draggable`/`.dropDestination`.
+- **iPad:** a true 2×2 grid filling the content column; each quadrant is a header + scrollable list. By default the list lays its cards out in as many columns as fit, each card at least 280 points wide; a Columns toggle in the toolbar switches back to one column, and accessibility text sizes always get one (`docs/2026-11-05-matrix-adaptive-columns.md`). **Drag a task card across quadrant boundaries** to reclassify it (updates `urgent`/`important`); use SwiftUI `.draggable`/`.dropDestination`.
 - **iPhone:** a vertical stack of quadrant sections with sticky headers and live counts; reclassify via the row's context menu or the editor (drag-across is impractical in a single column).
 - **Row interactions (both):**
   - **Leading swipe →** complete/uncomplete (with haptic + confetti on complete, §6.4).
