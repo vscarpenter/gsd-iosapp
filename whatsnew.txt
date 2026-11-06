@@ -1,6 +1,8 @@
 iOS (recommended)
 
-▎ GSD 3.8 shows you what changed, right in the app. In Settings, About has a What's New screen with the notes for every recent version, newest first. You can also open it from the command palette.
+▎ On iPad, GSD 3.9 lays each quadrant's tasks out in columns when the window is wide enough, so more of your list fits at once. To keep one list per quadrant, turn off Columns in the matrix toolbar.
+▎
+▎ GSD also shows you what changed, right in the app. In Settings, About has a What's New screen with the notes for every recent version, newest first. You can also open it from the command palette.
 ▎
 ▎ After an update with something new, one line under the capture bar tells you what changed. Dismiss it and it stays gone. There are no pop-ups and no badges.
 ▎
@@ -10,7 +12,9 @@ iOS (recommended)
 
 macOS (recommended)
 
-▎ GSD 3.8 shows you what changed, right in the app. Choose Help > What's New in GSD, or open What's New from Settings > About or the command palette. It lists the notes for every recent version, newest first.
+▎ GSD 3.9 lays each quadrant's tasks out in columns when the window is wide enough, so more of your list fits at once. To keep one list per quadrant, turn off Columns in the matrix toolbar.
+▎
+▎ GSD also shows you what changed, right in the app. Choose Help > What's New in GSD, or open What's New from Settings > About or the command palette. It lists the notes for every recent version, newest first.
 ▎
 ▎ After an update with something new, one line under the capture bar tells you what changed. Dismiss it and it stays gone. There are no pop-ups and no badges.
 ▎
