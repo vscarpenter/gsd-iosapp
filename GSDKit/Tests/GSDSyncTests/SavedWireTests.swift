@@ -19,7 +19,7 @@ struct SavedWireTests {
         #expect(task.savedAt == WireDate.parse(savedString))
         #expect(task.isSaved)
         let merged = TaskWireMapper.toDomain(wire, mergingInto: task)
-        let pushed = TaskWireMapper.toWire(merged, owner: "user", deviceId: "ios")
+        let pushed = TaskWireMapper.toWire(merged, owner: "user", deviceId: "ios", defaultReminder: 15)
         let body = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(pushed)) as? [String: Any])
         #expect(body["saved_at"] as? String == savedString)
         #expect(body["task_id"] as? String == "reading")
@@ -30,7 +30,7 @@ struct SavedWireTests {
         var task = Task(id: "reading", title: "Read later", urgent: false, important: true,
                         createdAt: stamp, updatedAt: stamp, savedAt: stamp)
         task.savedAt = nil
-        let wire = TaskWireMapper.toWire(task, owner: "user", deviceId: "ios")
+        let wire = TaskWireMapper.toWire(task, owner: "user", deviceId: "ios", defaultReminder: 15)
         let body = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(wire)) as? [String: Any])
         #expect(body["saved_at"] as? String == "")
         #expect(!TaskWireMapper.toDomain(wire, mergingInto: nil).isSaved)
@@ -41,7 +41,7 @@ struct SavedWireTests {
         let local = Task(id: "reading", title: "Read later", urgent: false, important: true,
                          createdAt: stamp, updatedAt: stamp, notificationSent: true,
                          lastNotificationAt: stamp, snoozedUntil: stamp.addingTimeInterval(3600), savedAt: stamp)
-        var wire = TaskWireMapper.toWire(local, owner: "user", deviceId: "web")
+        var wire = TaskWireMapper.toWire(local, owner: "user", deviceId: "web", defaultReminder: 15)
         let stillSaved = TaskWireMapper.toDomain(wire, mergingInto: local)
         #expect(stillSaved.notificationSent && stillSaved.snoozedUntil == local.snoozedUntil)
         wire.savedAt = ""
@@ -59,7 +59,7 @@ struct SavedWireTests {
     }
 
     private func pushBody(_ payload: Task, current: Task?) throws -> [String: Any] {
-        let wire = TaskWireMapper.toWire(payload, current: current, owner: "user", deviceId: "ios")
+        let wire = TaskWireMapper.toWire(payload, current: current, owner: "user", deviceId: "ios", defaultReminder: 15)
         return try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(wire)) as? [String: Any])
     }
 

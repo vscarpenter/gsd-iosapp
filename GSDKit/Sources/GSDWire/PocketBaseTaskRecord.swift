@@ -117,7 +117,7 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
          urgent: Bool, important: Bool, quadrant: String, dueDate: String, completed: Bool,
          completedAt: String, recurrence: String, tags: [String], subtasks: [Subtask],
          dependencies: [String], notificationEnabled: Bool, notificationSent: Bool,
-         notifyBefore: Int?, lastNotificationAt: String, estimatedMinutes: Int?, timeSpent: Int,
+         notifyBefore: Int, lastNotificationAt: String, estimatedMinutes: Int?, timeSpent: Int,
          timeEntries: [WireTimeEntry], snoozedUntil: String, clientUpdatedAt: String,
          clientCreatedAt: String, deviceId: String, updated: String = "", savedAt: String? = "") {
         self.id = id; self.taskId = taskId; self.owner = owner; self.title = title

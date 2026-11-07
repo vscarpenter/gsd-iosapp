@@ -51,6 +51,8 @@ public actor SyncEngine {
     private let throttleMs: Int
     private let history: any SyncHistoryRepository
     private let reminders: any ReminderScheduling
+    /// This device's Default reminder, for a task whose offset is still null at push time (D-10).
+    private let defaultReminder: @Sendable () -> Int
     private var isSyncing = false
     private var isErasing = false      // §3.4: suppresses pull during a destructive erase/replace drain (Group D)
 
@@ -68,10 +70,12 @@ public actor SyncEngine {
                 now: @escaping @Sendable () -> Date = { Date() },
                 throttleMs: Int = 100,
                 history: any SyncHistoryRepository = NoopSyncHistoryRepository(),
-                reminders: any ReminderScheduling = NoopReminderScheduler()) {
+                reminders: any ReminderScheduling = NoopReminderScheduler(),
+                defaultReminder: @escaping @Sendable () -> Int = SyncEngine.deviceDefaultReminder) {
         self.init(client: client, tasks: tasks, queue: queue, tombstones: tombstones, cursor: cursor,
                   deviceId: deviceId, tokenProvider: tokenProvider, rawToken: rawToken, fenced: true,
-                  now: now, throttleMs: throttleMs, history: history, reminders: reminders)
+                  now: now, throttleMs: throttleMs, history: history, reminders: reminders,
+                  defaultReminder: defaultReminder)
     }
 
     /// Test seam for the many engine tests that never archive or trash a task or end a session.
@@ -82,10 +86,12 @@ public actor SyncEngine {
          rawToken: @escaping @Sendable () -> String? = { nil },
          now: @escaping @Sendable () -> Date = { Date() },
          throttleMs: Int = 100,
-         history: any SyncHistoryRepository = NoopSyncHistoryRepository()) {
+         history: any SyncHistoryRepository = NoopSyncHistoryRepository(),
+         defaultReminder: @escaping @Sendable () -> Int = SyncEngine.deviceDefaultReminder) {
         self.init(client: client, tasks: tasks, queue: queue, tombstones: NoTombstones(), cursor: cursor,
                   deviceId: deviceId, tokenProvider: tokenProvider, rawToken: rawToken, fenced: false,
-                  now: now, throttleMs: throttleMs, history: history, reminders: NoopReminderScheduler())
+                  now: now, throttleMs: throttleMs, history: history, reminders: NoopReminderScheduler(),
+                  defaultReminder: defaultReminder)
     }
 
     private init(client: PocketBaseClient, tasks: any TaskRepository, queue: any SyncQueueRepository,
@@ -93,12 +99,19 @@ public actor SyncEngine {
                  tokenProvider: @escaping @Sendable () async throws -> String?,
                  rawToken: @escaping @Sendable () -> String?, fenced: Bool,
                  now: @escaping @Sendable () -> Date, throttleMs: Int,
-                 history: any SyncHistoryRepository, reminders: any ReminderScheduling) {
+                 history: any SyncHistoryRepository, reminders: any ReminderScheduling,
+                 defaultReminder: @escaping @Sendable () -> Int) {
         self.client = client; self.tasks = tasks; self.queue = queue; self.tombstones = tombstones
         self.cursor = cursor
         self.deviceId = deviceId; self.tokenProvider = tokenProvider; self.rawToken = rawToken
         self.fenced = fenced
         self.now = now; self.throttleMs = throttleMs; self.history = history; self.reminders = reminders
+        self.defaultReminder = defaultReminder
+    }
+
+    /// The App-Group Default reminder, read when a push needs it.
+    public static let deviceDefaultReminder: @Sendable () -> Int = {
+        TaskStore.readNotificationSettings(from: AppGroupDefaults.shared).defaultReminder
     }
 
     // MARK: Session fence (B-14)
@@ -241,10 +254,12 @@ public actor SyncEngine {
                     // PATCH the deleted record. A delete that threw never reaches this line.
                     index.removeValue(forKey: item.taskId)
                 case .create, .update:
-                    guard let payload = item.payload else { break }
+                    guard var payload = item.payload else { break }
+                    try await resolveNotifyBefore(of: &payload, owner: owner)
                     let current = try await tasks.fetch(id: item.taskId)   // placement comes from the row, not the payload
                     let wire = TaskWireMapper.toWire(payload, current: current, owner: owner, deviceId: deviceId,
-                                                     recordId: remote?.recordId ?? "")
+                                                     recordId: remote?.recordId ?? "",
+                                                     defaultReminder: defaultReminder())
                     if let recordId = remote?.recordId { try await client.updateTask(recordId: recordId, record: wire, token: token) }
                     else {
                         // Record the new recordId in the live index so a later same-drain DELETE for the
@@ -262,6 +277,20 @@ public actor SyncEngine {
             }
         }
         return (pushed, failed)
+    }
+
+    /// D-10 rule 2: a queued payload from before the upgrade can carry a null offset. Push
+    /// `payload ?? current row ?? this device's default`. When the row is null too, store the number
+    /// on it with no stamp bump and nothing queued, so this device and the server agree.
+    private func resolveNotifyBefore(of payload: inout Task, owner: String) async throws {
+        guard payload.notifyBefore == nil else { return }
+        let current = try await tasks.fetch(id: payload.id)
+        let resolved = current?.notifyBefore ?? defaultReminder()
+        payload.notifyBefore = resolved
+        if current != nil, current?.notifyBefore == nil {
+            try fence(owner)
+            try await tasks.setNotifyBeforeIfNull(id: payload.id, value: resolved)   // one column, never the whole row
+        }
     }
 
     /// A delete is stale when the remote changed after it was queued (B-42). An archive's delete also

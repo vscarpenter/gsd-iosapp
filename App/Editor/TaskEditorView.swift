@@ -541,8 +541,7 @@ struct TaskEditorView: View {
             set: { option in
                 switch option {
                 case .none:
-                    notificationEnabled = false
-                    notifyBefore = nil
+                    notificationEnabled = false   // Off keeps the number (D-10), so turning it back on restores it
                 case .offset(let minutes):
                     notificationEnabled = true
                     notifyBefore = minutes
@@ -652,13 +651,10 @@ struct TaskEditorView: View {
             task.dueDate = dueDate
             // Phase-4: the editor's reminder controls drive these (§9). Clearing the due date
             // also clears the reminder (a reminder is meaningless without a due date).
-            if dueDate == nil {
-                task.notificationEnabled = false
-                task.notifyBefore = nil
-            } else {
-                task.notificationEnabled = notificationEnabled
-                task.notifyBefore = notificationEnabled ? notifyBefore : nil
-            }
+            // D-10: the offset is always a number and Off keeps it. This stays in step with
+            // `EditorMerge.untouched`, which resolves a null offset the same way.
+            task.notificationEnabled = dueDate != nil && notificationEnabled
+            task.notifyBefore = notifyBefore ?? store.notificationSettings.defaultReminder
             task.recurrence = recurrence
             task.snoozedUntil = snoozedUntil
             task.estimatedMinutes = FieldLimits.normalizedEstimate(Int(estimateText))
@@ -678,7 +674,7 @@ struct TaskEditorView: View {
                         tags: tags,
                         subtasks: subtasks,
                         dependencies: dependencies,
-                        notifyBefore: (dueDate != nil && notificationEnabled) ? notifyBefore : nil,
+                        notifyBefore: notifyBefore,   // nil here: the store resolves it to the Default reminder (D-10)
                         notificationEnabled: dueDate != nil && notificationEnabled,
                         snoozedUntil: snoozedUntil,
                         estimatedMinutes: FieldLimits.normalizedEstimate(Int(estimateText)))
@@ -688,7 +684,7 @@ struct TaskEditorView: View {
                 if let original {
                     // Merge onto the row as it is now, so a completion or edit synced in while the
                     // sheet was open survives (parity C10).
-                    guard try await store.saveEdits(task, openedAs: EditorMerge.untouched(original)) else {
+                    guard try await store.saveEdits(task, openedAs: EditorMerge.untouched(original, defaultReminder: store.notificationSettings.defaultReminder)) else {
                         saveError = String(localized: "That task no longer exists, so your changes weren't saved.")
                         isSaving = false
                         return

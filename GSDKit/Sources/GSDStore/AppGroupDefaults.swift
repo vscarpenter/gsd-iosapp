@@ -18,7 +18,7 @@ public enum AppGroupDefaults {
         public static let archiveAutoEnabled = "archiveAutoEnabled"
         public static let archiveAfterDays = "archiveAfterDays"
         public static let notificationsEnabled = "notificationsEnabled"
-        public static let notificationDefaultReminder = "notificationDefaultReminder"
+        public static let notificationDefaultReminder = AppGroup.defaultReminderKey
         public static let notificationSoundEnabled = "notificationSoundEnabled"
         public static let notificationQuietHoursStart = "notificationQuietHoursStart"
         public static let notificationQuietHoursEnd = "notificationQuietHoursEnd"

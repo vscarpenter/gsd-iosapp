@@ -8,7 +8,11 @@ package enum TaskWireMapper {
 
     // MARK: Local → Wire (push)
 
-    package static func toWire(_ task: Task, owner: String, deviceId: String, recordId: String = "") -> PocketBaseTaskRecord {
+    /// `notify_before` always carries a number (D-10): the task's own, else this device's Default
+    /// reminder. PocketBase never stores a null number, so a null or omitted key meant different
+    /// things on different devices. `defaultReminder` is required so the compiler finds every path.
+    package static func toWire(_ task: Task, owner: String, deviceId: String, recordId: String = "",
+                               defaultReminder: Int) -> PocketBaseTaskRecord {
         PocketBaseTaskRecord(
             id: recordId,
             taskId: task.id,
@@ -27,7 +31,7 @@ package enum TaskWireMapper {
             dependencies: task.dependencies,
             notificationEnabled: task.notificationEnabled,
             notificationSent: task.notificationSent,
-            notifyBefore: task.notifyBefore,
+            notifyBefore: task.notifyBefore ?? defaultReminder,
             lastNotificationAt: WireDate.format(task.lastNotificationAt),
             estimatedMinutes: task.estimatedMinutes,
             timeSpent: task.timeSpent ?? 0,
@@ -44,8 +48,9 @@ package enum TaskWireMapper {
     /// queued before the backfill repaired the row has none (C4-6's shape, applied to `saved_at`).
     /// With no live row, `saved_at` stays off the wire and the server keeps its value.
     package static func toWire(_ payload: Task, current: Task?, owner: String, deviceId: String,
-                               recordId: String = "") -> PocketBaseTaskRecord {
-        var wire = toWire(payload, owner: owner, deviceId: deviceId, recordId: recordId)
+                               recordId: String = "", defaultReminder: Int) -> PocketBaseTaskRecord {
+        var wire = toWire(payload, owner: owner, deviceId: deviceId, recordId: recordId,
+                          defaultReminder: defaultReminder)
         wire.savedAt = current.map { WireDate.format($0.savedAt) }
         return wire
     }
