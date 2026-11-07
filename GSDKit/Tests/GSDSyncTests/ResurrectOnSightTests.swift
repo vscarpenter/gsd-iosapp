@@ -16,6 +16,7 @@ actor AccountServer: RequestExecuting {
     private var sessionDead = false
     private var incomplete = false
     private var listingFails = false
+    private var onListing: (@Sendable () -> Void)?
 
     func add(_ taskId: String, title: String = "Call the venue", clientUpdatedAt: String = "2026-11-01T10:00:00.000Z") {
         records[taskId] = ["id": "rec_\(taskId)", "task_id": taskId, "owner": "u1", "title": title, "description": "",
@@ -27,6 +28,8 @@ actor AccountServer: RequestExecuting {
     func listIncompletely() { incomplete = true }
     func failListings(_ fail: Bool) { listingFails = fail }
     func has(_ taskId: String) -> Bool { records[taskId] != nil }
+    /// Runs once, the next time the account is listed: something else happening while a run awaits.
+    func whenListed(_ hook: @escaping @Sendable () -> Void) { onListing = hook }
 
     func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let url = try #require(request.url)
@@ -54,6 +57,7 @@ actor AccountServer: RequestExecuting {
 
     private func list(_ request: URLRequest, url: URL) throws -> (Data, HTTPURLResponse) {
         listings += 1
+        onListing?(); onListing = nil
         if listingFails { return (Data(#"{"message":"unavailable"}"#.utf8), response(url, 503)) }
         let items = sessionDead ? [] : records.keys.sorted().compactMap { records[$0] }.filter { listed($0, by: request) }
         let page: [String: Any] = ["page": 1, "perPage": 200, "totalItems": items.count + (incomplete ? 1 : 0),
@@ -234,6 +238,21 @@ struct ResurrectOnSightTests {
 
         #expect(stack.cursor.rememberedDeletes() == ["t1"])
         #expect(try await stack.isActive("t2"))
+    }
+
+    /// S-AND's note 3, the Lead's fix: the step awaits the listing, so a sign-in can remember another
+    /// id meanwhile. Only the ids in the snapshot taken when the step began are forgotten.
+    @Test func anIdRememberedWhileTheStepAwaitsIsKept() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        let cursor = stack.cursor
+        await stack.server.whenListed { cursor.rememberDeletes(["t9"]) }
+
+        _ = try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+
+        #expect(stack.cursor.rememberedDeletes() == ["t9"])
     }
 
     @Test("nothing remembered means no extra listing")
