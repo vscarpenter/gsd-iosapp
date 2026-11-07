@@ -216,9 +216,9 @@ Items 6 and 7 were checked against the code on 2026-11-06. Items 1, 3, 4, 5, and
 3. **Read, not run.** Apple documents waking the iPhone app only for `sendMessage`, not `transferUserInfo`, so watch changes land when the iPhone app next runs, as share captures did before iOS #23. That's acceptable for v1, and the "waiting for iPhone" footer covers it (W2). The Simulator doesn't run `transferUserInfo`, so this is confirmed on paired devices.
 4. **Read, not run.** RelevanceKit gives watchOS 26 widgets Smart Stack relevance (section 4.5). watchOS 27's single tap selects a Smart Stack widget, and Apple has published no developer guidance for it. Our widget has no buttons, so a tap opening the app is unchanged (W5).
 5. **Read, not run.** Yes: a watchOS 26 Control with an `OpenIntent` opens Capture from Control Center, the Smart Stack, or the Action button on Ultra. It's in W5 (section 4.5).
-6. **Checked.** `Task.init` gives defaults for every field `WatchTask` leaves out (`GSDModel/Task.swift:37`).
+6. **Checked.** `Task.init` gives defaults for every field `WatchTask` leaves out (`GSDModel/Task.swift:41`).
 7. **Checked.** `onTasksChanged` is a single closure; chain into it (section 7).
-8. **Read, not run.** Reopening leaves the spawned next instance, and completing again spawns another (`GSDStore/TaskStore.swift:396-414`). So a repeating task gets Undo only while its command is still queued (section 6.4, W3).
+8. **Read, not run.** Reopening leaves the spawned next instance, and completing again spawns another (`GSDStore/TaskStore.swift:399-417`). So a repeating task gets Undo only while its command is still queued (section 6.4, W3).
 
 ## 11. Rollout as PR slices
 
