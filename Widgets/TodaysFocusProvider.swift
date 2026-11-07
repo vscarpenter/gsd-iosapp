@@ -1,8 +1,10 @@
 import WidgetKit
 import GSDSnapshot
 
-/// Reads the precomputed snapshot. One entry, `.never` policy — `today-focus` has no time
-/// component, so the app's `reloadAllTimelines()` is the sole refresh driver (spec §8).
+/// Reads the precomputed snapshot. The app's `reloadAllTimelines()` is the main refresh driver
+/// (spec §8). The timeline also carries an entry for the next local midnight, because a widget
+/// doesn't redraw by itself and today's picks must stop showing the moment the date changes
+/// (spec-top-three section 9). `.atEnd` asks for a fresh timeline after that entry.
 struct TodaysFocusProvider: TimelineProvider {
     private let store = WidgetSnapshotStore()
 
@@ -16,7 +18,11 @@ struct TodaysFocusProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<TodaysFocusEntry>) -> Void) {
-        let entry = TodaysFocusEntry(date: Date(), snapshot: store.read() ?? .empty)
-        completion(Timeline(entries: [entry], policy: .never))
+        let now = Date()
+        let snapshot = store.read() ?? .empty
+        let midnight = WidgetSnapshot.nextLocalMidnight(after: now)
+        completion(Timeline(entries: [TodaysFocusEntry(date: now, snapshot: snapshot),
+                                      TodaysFocusEntry(date: midnight, snapshot: snapshot)],
+                            policy: .atEnd))
     }
 }
