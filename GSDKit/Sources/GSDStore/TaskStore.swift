@@ -814,16 +814,21 @@ public final class TaskStore {
         await reminders.setBadge(count)
     }
 
-    /// Rebuild reminder + badge state from the live snapshot (design 2026-06-10 Fix A).
+    /// Rebuild reminder + badge state from the store (design 2026-06-10 Fix A).
     /// Repository-direct writes — sync pull, SSE, deletion-reconcile — never pass through the
     /// §9.1 mutation hooks, so remote changes leave reminders stale on this device. The App
-    /// calls this (debounced) whenever the task set changes. Idempotent: `schedule()` uses the
-    /// stable `task-<id>` identifier, so re-scheduling replaces rather than duplicates. The
+    /// calls this (debounced) whenever the task set changes, and after background refresh.
+    /// Idempotent: `schedule()` uses the stable `task-<id>` identifier, so re-scheduling replaces
+    /// rather than duplicates. The
     /// eligibility pre-filter bounds notification-center IPC to reminder-bearing tasks;
     /// `schedule()` keeps final say (quiet hours, past-due → cancel).
     public func resyncReminders() async {
+        // The rows, not the observed snapshot: background refresh can run before any scene has
+        // started observation, and an empty snapshot would cancel every reminder and schedule
+        // none (IOS-CAP-BG). A failed read leaves the pending reminders as they are.
+        guard let rows = try? await repository.fetchAll() else { return }
         await reminders.cancelAll()
-        for task in soonestReminderTasks() { await refreshReminder(task) }
+        for task in soonestReminderTasks(rows) { await refreshReminder(task) }
         await refreshBadge()
     }
 
@@ -833,11 +838,11 @@ public final class TaskStore {
     /// fire times break by id so every resync picks the same tasks (Android `ReminderPlanner.soonest`).
     /// 60 leaves room for single-task edits between resyncs. Tasks past the cap wait for the next
     /// resync, which runs on store changes and launch.
-    private func soonestReminderTasks() -> [Task] {
+    private func soonestReminderTasks(_ rows: [Task]) -> [Task] {
         let settings = notificationSettings
         let inputs = ReminderMath.Inputs(masterEnabled: settings.enabled, defaultReminder: settings.defaultReminder)
         let now = clock()
-        return tasks
+        return rows
             .compactMap { task -> (task: Task, fire: Date)? in
                 guard !task.isSaved,
                       let fire = ReminderMath.nextFire(for: task, inputs: inputs,
