@@ -33,7 +33,7 @@ struct TopThreeSection: View {
         let offer = TopThree.carryOver(store.tasks, now: now, timeZone: zone)
         guard let from = offer.fromDate else { return nil }
         let tasks = offer.ids.compactMap { id in store.tasks.first { $0.id == id } }
-        return tasks.isEmpty ? nil : (Self.carryOverLabel(from: from, today: today, zone: zone), tasks)
+        return tasks.isEmpty ? nil : (TopThree.carryOverLabel(from: from, today: today, timeZone: zone), tasks)
     }
 
     private var suggestions: [Task] {
@@ -172,24 +172,5 @@ struct TopThreeSection: View {
         case 1: String(localized: "second")
         default: String(localized: "third")
         }
-    }
-
-    /// "From yesterday", or "From Friday" for any other earlier day.
-    static func carryOverLabel(from date: String, today: String, zone: TimeZone) -> String {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = zone
-        let parser = DateFormatter()
-        parser.calendar = calendar
-        parser.timeZone = zone
-        parser.dateFormat = "yyyy-MM-dd"
-        guard let day = parser.date(from: date), let now = parser.date(from: today) else {
-            return String(localized: "From earlier")
-        }
-        if calendar.dateComponents([.day], from: day, to: now).day == 1 { return String(localized: "From yesterday") }
-        let weekday = DateFormatter()
-        weekday.calendar = calendar
-        weekday.timeZone = zone
-        weekday.setLocalizedDateFormatFromTemplate("EEEE")
-        return String(localized: "From \(weekday.string(from: day))")
     }
 }
