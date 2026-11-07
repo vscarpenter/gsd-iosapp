@@ -203,6 +203,28 @@ public enum TopThree {
         return CarryOver(fromDate: latest, ids: ordered(tasks, onDate: latest).prefix(maxPicks).map(\.id))
     }
 
+    /// The words over the carry-over offer: one day back is "From yesterday", two to six days back
+    /// is the weekday ("From Friday"), and seven days back is "From a week ago", because the weekday
+    /// would match today's. `carryOver` only offers dates one to seven days back, so these are all
+    /// the cases.
+    public static func carryOverLabel(from date: String, today: String, timeZone: TimeZone) -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        let back = daysBetween(date, today) ?? 1
+        if back <= 1 { return String(localized: "From yesterday") }
+        if back >= carryOverDays { return String(localized: "From a week ago") }
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = .gmt
+        let name = parse(date, calendar: utc).map { day -> String in
+            let formatter = DateFormatter()
+            formatter.calendar = utc
+            formatter.timeZone = .gmt
+            formatter.setLocalizedDateFormatFromTemplate("EEEE")
+            return formatter.string(from: day)
+        } ?? ""
+        return String(localized: "From \(name)")
+    }
+
     // MARK: - Pull merge (spec 6, C4-4)
 
     /// The fields a pull compares. Dates are instants; `focusDate` is text.
