@@ -79,6 +79,20 @@ struct NotifyBeforeStoreTests {
         }
     }
 
+    @Test func aBackupWithNoOffsetTakesTheDefaultInEffectAfterTheImportFinishes() async throws {
+        // D3: the backup's own settings are restored by the import, so its default is the one in effect.
+        for mode in [TaskStore.ImportMode.replace, .merge] {
+            let (store, repo, _) = try makeStore(defaultReminder: 15)
+            let backupSettings = NotificationSettings(enabled: true, defaultReminder: 60)
+            let data = try TaskExport.encode(TaskExport(
+                tasks: [task("imp", offset: nil)], exportedAt: stamp,
+                notificationSettings: NotificationSettingsWire(backupSettings, updatedAt: stamp)))
+            try await store.importTasks(data, mode: mode)
+            #expect(store.notificationSettings.defaultReminder == 60)
+            #expect(try await repo.fetch(id: "imp")?.notifyBefore == 60)
+        }
+    }
+
     @Test func aLegacyNullStillFiresTheDefaultUntilItIsWritten() {
         let inputs = ReminderMath.Inputs(masterEnabled: true, defaultReminder: 15)
         let due = Date(timeIntervalSince1970: 1_790_000_000)

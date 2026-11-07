@@ -277,7 +277,7 @@ struct SettingsView: View {
             ))
             .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
             if notificationSettings.enabled {
-                Picker(String(localized: "Default Reminder"), selection: Binding(
+                Picker(String(localized: "Default reminder"), selection: Binding(
                     get: { notificationSettings.defaultReminder },
                     set: { notificationSettings.defaultReminder = $0; flushNotificationSettings() }
                 )) {
