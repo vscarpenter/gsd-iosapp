@@ -287,9 +287,9 @@ public actor SyncEngine {
         let current = try await tasks.fetch(id: payload.id)
         let resolved = current?.notifyBefore ?? defaultReminder()
         payload.notifyBefore = resolved
-        if let row = current, row.notifyBefore == nil {
+        if current != nil, current?.notifyBefore == nil {
             try fence(owner)
-            try await tasks.setNotifyBeforeIfNull(id: row.id, value: resolved)   // one column, never the whole row
+            try await tasks.setNotifyBeforeIfNull(id: payload.id, value: resolved)   // one column, never the whole row
         }
     }
 
