@@ -21,9 +21,12 @@ struct SavedEditorView: View {
     @State private var isSaving = false
     @State private var failure: TaskActionFailure?
     let target: SavedEditorTarget
+    /// Runs after a save succeeds, before the sheet closes. The weekly sweep moves on from here.
+    var onSaved: (() -> Void)?
 
-    init(target: SavedEditorTarget) {
+    init(target: SavedEditorTarget, onSaved: (() -> Void)? = nil) {
         self.target = target
+        self.onSaved = onSaved
         _notes = State(initialValue: target.task.description)
         _quadrant = State(initialValue: target.task.quadrant)
         _dueDate = State(initialValue: target.task.dueDate)
@@ -142,9 +145,12 @@ struct SavedEditorView: View {
             do {
                 if target.isNotes { try await store.updateSavedNotes(id: target.task.id, notes: notes) }
                 else { try await store.returnToMatrix(id: target.task.id, quadrant: quadrant, dueDate: dueDate) }
+                onSaved?()
                 dismiss()
             } catch {
-                failure = TaskActionFailure(error.localizedDescription)
+                // The base string, as on web, with no raw error appended (S9).
+                failure = TaskActionFailure(target.isNotes ? error.localizedDescription
+                                            : String(localized: "Couldn’t return this item to the matrix"))
                 isSaving = false
             }
         }
