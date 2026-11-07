@@ -37,7 +37,15 @@ struct DirectTaskPushTests {
 
     private func push(_ exec: RecordingExecutor, token: String?, deviceID: String? = "dev-A") -> DirectTaskPush {
         DirectTaskPush(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
-                       token: { token }, deviceID: { deviceID }, now: { now })
+                       token: { token }, deviceID: { deviceID }, defaultReminder: { 15 }, now: { now })
+    }
+
+    @Test func aSharedTasksDirectPushCarriesTheDefaultReminder() async throws {
+        let exec = RecordingExecutor()
+        _ = await push(exec, token: jwt()).attempt(task)
+        let body = try #require(exec.requests.first?.httpBody)
+        let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        #expect(json["notify_before"] as? Int == 15)   // the injected default; the task has no offset
     }
 
     @Test func pushesOneCreateAndReturnsTheRecordID() async throws {
