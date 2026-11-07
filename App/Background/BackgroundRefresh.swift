@@ -3,7 +3,7 @@ import BackgroundTasks
 import GSDStore
 
 /// Background app-refresh (product spec §9.4): drains the Share-Extension outbox, runs one sync,
-/// then the trash and auto-archive sweeps + badge refresh so data is fresh on next open.
+/// then the trash and auto-archive sweeps + a reminder resync (with the badge) so data is fresh on next open.
 ///
 /// The drain + sync is what lets a task shared from Safari reach the server without the app being
 /// opened: on iOS the extension never foregrounds GSD, so the launch/foreground drains in `GSDApp`
@@ -70,7 +70,9 @@ enum BackgroundRefresh {
                 try? await store.runAutoArchiveSweep()         // see the type comment
             }
             _ = try? await store.runTrashRetentionSweep()
-            await store.refreshBadge()
+            // Rebuilds the soonest reminders from the store (and the badge). The sync above may
+            // have pulled new due dates, and the 60-reminder cap refills here, not only on open.
+            await store.resyncReminders()
             AppDatabase.suspend()
             task.setTaskCompleted(success: true)
         }
