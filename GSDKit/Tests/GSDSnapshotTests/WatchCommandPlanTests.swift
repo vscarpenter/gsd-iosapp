@@ -7,9 +7,10 @@ struct WatchCommandPlanTests {
     let at = Date(timeIntervalSince1970: 1_800_000_000)
 
     private func task(urgent: Bool = false, important: Bool = true,
-                      completed: Bool = false, recurrence: RecurrenceType = .none) -> Task {
+                      completed: Bool = false, recurrence: RecurrenceType = .none,
+                      saved: Bool = false) -> Task {
         Task(id: "t1", title: "t1", urgent: urgent, important: important, completed: completed,
-             createdAt: at, updatedAt: at, recurrence: recurrence)
+             createdAt: at, updatedAt: at, recurrence: recurrence, savedAt: saved ? at : nil)
     }
 
     private func cmd(_ kind: WatchCommand.Kind, id: String = "c1") -> WatchCommand {
@@ -62,6 +63,28 @@ struct WatchCommandPlanTests {
         #expect(decide(.snooze(taskID: "t1"), task(recurrence: .daily)) == .apply(.snoozeOneHour))
         #expect(decide(.snooze(taskID: "t1"), nil) == .skip(.missingTask))
         #expect(decide(.snooze(taskID: "t1"), task(completed: true)) == .skip(.alreadyCompleted))
+    }
+
+    // MARK: Saved since the snapshot
+
+    @Test func aTaskSavedSinceTheSnapshotSkipsEveryTaskCommandSoTheWatchDropsIt() {
+        let saved = task(saved: true)
+        #expect(decide(.complete(taskID: "t1"), saved) == .skip(.saved))
+        #expect(decide(.markUrgent(taskID: "t1"), saved) == .skip(.saved))
+        #expect(decide(.snooze(taskID: "t1"), saved) == .skip(.saved))
+        #expect(decide(.reopen(taskID: "t1"), task(completed: true, saved: true)) == .skip(.saved))
+    }
+
+    // MARK: capture title
+
+    @Test func aLongCaptureTitleIsClampedToTheFieldLimit() {
+        let parsed = WatchCommandPlan.parseCapture(String(repeating: "a", count: 120) + " #work")
+        #expect(parsed.title.count == FieldLimits.titleRange.upperBound)
+        #expect(parsed.tags == ["work"])
+    }
+
+    @Test func aShortCaptureTitleParsesLikeTheCaptureBar() {
+        #expect(WatchCommandPlan.parseCapture("Call Sam !") == CaptureParser.parse("Call Sam !"))
     }
 
     // MARK: capture

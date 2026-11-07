@@ -18,7 +18,7 @@ public enum WatchCommandPlan {
     }
 
     public enum SkipReason: Sendable, Equatable {
-        case duplicate, missingTask, alreadyCompleted, notCompleted, alreadyUrgent, emptyText
+        case duplicate, missingTask, saved, alreadyCompleted, notCompleted, alreadyUrgent, emptyText
         /// Top three commands wait for phase 4 on Apple.
         case notAvailableYet
     }
@@ -30,6 +30,10 @@ public enum WatchCommandPlan {
 
     public static func decide(_ command: WatchCommand, task: Task?, alreadyApplied: Bool) -> Decision {
         if alreadyApplied { return .skip(.duplicate) }
+
+        // A task Saved since the watch's snapshot is out of reach: the builder never sends Saved
+        // rows, and `TaskStore.toggleComplete` refuses one. Skipping lets the watch drop the change.
+        if let task, task.isSaved, command.taskID != nil { return .skip(.saved) }
 
         switch command.kind {
         case .capture(let text, let quadrant):
@@ -52,5 +56,13 @@ public enum WatchCommandPlan {
             guard let task else { return .skip(.missingTask) }
             return task.completed ? .skip(.alreadyCompleted) : .apply(.snoozeOneHour)
         }
+    }
+
+    /// Parses capture text like the iPhone capture bar, then clamps the title to the field limit.
+    /// Dictation on the watch can run past 80 characters, and `TaskStore.add` refuses those.
+    public static func parseCapture(_ text: String) -> ParsedCapture {
+        var parsed = CaptureParser.parse(text)
+        parsed.title = String(parsed.title.prefix(FieldLimits.titleRange.upperBound))
+        return parsed
     }
 }

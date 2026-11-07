@@ -24,13 +24,26 @@ struct WatchAppliedLedgerTests {
         #expect(WatchAppliedLedger(defaults: d).contains("a"))
     }
 
-    @Test func keepsOnlyTheNewestFifty() {
+    @Test func keepsTheNewestTwoHundredAsTheSpecSays() {
         var ledger = WatchAppliedLedger(defaults: defaults())
-        for i in 0..<60 { ledger.record("id-\(i)") }
-        #expect(ledger.ids.count == WatchSnapshot.appliedCommandCap)
+        for i in 0..<210 { ledger.record("id-\(i)") }
+        #expect(ledger.ids.count == 200)
         #expect(!ledger.contains("id-9"))
         #expect(ledger.contains("id-10"))
-        #expect(ledger.ids.last == "id-59")
+        #expect(ledger.ids.last == "id-209")
+    }
+
+    @Test func anIDMoreThanFiftyCommandsOldIsStillADuplicate() {
+        var ledger = WatchAppliedLedger(defaults: defaults())
+        for i in 0..<60 { ledger.record("id-\(i)") }
+        #expect(ledger.contains("id-0"))
+    }
+
+    @Test func theSnapshotStillCarriesOnlyTheNewestFifty() {
+        var ledger = WatchAppliedLedger(defaults: defaults())
+        for i in 0..<60 { ledger.record("id-\(i)") }
+        #expect(ledger.snapshotIDs.count == WatchSnapshot.appliedCommandCap)
+        #expect(ledger.snapshotIDs.last == "id-59")
     }
 
     @Test func recordingTwiceKeepsOneCopy() {
