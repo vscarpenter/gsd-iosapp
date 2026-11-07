@@ -78,7 +78,7 @@ final class WatchSessionCoordinator: NSObject {
         let snapshot = WatchSnapshotBuilder.build(
             from: store.tasks, now: now(),
             escalationWindowDays: window.days,
-            appliedCommandIDs: ledger.ids)
+            appliedCommandIDs: ledger.snapshotIDs)
         guard let data = try? JSONEncoder().encode(snapshot) else { return }
         // `generatedAt` changes every build, so compare the payload with it held fixed.
         var stable = snapshot; stable.generatedAt = .distantPast
@@ -101,10 +101,16 @@ final class WatchSessionCoordinator: NSObject {
         let decision = WatchCommandPlan.decide(command, task: task, alreadyApplied: ledger.contains(command.id))
         if case .apply(let action) = decision {
             do { try await perform(action, on: task) }
-            catch { return }   // a failed write stays unrecorded; the watch keeps the command pending
+            catch where Self.isPermanentRefusal(error) {
+                // The store will always refuse this command. Recording it lets the watch drop it.
+            } catch { return }   // a store or database failure may clear; leave the id unrecorded
         }
         ledger.record(command.id)
         schedule()
+    }
+
+    private static func isPermanentRefusal(_ error: Error) -> Bool {
+        error is TaskStoreError || error is ValidationError
     }
 
     private func perform(_ action: WatchCommandPlan.Action, on task: Task?) async throws {
@@ -116,7 +122,7 @@ final class WatchSessionCoordinator: NSObject {
         case .snoozeOneHour:
             if let task { try await store.snooze(task, by: .oneHour) }
         case .capture(let text, let quadrant):
-            try await store.add(CaptureParser.parse(text), override: quadrant)
+            try await store.add(WatchCommandPlan.parseCapture(text), override: quadrant)
         }
     }
 }
