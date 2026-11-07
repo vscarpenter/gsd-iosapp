@@ -26,6 +26,15 @@ public protocol ReminderScheduling: Sendable {
 
     /// Set the app-icon badge (product spec §9.4).
     func setBadge(_ count: Int) async
+
+    /// Schedule the weekly sweep reminder again from the stored setting, or cancel it when off.
+    /// `resyncReminders` calls this after `cancelAll`, which would otherwise remove the repeating
+    /// request at the next task change. A default no-op keeps other conformances unchanged.
+    func rescheduleSweepReminder() async
+}
+
+extension ReminderScheduling {
+    public func rescheduleSweepReminder() async {}
 }
 
 /// The default no-op scheduler so existing `TaskStore` call sites and tests compile and run

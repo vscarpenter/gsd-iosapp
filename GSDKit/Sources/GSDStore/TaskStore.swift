@@ -837,6 +837,7 @@ public final class TaskStore {
         // none (IOS-CAP-BG). A failed read leaves the pending reminders as they are.
         guard let rows = try? await repository.fetchAll() else { return }
         await reminders.cancelAll()
+        await reminders.rescheduleSweepReminder()   // cancelAll also removed the repeating sweep reminder
         for task in soonestReminderTasks(rows) { await refreshReminder(task) }
         await refreshBadge()
     }

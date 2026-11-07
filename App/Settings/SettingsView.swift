@@ -25,6 +25,7 @@ struct SettingsView: View {
     @State private var archiveStatusIsError = false
 
     @State private var notificationSettings: NotificationSettings = .init()
+    @State private var sweepReminder: WeeklySweep.Reminder = WeeklySweepSettings.reminder()
     /// OS authorization status, refreshed on appear (nil = not yet read).
     @State private var authStatusText: String?
     @State private var authIsDenied = false
@@ -41,6 +42,7 @@ struct SettingsView: View {
                 accountSection
                 archiveSection
                 trashSection
+                sweepSection
                 notificationSection
                 DataStorageView()          // Group D sections
                 feedbackSection
@@ -298,6 +300,63 @@ struct SettingsView: View {
                 quietHoursControls
                 authStatusRow
             }
+            sweepReminderControls
+        }
+    }
+
+    /// Always available here, whether or not the Matrix entry line is showing.
+    private var sweepSection: some View {
+        Section {
+            NavigationLink {
+                SweepView()
+            } label: {
+                Label(String(localized: "Weekly sweep"), systemImage: "wind")
+            }
+            .foregroundStyle(Surface.ink)
+        }
+    }
+
+    /// "Weekly sweep reminder", with day and time (spec-weekly-sweep section 7). Turning it on starts
+    /// at Sunday 09:00. Per device, never synced. The notification text is fixed and has no count.
+    @ViewBuilder private var sweepReminderControls: some View {
+        Toggle(String(localized: "Weekly sweep reminder"), isOn: Binding(
+            get: { sweepReminder.enabled },
+            set: { on in
+                sweepReminder = on ? WeeklySweepSettings.defaultReminder : .off
+                applySweepReminder(askPermission: on)
+            }
+        ))
+        .tint(Surface.tint)
+        if sweepReminder.enabled {
+            Picker(String(localized: "Day"), selection: Binding(
+                get: { sweepReminder.weekday },
+                set: { sweepReminder.weekday = $0; applySweepReminder() }
+            )) {
+                ForEach(1...7, id: \.self) { iso in
+                    Text(Calendar.current.weekdaySymbols[(iso % 7)]).tag(iso)
+                }
+            }
+            .tint(Surface.ink3)
+            DatePicker(String(localized: "Time"), selection: Binding(
+                get: {
+                    Calendar.current.date(from: DateComponents(hour: sweepReminder.hour, minute: sweepReminder.minute))
+                        ?? Date()
+                },
+                set: { picked in
+                    let parts = Calendar.current.dateComponents([.hour, .minute], from: picked)
+                    sweepReminder.hour = parts.hour ?? 9
+                    sweepReminder.minute = parts.minute ?? 0
+                    applySweepReminder()
+                }
+            ), displayedComponents: .hourAndMinute)
+        }
+    }
+
+    private func applySweepReminder(askPermission: Bool = false) {
+        WeeklySweepSettings.setReminder(sweepReminder)
+        _Concurrency.Task {
+            if askPermission { await store.requestNotificationAuthorization() }
+            await store.resyncReminders()   // reschedules the sweep reminder after its cancelAll
         }
     }
 

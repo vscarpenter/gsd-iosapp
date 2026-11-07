@@ -27,6 +27,7 @@ private struct MatrixListContent: View {
     @Environment(SyncCoordinator.self) private var sync
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @State private var actionFailure: TaskActionFailure?
+    @State private var showSweep = false
     @State private var selection = Set<String>()
     @Environment(\.editMode) private var editMode
     var onCompleted: () -> Void
@@ -43,6 +44,10 @@ private struct MatrixListContent: View {
                 ScrollViewReader { proxy in
                     List(selection: $selection) {
                         Section {
+                            SweepEntryLine { showSweep = true }
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                             TopThreeSection(actions: TaskActions(
                                                 store: store,
                                                 onCompleted: onCompleted,
@@ -98,6 +103,7 @@ private struct MatrixListContent: View {
         // content (see BulkActionBar) so they don't get reparented out of existence.
         .bulkActionBar(selection: $selection, failure: $actionFailure)
         .taskActionFailureAlert($actionFailure)
+        .navigationDestination(isPresented: $showSweep) { SweepView() }
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }
         }
