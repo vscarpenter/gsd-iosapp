@@ -84,32 +84,41 @@ package enum TaskWireMapper {
     }
 
     /// Pull-merge into an existing local task: remote wins for synced fields; the device-local +
-    /// derived set is preserved from `local` (conventions 7). Returning from Saved resets this
-    /// device's reminder state just like a native return. `quadrant` recomputed from flags.
+    /// derived set is preserved from `local` (conventions 7). This device's reminder state stays
+    /// local unless the pull returns the task from Saved or moves its due date to another instant.
+    /// Either one is a new reminder, as the native edit makes it, and the old state would hide it
+    /// (B-55; web `localReminderState`, Android `reminderSource`). `quadrant` recomputed from flags.
     private static func merged(_ r: PocketBaseTaskRecord, into local: Task) -> Task {
         let savedAt = WireDate.parse(r.savedAt)
         let returning = local.isSaved && savedAt == nil
+        let dueDate = WireDate.parse(r.dueDate)
+        let keepsReminder = !returning && isSameInstant(local.dueDate, dueDate)
         return Task(
             id: r.taskId, title: r.title, description: r.description,
             urgent: r.urgent, important: r.important,
             completed: r.completed, completedAt: WireDate.parse(r.completedAt),
             createdAt: WireDate.parse(r.clientCreatedAt) ?? local.createdAt,
             updatedAt: WireDate.parse(r.clientUpdatedAt) ?? local.updatedAt,
-            dueDate: WireDate.parse(r.dueDate),
+            dueDate: dueDate,
             recurrence: RecurrenceType(rawValue: r.recurrence) ?? .none,
             tags: r.tags, subtasks: r.subtasks, dependencies: r.dependencies,
             parentTaskId: local.parentTaskId,               // device-local (no wire column)
             notifyBefore: r.notifyBefore,
             notificationEnabled: r.notificationEnabled,
-            notificationSent: returning ? false : local.notificationSent,
-            lastNotificationAt: returning ? nil : local.lastNotificationAt,
-            snoozedUntil: returning ? nil : local.snoozedUntil,
+            notificationSent: keepsReminder ? local.notificationSent : false,
+            lastNotificationAt: keepsReminder ? local.lastNotificationAt : nil,
+            snoozedUntil: keepsReminder ? local.snoozedUntil : nil,
             estimatedMinutes: r.estimatedMinutes,
             timeSpent: local.timeSpent,                     // derived from timeEntries → stays local
             timeEntries: local.timeEntries,                 // wire form lossy → prefer local
             savedAt: savedAt
         )
     }
+
+    /// Equal to the millisecond, the precision web and Android compare at. Both nil counts as equal.
+    private static func isSameInstant(_ a: Date?, _ b: Date?) -> Bool { a.map(epochMs) == b.map(epochMs) }
+
+    private static func epochMs(_ date: Date) -> Int { Int((date.timeIntervalSince1970 * 1000).rounded()) }
 
     private static func reconstruct(_ wire: WireTimeEntry) -> TimeEntry {
         let started = WireDate.parse(wire.startedAt) ?? Date(timeIntervalSince1970: 0)

@@ -120,6 +120,64 @@ struct TaskWireMapperTests {
         #expect(merged.snoozedUntil == nil)
     }
 
+    // MARK: toDomain — a pulled due date at a new instant is a new reminder (B-55)
+
+    private func remindedLocal() -> Task {
+        sampleTask(notificationSent: true, lastNotificationAt: date("2026-06-15T08:30:00.000Z"),
+                   snoozedUntil: date("2026-06-15T10:00:00.000Z"))
+    }
+
+    private func expectReminderReset(_ merged: Task) {
+        #expect(merged.notificationSent == false)
+        #expect(merged.lastNotificationAt == nil)
+        #expect(merged.snoozedUntil == nil)
+    }
+
+    @Test func aPulledDueDateAtANewInstantResetsThisDevicesReminderState() {
+        var wire = TaskWireMapper.toWire(remindedLocal(), owner: "u", deviceId: "web")
+        wire.dueDate = "2026-06-16T09:00:00.000Z"
+        let merged = TaskWireMapper.toDomain(wire, mergingInto: remindedLocal())
+        #expect(merged.dueDate == date("2026-06-16T09:00:00.000Z"))
+        expectReminderReset(merged)
+    }
+
+    @Test(arguments: [(local: true, remote: false), (local: false, remote: true)])
+    func aPulledDueDateAddedOrRemovedResetsThisDevicesReminderState(dated: (local: Bool, remote: Bool)) {
+        var local = remindedLocal()
+        local.dueDate = dated.local ? date("2026-06-15T09:00:00.000Z") : nil
+        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "web")
+        wire.dueDate = dated.remote ? "2026-06-15T09:00:00.000Z" : ""
+        expectReminderReset(TaskWireMapper.toDomain(wire, mergingInto: local))
+    }
+
+    @Test(arguments: ["2026-06-15T09:00:00Z", "2026-06-15T04:00:00.000-05:00"])
+    func theSameDueInstantInAnotherFormKeepsThisDevicesReminderState(remoteDue: String) {
+        var wire = TaskWireMapper.toWire(remindedLocal(), owner: "u", deviceId: "web")
+        wire.dueDate = remoteDue
+        wire.title = "Renamed on the web"
+        let merged = TaskWireMapper.toDomain(wire, mergingInto: remindedLocal())
+        #expect(merged.notificationSent == true)
+        #expect(merged.lastNotificationAt == date("2026-06-15T08:30:00.000Z"))
+        #expect(merged.snoozedUntil == date("2026-06-15T10:00:00.000Z"))
+    }
+
+    /// The symptom: the due date moved earlier, and a snooze set for the old date outlived the move.
+    /// It ends after the new reminder, so it would win under either snooze rule and skip that reminder.
+    @Test func aStaleSnoozeNoLongerBeatsAMovedDueDate() throws {
+        var local = remindedLocal()
+        local.dueDate = date("2026-06-20T09:00:00.000Z")
+        local.snoozedUntil = date("2026-06-19T10:00:00.000Z")
+        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "web")
+        wire.dueDate = "2026-06-16T09:00:00.000Z"
+        let merged = TaskWireMapper.toDomain(wire, mergingInto: local)
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try #require(TimeZone(identifier: "UTC"))
+        let fire = ReminderMath.nextFire(for: merged, inputs: .init(masterEnabled: true, defaultReminder: 15),
+                                         quietStart: nil, quietEnd: nil,
+                                         now: date("2026-06-15T09:30:00.000Z"), calendar: utc)
+        #expect(fire == date("2026-06-16T08:30:00.000Z"))              // notifyBefore 30 on the new date
+    }
+
     // MARK: round-trip
 
     @Test func roundTripPreservesJoinKeyAndDocumentsLoss() {
