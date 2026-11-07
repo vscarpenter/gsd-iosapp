@@ -62,6 +62,13 @@ private struct MatrixGridContent: View {
                 GeometryReader { viewport in
                     let pinnedHeight = Self.pinnedRowHeight(for: viewport.size.height)
                     ScrollView {
+                        TopThreeSection(actions: TaskActions(
+                                            store: store,
+                                            onCompleted: onCompleted,
+                                            onError: { actionFailure = TaskActionFailure($0) }),
+                                        onEdit: { palette.editor = .edit($0) })
+                            .padding(.horizontal, Self.gridInset)
+                            .padding(.top, Self.gridInset)
                         LazyVGrid(columns: columns, spacing: Self.gridSpacing) {
                             ForEach(Quadrant.allCases, id: \.self) { q in
                                 QuadrantCell(
