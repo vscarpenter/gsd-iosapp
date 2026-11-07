@@ -46,6 +46,17 @@ extension PocketBaseClient {
         try await listAll(PocketBaseTaskRecord.self, updatedSince: since, token: token, perPage: perPage).items
     }
 
+    /// Every task record the account holds, or a throw. Unlike `listTasks`, a record that won't
+    /// decode fails the listing: a caller that forgets what the listing lacks (resurrect on sight,
+    /// rule 5) must not mistake an unreadable record for a missing one.
+    package func listEveryTask(token: String) async throws -> [PocketBaseTaskRecord] {
+        let listing = try await listAll(PocketBaseTaskRecord.self, updatedSince: "1970-01-01T00:00:00.000Z", token: token)
+        if listing.undecodable > 0 {
+            throw RemoteListingIncomplete(reason: "\(listing.undecodable) records could not be read")
+        }
+        return listing.items
+    }
+
     /// Walk every page and return all of it, or throw `RemoteListingIncomplete`. A record that
     /// fails to decode still counts toward the server's `totalItems`, and the caller decides what
     /// it means: pull skips it, while the push and reconcile index refuses to go on. The same

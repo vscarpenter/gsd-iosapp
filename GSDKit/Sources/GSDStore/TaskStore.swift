@@ -1107,6 +1107,7 @@ public final class TaskStore {
         defaults.removeObject(forKey: AppGroupDefaults.Key.pinnedSmartViewIds)
         defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAutoEnabled)
         defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAfterDays)
+        defaults.removeObject(forKey: AppGroupDefaults.Key.resurrectOnSight)   // resurrect on sight, rule 2
         FeedbackLocalState.reset(in: feedbackDefaults)
         WeeklySweepSettings.reset(in: defaults)
     }

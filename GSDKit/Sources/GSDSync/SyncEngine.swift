@@ -413,7 +413,8 @@ public actor SyncEngine {
                                                                  owner: owner)
             try fence(owner)
             if backfill { cursor.markBackfilled() }
-            result.pulled = pulled
+            // Tasks deleted while signed out come back before the push, so it never sees them.
+            result.pulled = pulled + (try await resurrectOnSight(token: token, owner: owner))
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
             result.deleted = try await reconcileDeletions(token: token, owner: owner)    // destructive — last
@@ -601,6 +602,67 @@ public actor SyncEngine {
         try fence(owner)
         try await tombstones.resurrect(TaskWireMapper.toDomain(record, mergingInto: nil))
         return .resurrected
+    }
+
+    // MARK: Resurrect on sight (spec-resurrect-on-sight.md)
+
+    /// The sign-in moment (section 5): a delete still queued when a session starts never reaches the
+    /// server. A Trash or Replace delete carries no payload, and its task is remembered so it comes
+    /// back when the account lists it. An archive's delete carries the task and is dropped without
+    /// being remembered, so the archive stands (rule 6). Runs only with a nil cursor, meaning a
+    /// sign-out or a device that never synced. A rejected token keeps the cursor, so a re-sign-in
+    /// after one drops nothing and its deletes still push (section 7). The coordinator calls this
+    /// once per sign-in, never per sync, so a failed first sync can't swallow a signed-in delete.
+    public func dropSignedOutDeletes() async throws {
+        guard cursor.load() == nil else { return }
+        let deletes = try await queue.all().filter { $0.operation == .delete }
+        cursor.rememberDeletes(deletes.filter { $0.payload == nil }.map(\.taskId))
+        for item in deletes { try await queue.remove(id: item.id) }
+    }
+
+    /// After the pull, before the push (rules 3 to 5): one complete listing with the owner
+    /// confirmed, then each remembered task it lists comes back here. Every remembered id is then
+    /// forgotten except one the far-future hold-off skipped, whose record the push heals first.
+    /// A throw forgets nothing, so a dead session or an incomplete listing tries again next run.
+    func resurrectOnSight(token: String, owner: String) async throws -> Int {
+        let remembered = cursor.rememberedDeletes()
+        guard !remembered.isEmpty else { return 0 }
+        let listing = try await client.listEveryTask(token: token)
+        // A rejected token lists as an empty account; only auth-refresh tells them apart.
+        guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
+        var heldOff = Set<String>()
+        var brought = 0
+        for record in listing where remembered.contains(record.taskId) {
+            guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { continue }
+            if try await hasQueuedWriteHoldingOff(record, remoteUpdated: remoteUpdated) {
+                heldOff.insert(record.taskId)
+                continue
+            }
+            if try await bringBack(record, remoteUpdated: remoteUpdated, owner: owner) { brought += 1 }
+        }
+        try fence(owner)
+        cursor.keepRememberedDeletes(only: heldOff)
+        return brought
+    }
+
+    /// One remembered task the account lists. A Trash row goes and the server copy becomes active.
+    /// An active copy here, restored while signed out or brought back by the pull, takes the
+    /// server's only when it is strictly newer.
+    private func bringBack(_ record: PocketBaseTaskRecord, remoteUpdated: Date, owner: String) async throws -> Bool {
+        let local = try await tasks.fetch(id: record.taskId)
+        let ingested = LWW.capped(remoteUpdated, now: now())
+        if let local, LWW.resolve(localUpdatedAt: local.updatedAt, remoteClientUpdatedAt: ingested) != .takeRemote {
+            return false
+        }
+        var incoming = TaskWireMapper.toDomain(record, mergingInto: local)
+        incoming.updatedAt = ingested
+        try fence(owner)
+        if local == nil, try await tombstones.tombstoneDate(id: record.taskId) != nil {
+            try await tombstones.resurrect(incoming)
+        } else {
+            try await tasks.upsert(incoming)
+        }
+        return true
     }
 
     // MARK: History (§7.7)
