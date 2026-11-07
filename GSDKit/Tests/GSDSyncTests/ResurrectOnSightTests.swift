@@ -332,6 +332,19 @@ struct ResurrectOnSightTests {
         #expect(stack.cursor.rememberedDeletes() == ["t1", "t2"])
     }
 
+    /// SPEC-3 (#680) rule 2: the sign-in drop adds to the remembered ids and never replaces them, so an
+    /// id an earlier sign-in remembered, and no run has listed yet, is still there.
+    @Test("sign-in keeps the remembered ids")
+    func signInKeepsTheRememberedIds() async throws {
+        let stack = try makeStack(.signedOut)
+        stack.cursor.rememberDeletes(["t0"])
+        try await stack.enqueueDelete("t1")
+
+        try await stack.engine.dropSignedOutDeletes()
+
+        #expect(stack.cursor.rememberedDeletes() == ["t0", "t1"])
+    }
+
     @Test("a re-sign-in after a rejected token drops no queued delete")
     func aReSignInAfterARejectedTokenDropsNothing() async throws {
         let stack = try makeStack(.signedIn)                     // a rejected token keeps the cursor

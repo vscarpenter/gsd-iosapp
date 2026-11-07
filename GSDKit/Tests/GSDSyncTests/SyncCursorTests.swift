@@ -105,6 +105,17 @@ extension SyncCursorTests {
         #expect(!cursor.needsBackfill())
     }
 
+    /// SPEC-3 (#680), iOS storage: the remembered ids have their own key, and sign-out's `clear()`
+    /// removes only the cursor's own keys, so they survive it.
+    @Test func clearKeepsTheRememberedDeletes() {
+        let cursor = SyncCursor(defaults: freshDefaults())
+        cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000_000_000))
+        cursor.rememberDeletes(["t1"])
+        cursor.clear()
+        #expect(cursor.load() == nil)
+        #expect(cursor.rememberedDeletes() == ["t1"])
+    }
+
     @Test func clearLeavesAnOlderContractOwed() {
         let defaults = freshDefaults()
         defaults.set("2026-10-27 00:00:00.000Z", forKey: "gsd.sync.lastServerUpdated")
