@@ -981,7 +981,8 @@ public final class TaskStore {
             let result = try TaskImporter.replace(from: data)
             let importedIDs = Set(result.tasks.map(\.id))
             let now = clock()
-            let defaultReminder = notificationSettings.defaultReminder
+            // D3: the import restores the backup's settings, so its default is the one in effect after.
+            let defaultReminder = result.notificationSettings?.defaultReminder ?? notificationSettings.defaultReminder
             let stamped = result.tasks.map { task -> Task in
                 var t = task; t.updatedAt = now
                 t.notifyBefore = t.notifyBefore ?? defaultReminder   // D-10: a backup with no offset
@@ -1007,9 +1008,10 @@ public final class TaskStore {
         case .merge:
             let existing = Set(try await repository.fetchAll().map(\.id))
             let result = try TaskImporter.merge(from: data, existingIDs: existing, newID: { self.newID() })
+            let defaultReminder = result.notificationSettings?.defaultReminder ?? notificationSettings.defaultReminder
             for task in result.tasks {
                 var t = task; t.updatedAt = clock()
-                t.notifyBefore = t.notifyBefore ?? notificationSettings.defaultReminder
+                t.notifyBefore = t.notifyBefore ?? defaultReminder
                 try await upsertEnqueued(t, op: .update)
             }
             try await restoreCompanionStores(result, mode: .merge)
