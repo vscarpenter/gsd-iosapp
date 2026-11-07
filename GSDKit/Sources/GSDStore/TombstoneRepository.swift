@@ -9,6 +9,8 @@ import GSDModel
 public protocol TombstoneRepository: Sendable {
     /// When the task was archived or trashed, or nil when it is in neither table.
     func tombstoneDate(id: String) async throws -> Date?
+    /// Whether the task is archived here (not trashed). Resurrect on sight leaves an archive alone.
+    func isArchived(id: String) async throws -> Bool
     /// Drop the archived or trashed row and save `task` as live, in one transaction.
     func resurrect(_ task: Task) async throws
     /// Move a live task to the trash and drop all its queue rows, in one transaction. Returns false
@@ -32,6 +34,10 @@ public final class GRDBTombstoneRepository: TombstoneRepository {
             let deletedAt = try DeletedTaskRecord.fetchOne(db, key: id)?.deletedAt
             return [archivedAt, deletedAt].compactMap { $0 }.max()
         }
+    }
+
+    public func isArchived(id: String) async throws -> Bool {
+        try await dbWriter.read { db in try ArchivedTaskRecord.fetchOne(db, key: id) != nil }
     }
 
     public func resurrect(_ task: Task) async throws {

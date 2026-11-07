@@ -30,6 +30,7 @@ struct SyncIdentityMismatch: Error {}
 /// What the internal test initializer passes for `tombstones`: no task is archived or trashed.
 private struct NoTombstones: TombstoneRepository {
     func tombstoneDate(id: String) async throws -> Date? { nil }
+    func isArchived(id: String) async throws -> Bool { false }
     func resurrect(_ task: Task) async throws {}
     func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool { false }
     func buriedTask(id: String) async throws -> Task? { nil }
@@ -666,9 +667,11 @@ public actor SyncEngine {
 
     /// One remembered task the account lists. A Trash row goes and the server copy becomes active.
     /// An active copy here, restored while signed out or brought back by the pull, takes the
-    /// server's only when it is strictly newer.
+    /// server's only when it is strictly newer. An archive row stays archived (section 8, reading 2):
+    /// the archive was the user's last act here.
     private func bringBack(_ record: PocketBaseTaskRecord, remoteUpdated: Date, owner: String) async throws -> Bool {
         let local = try await tasks.fetch(id: record.taskId)
+        if local == nil, try await tombstones.isArchived(id: record.taskId) { return false }
         let ingested = LWW.capped(remoteUpdated, now: now())
         if let local, LWW.resolve(localUpdatedAt: local.updatedAt, remoteClientUpdatedAt: ingested) != .takeRemote {
             return false
