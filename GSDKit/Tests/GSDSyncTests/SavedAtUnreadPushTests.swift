@@ -325,12 +325,17 @@ struct SavedAtUnreadPushTests {
     @Test("a far-future remote with a queued edit keeps the server pick through the backfill")
     func farFutureRemoteWithAQueuedEdit() async throws {
         let stack = try makeStack(.olderBuild, server: UnreadServer(clientUpdatedAt: "2027-01-01T00:00:00.000Z"))
-        try await stack.seedRow(at: "2026-10-21T10:00:00.000Z", queued: true)
+        try await stack.seedRow(at: "2026-10-21T10:00:00.000Z", queued: false)
+        var edit = try #require(try await stack.repo.fetch(id: "a"))
+        edit.title = "Read this week"                                   // differs from the server's title
+        try await stack.repo.upsert(edit)
+        try await stack.enqueue(edit)
 
         _ = await stack.engine.sync(trigger: .launch)
 
         #expect(await stack.server.writes.count == 1)
         #expect(await stack.server.savedAt() == UnreadServer.savedStamp)
+        #expect(try await stack.repo.fetch(id: "a")?.title == "Read this week")   // the hold-off kept the edit
     }
 
     @Test("a queued item for a row that's gone leaves saved_at off the wire")
