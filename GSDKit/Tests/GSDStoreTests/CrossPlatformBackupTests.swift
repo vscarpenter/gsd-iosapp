@@ -36,6 +36,14 @@ struct CrossPlatformBackupTests {
         return try Data(contentsOf: url)
     }
 
+    /// The iOS client's own export, copied byte-for-byte from the web repo's fixture pair.
+    private func iosBackup() throws -> Data {
+        let url = try #require(Bundle.module.url(forResource: "ios-backup-export",
+                                                 withExtension: "json",
+                                                 subdirectory: "Fixtures"))
+        return try Data(contentsOf: url)
+    }
+
     private func waitForTasks(_ store: TaskStore, count: Int) async throws {
         store.start(); var w = 0
         while store.tasks.count != count && w < 100 {
@@ -51,6 +59,23 @@ struct CrossPlatformBackupTests {
         let decoded = try TaskExport.decode(try webBackup())
         #expect(decoded.version == "2.1.0")
         #expect(decoded.tasks.count == 2)
+    }
+
+    @Test func theIOSExportParsesAtAll() throws {
+        // The iOS client's own output, read back by this app's decoder.
+        let decoded = try TaskExport.decode(try iosBackup())
+        #expect(decoded.version == "2.1.0")
+        #expect(decoded.tasks.count == 2)
+    }
+
+    @Test func restoringTheIOSExportBringsBackItsTasks() async throws {
+        let store = try makeStore()
+        try await store.importTasks(try iosBackup(), mode: .replace)
+        try await waitForTasks(store, count: 2)
+
+        #expect(Set(store.tasks.map(\.id)) == ["web-task-1", "web-task-2"])
+        #expect(try await store.archivedTasksStamped().map(\.task.id) == ["web-arch-1"])
+        #expect(try await store.trashedTasks().map(\.task.id) == ["web-trash-1"])
     }
 
     @Test func restoringAWebBackupBringsBackEveryStore() async throws {
