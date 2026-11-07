@@ -82,6 +82,20 @@ struct TopThreeContract4Tests {
 
     // MARK: C4-1
 
+    /// The pick version of IOS-SAVED's b1 case, so the spec's table reads straight across (S-AND).
+    @Test("backfill runs with a null cursor")
+    func backfillRunsWithANullCursor() async throws {
+        let stack = try makeStack(.contract3SignedOut, server: pickedServer())
+        try await stack.seedRow(at: UnreadServer.savedStamp, queued: false)
+
+        let result = await stack.engine.sync(trigger: .signIn)
+
+        #expect(result.error == nil)
+        #expect(await stack.serverKeepsThePick())
+        #expect(try await stack.local().focusRank == Self.pick.rank)
+        #expect(!stack.cursor.needsBackfill())
+    }
+
     @Test("sign-out, upgrade, and sign-in keep the server pick")
     func signOutUpgradeAndSignInKeepTheServerPick() async throws {
         let stack = try makeStack(.contract3SignedOut, server: pickedServer())
