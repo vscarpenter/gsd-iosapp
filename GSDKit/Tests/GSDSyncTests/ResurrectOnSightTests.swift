@@ -18,8 +18,10 @@ actor AccountServer: RequestExecuting {
     private var listingFails = false
     private var onListing: (@Sendable () -> Void)?
 
-    func add(_ taskId: String, title: String = "Call the venue", clientUpdatedAt: String = "2026-11-01T10:00:00.000Z") {
+    func add(_ taskId: String, title: String = "Call the venue", clientUpdatedAt: String = "2026-11-01T10:00:00.000Z",
+             dueDate: String = "") {
         records[taskId] = ["id": "rec_\(taskId)", "task_id": taskId, "owner": "u1", "title": title, "description": "",
+                           "due_date": dueDate,
                            "urgent": true, "important": true, "client_created_at": "2026-10-01T10:00:00.000Z",
                            "client_updated_at": clientUpdatedAt, "updated": "2026-11-01 10:00:01.000Z", "device_id": "web"]
     }
@@ -238,6 +240,33 @@ struct ResurrectOnSightTests {
 
         #expect(stack.cursor.rememberedDeletes() == ["t1"])
         #expect(try await stack.isActive("t2"))
+    }
+
+    /// The Lead's decision on S-AND's review: the server copy merges into the Trash row, as web does,
+    /// instead of replacing it, so this device's reminder state and rich time entries survive.
+    @Test("a resurrected task keeps this device's reminder state and time-entry notes")
+    func aResurrectedTaskKeepsReminderStateAndTimeEntryNotes() async throws {
+        let stack = try makeStack(.signedIn)
+        let due = "2026-11-10T15:00:00.000Z"
+        await stack.server.add("t1", dueDate: due)
+        let started = try #require(WireDate.parse("2026-11-01T09:00:00.000Z"))
+        let entry = TimeEntry(id: "e1", startedAt: started, endedAt: started.addingTimeInterval(1500),
+                              notes: "Left a voicemail")
+        var row = try await stack.seedActive("t1")
+        row.dueDate = WireDate.parse(due)
+        row.timeEntries = [entry]
+        row.notificationSent = true
+        row.lastNotificationAt = try #require(WireDate.parse("2026-11-06T14:45:00.000Z"))
+        row.snoozedUntil = try #require(WireDate.parse("2026-11-10T14:30:00.000Z"))
+        try await stack.trash.trash(row, at: Self.now)
+        stack.cursor.rememberDeletes(["t1"])
+
+        _ = try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+
+        let back = try #require(try await stack.repo.fetch(id: "t1"))
+        #expect(back.timeEntries == [entry])
+        #expect(back.notificationSent && back.lastNotificationAt == row.lastNotificationAt)
+        #expect(back.snoozedUntil == row.snoozedUntil)
     }
 
     /// S-AND's note 3, the Lead's fix: the step awaits the listing, so a sign-in can remember another

@@ -32,6 +32,7 @@ private struct NoTombstones: TombstoneRepository {
     func tombstoneDate(id: String) async throws -> Date? { nil }
     func resurrect(_ task: Task) async throws {}
     func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool { false }
+    func buriedTask(id: String) async throws -> Task? { nil }
 }
 
 /// Bidirectional active-task sync (§7.4–7.5). Writes pulled tasks DIRECTLY via the repository
@@ -656,10 +657,13 @@ public actor SyncEngine {
         if let local, LWW.resolve(localUpdatedAt: local.updatedAt, remoteClientUpdatedAt: ingested) != .takeRemote {
             return false
         }
-        var incoming = TaskWireMapper.toDomain(record, mergingInto: local)
+        // A buried row merges the server copy the way an active row does, as web does, so its rich
+        // time entries and this device's reminder state survive instead of a rebuild from the wire.
+        let buried = local == nil ? try await tombstones.buriedTask(id: record.taskId) : nil
+        var incoming = TaskWireMapper.toDomain(record, mergingInto: local ?? buried)
         incoming.updatedAt = ingested
         try fence(owner)
-        if local == nil, try await tombstones.tombstoneDate(id: record.taskId) != nil {
+        if buried != nil {
             try await tombstones.resurrect(incoming)
         } else {
             try await tasks.upsert(incoming)
