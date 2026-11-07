@@ -20,25 +20,31 @@ struct TodaysFocusView: View {
     private var rowFont: Font { family == .systemLarge ? .subheadline : .caption }
     private var markerFont: Font { family == .systemLarge ? .caption : .caption2 }
 
+    /// Today's picks in rank order while the snapshot's date is the date being drawn; otherwise the
+    /// existing Today's Focus list. The comparison happens here, at draw time, because the widget
+    /// doesn't redraw at midnight on its own.
+    private var picks: [WidgetTask]? { entry.snapshot.visibleFocusTasks(at: entry.date) }
+    private var rows: [WidgetTask] { picks ?? entry.snapshot.tasks }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Label(String(localized: "Today's Focus"), systemImage: "target")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
 
-            if entry.snapshot.tasks.isEmpty {
+            if rows.isEmpty {
                 Spacer(minLength: 0)
                 Text(String(localized: "All clear"))
                     .font(.headline)
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             } else {
-                ForEach(entry.snapshot.tasks.prefix(visibleCount)) { task in
+                ForEach(rows.prefix(visibleCount)) { task in
                     Link(destination: DeepLinkRoute.task(task.id).url) {
                         row(task)
                     }
                 }
-                if entry.snapshot.totalCount > visibleCount {
+                if picks == nil && entry.snapshot.totalCount > visibleCount {
                     Text(String(localized: "+\(entry.snapshot.totalCount - visibleCount) more"))
                         .font(.caption2).foregroundStyle(.secondary)
                 }

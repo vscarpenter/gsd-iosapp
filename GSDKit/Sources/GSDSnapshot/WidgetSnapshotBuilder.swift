@@ -15,6 +15,12 @@ public enum WidgetSnapshotBuilder {
         let rows = matched.prefix(limit).map {
             WidgetTask(id: $0.id, title: $0.title, dueDate: $0.dueDate)
         }
-        return WidgetSnapshot(generatedAt: now, tasks: Array(rows), totalCount: matched.count)
+        // Top three: at most three, in rank order, and dated so the widget can refuse a stale day.
+        let picks = TopThree.todaysPicks(tasks, now: now, timeZone: calendar.timeZone).picks
+            .compactMap { id in tasks.first { $0.id == id } }
+            .map { WidgetTask(id: $0.id, title: $0.title, dueDate: $0.dueDate) }
+        return WidgetSnapshot(generatedAt: now, tasks: Array(rows), totalCount: matched.count,
+                              focusDate: picks.isEmpty ? nil : TopThree.localDate(now, timeZone: calendar.timeZone),
+                              focusTasks: picks)
     }
 }
