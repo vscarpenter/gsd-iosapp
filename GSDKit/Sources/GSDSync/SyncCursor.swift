@@ -76,8 +76,8 @@ public struct SyncCursor: @unchecked Sendable {
 
     func rememberDeletes(_ ids: some Sequence<String>) { saveRemembered(rememberedDeletes().union(ids)) }
 
-    /// Forget every remembered id except `ids`.
-    func keepRememberedDeletes(only ids: Set<String>) { saveRemembered(rememberedDeletes().intersection(ids)) }
+    /// Forget exactly `ids`. An id remembered since the caller read the list survives.
+    func forgetRememberedDeletes(_ ids: Set<String>) { saveRemembered(rememberedDeletes().subtracting(ids)) }
 
     private func saveRemembered(_ ids: Set<String>) {
         if ids.isEmpty { defaults.removeObject(forKey: AppGroupDefaults.Key.resurrectOnSight) }

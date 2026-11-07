@@ -641,7 +641,9 @@ public actor SyncEngine {
             if try await bringBack(record, remoteUpdated: remoteUpdated, owner: owner) { brought += 1 }
         }
         try fence(owner)
-        cursor.keepRememberedDeletes(only: heldOff)
+        // Forget from the snapshot taken above, not the stored list: a sign-in during the awaits
+        // may have remembered another id, and this run never looked for it.
+        cursor.forgetRememberedDeletes(remembered.subtracting(heldOff))
         return brought
     }
 
