@@ -16,6 +16,10 @@ public protocol TaskRepository: Sendable {
     func upsert(_ task: Task) async throws
     func fetchAll() async throws -> [Task]
     func fetch(id: String) async throws -> Task?
+    /// One write that sets only `notifyBefore`, and only where it is still null (D-10). The sync
+    /// drain settles a legacy null this way, so a local write that lands in between is never
+    /// reverted by a whole-row save. Touches no other column, not even `updatedAt`.
+    func setNotifyBeforeIfNull(id: String, value: Int) async throws
     func delete(id: String) async throws
     /// Replace the entire task table in a single transaction: delete all rows, then insert
     /// `tasks`. Used by Replace-mode import. No dependency-scrub is needed (a full clear
@@ -49,6 +53,13 @@ public final class GRDBTaskRepository: TaskRepository {
         try await dbWriter.read { db in
             guard let record = try TaskRecord.fetchOne(db, key: id) else { return nil }
             return try record.toDomain()
+        }
+    }
+
+    public func setNotifyBeforeIfNull(id: String, value: Int) async throws {
+        try await dbWriter.write { db in
+            try db.execute(sql: "UPDATE tasks SET notifyBefore = ? WHERE id = ? AND notifyBefore IS NULL",
+                           arguments: [value, id])
         }
     }
 
