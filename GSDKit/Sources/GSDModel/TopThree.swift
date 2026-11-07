@@ -205,12 +205,12 @@ public enum TopThree {
 
     /// The words over the carry-over offer: one day back is "From yesterday", two to six days back
     /// is the weekday ("From Friday"), and seven days back is "From a week ago", because the weekday
-    /// would match today's. `carryOver` only offers dates one to seven days back, so these are all
-    /// the cases.
-    public static func carryOverLabel(from date: String, today: String, timeZone: TimeZone) -> String {
+    /// would match today's. `carryOver` only offers valid dates one to seven days back, so a date that
+    /// doesn't parse has no label: the result is nil and the caller shows no offer.
+    public static func carryOverLabel(from date: String, today: String, timeZone: TimeZone) -> String? {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
-        let back = daysBetween(date, today) ?? 1
+        guard let back = daysBetween(date, today) else { return nil }
         if back <= 1 { return String(localized: "From yesterday") }
         if back >= carryOverDays { return String(localized: "From a week ago") }
         var utc = Calendar(identifier: .gregorian)
