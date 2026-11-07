@@ -392,6 +392,7 @@ public actor SyncEngine {
         }
         let start = now()
         do {
+            try await dropSignedOutDeletesIfOwed()                                  // resurrect on sight: before anything else
             if cursor.load() == nil { try await seedExistingTasks(owner: owner) }      // first-sync seed BEFORE pull/reconcile
             // Revive `.failed` items so the push loop drains them again. Done on any user-app-open
             // event (manual Sync Now, cold launch, return-to-foreground) and when the network
@@ -461,6 +462,7 @@ public actor SyncEngine {
         }
         let start = now()
         do {
+            try await dropSignedOutDeletesIfOwed()   // a push-only drain may be the first run after sign-in
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
             await record(trigger: trigger, result: result, conflicts: 0, start: start)
@@ -607,14 +609,28 @@ public actor SyncEngine {
 
     // MARK: Resurrect on sight (spec-resurrect-on-sight.md)
 
+    /// Called as the user starts signing in, before the token exists. The next engine run, a sync or a
+    /// push-only drain, then drops the deletes queued while signed out before anything else. Marking
+    /// it here rather than at the sign-in moment closes every window between the token landing and the
+    /// drop: a debounced push, a foreground sync as OAuth returns, or a background refresh.
+    public func beginSignIn() { cursor.markSignInDropOwed() }
+
+    /// The first run after `beginSignIn`, inside the single-flight, before the seed, pull, or push.
+    /// The mark clears only once the drop succeeds, so a failed queue read tries again next run.
+    private func dropSignedOutDeletesIfOwed() async throws {
+        guard cursor.signInDropOwed() else { return }
+        try await dropSignedOutDeletes()
+        cursor.clearSignInDropOwed()
+    }
+
     /// The sign-in moment (section 5): a delete still queued when a session starts never reaches the
     /// server. A Trash or Replace delete carries no payload, and its task is remembered so it comes
     /// back when the account lists it. An archive's delete carries the task and is dropped without
     /// being remembered, so the archive stands (rule 6). Runs only with a nil cursor, meaning a
     /// sign-out or a device that never synced. A rejected token keeps the cursor, so a re-sign-in
-    /// after one drops nothing and its deletes still push (section 7). The coordinator calls this
-    /// once per sign-in, never per sync, so a failed first sync can't swallow a signed-in delete.
-    public func dropSignedOutDeletes() async throws {
+    /// after one drops nothing and its deletes still push (section 7). It runs once per sign-in,
+    /// never per sync, so a failed first sync can't swallow a delete made while signed in.
+    func dropSignedOutDeletes() async throws {
         guard cursor.load() == nil else { return }
         let deletes = try await queue.all().filter { $0.operation == .delete }
         cursor.rememberDeletes(deletes.filter { $0.payload == nil }.map(\.taskId))
