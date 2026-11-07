@@ -15,10 +15,10 @@ then the push sent the queued delete. The task left every device.
 
 - **The sign-in moment.** `SyncEngine.dropSignedOutDeletes()` remembers the ids of queued Trash
   and Replace deletes (no payload) and removes every queued delete. An archive's delete carries
-  the task, so it's dropped without being remembered, and the archive stands.
-  `SyncCoordinator.start(trigger: .signIn)` runs it before reachability, cadence, realtime, and the
-  first sync start, so nothing can push those deletes first. Every `SessionStore` path that records
-  the owner (proceed, merge, fresh) reaches the sign-in moment through that one call.
+  the task, so it's dropped without being remembered, and the archive stands. `SessionStore.signIn`
+  calls `SyncEngine.beginSignIn()` before the token exists, and the engine's first run of any kind
+  (a sync or a push-only drain) does the drop before anything else, so nothing can push those
+  deletes first. Every sign-in, including the account-switch paths, goes through that one call.
 - **Only with no cursor.** A rejected token clears only the Keychain token and keeps the cursor,
   so a re-sign-in after one drops nothing, and its deletes still push. That's today's behavior,
   and owner decision D-2 owns it. A sign-out clears the cursor, and so does a device that never
@@ -46,3 +46,18 @@ lists, deletes, and confirms the owner. The Erase row is in `TaskStoreDataTests`
 the server. The other three are guards that pass both ways: a re-sign-in drops nothing, a failed
 first sync swallows nothing, and a signed-in delete still deletes. The real-server run is pending
 on owner item 24.
+
+## After review
+
+S-AND's review and the Lead's decisions (2026-11-07) added three fixes, each red first:
+
+- **The drop runs before any push.** At first the coordinator ran the drop just after sign-in,
+  which left windows: a debounced push, or a foreground sync as OAuth returns, could reach the
+  queue first. Now the mark is set before the token exists and the engine drops on its first run,
+  whatever triggered it (`a mutation-triggered push right after sign-in sends no signed-out
+  delete`). The mark records order only; the drop still decides by the cursor, once per sign-in.
+- **A run forgets only its own snapshot.** An id that a concurrent sign-in remembers during the
+  step's awaits survives (`anIdRememberedWhileTheStepAwaitsIsKept`).
+- **A resurrected task merges into its Trash row,** as web does, so its rich time entries and this
+  device's reminder state survive (`a resurrected task keeps this device's reminder state and
+  time-entry notes`). Android gets the same change in AND-RESURRECT-PARITY.
