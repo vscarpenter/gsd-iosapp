@@ -121,11 +121,14 @@ struct TopThreeSection: View {
                 HStack(spacing: 12) {
                     Text(task.title).font(.callout).foregroundStyle(Surface.ink).lineLimit(2)
                     Spacer(minLength: 8)
-                    Button(String(localized: "Add to today")) { actions.addToToday(task) }
-                        .font(.callout.weight(.semibold))
-                        .buttonStyle(.borderless)
-                        .frame(minHeight: 44)
-                        .accessibilityLabel(String(localized: "Add to today: \(task.title)"))
+                    Button { actions.addToToday(task) } label: {
+                        Text("Add to today")
+                            .font(.callout.weight(.semibold))
+                            .frame(minWidth: 44, minHeight: 44)   // the audit measures the label, not the button
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel(String(localized: "Add to today: \(task.title)"))
                 }
             }
         }
