@@ -34,27 +34,37 @@ public enum ReminderMath {
     /// per whole day of offset (D-1: a due date at local midnight is all day).
     public static func fireDate(for task: Task, inputs: Inputs, now: Date,
                                 calendar: Calendar = .current) -> Date? {
-        guard shouldSchedule(task, inputs: inputs), let due = task.dueDate else { return nil }
-        let offsetMinutes = task.notifyBefore ?? inputs.defaultReminder
-        let fire = DueTime.isAllDay(due, calendar: calendar)
-            ? allDayFire(due: due, offsetMinutes: offsetMinutes, calendar: calendar)
-            : due.addingTimeInterval(TimeInterval(-offsetMinutes * 60))
-        guard fire >= now else { return nil }   // past-due rule: SKIP
+        guard let fire = reminderTime(for: task, inputs: inputs, calendar: calendar),
+              fire >= now else { return nil }   // past-due rule: SKIP
         return fire
     }
 
-    /// When the reminder will fire, with a future snooze winning and quiet hours deferring either.
-    /// This is the one rule the live scheduler and the shared due-time corpus both run.
+    /// When the reminder will fire, with quiet hours deferring it. A future snooze takes over unless
+    /// it ends before the reminder's own time, which then stays on time (owner decision 2026-11-03,
+    /// due-time corpus v2). Web compares the two after quiet hours; deferral never moves a time
+    /// earlier, so comparing first picks the same fire time. This is the one rule the live scheduler
+    /// and the shared due-time corpus both run.
     public static func nextFire(for task: Task, inputs: Inputs, quietStart: String?, quietEnd: String?,
                                 now: Date, calendar: Calendar) -> Date? {
+        let planned = reminderTime(for: task, inputs: inputs, calendar: calendar)
         let base: Date?
         if let snoozed = task.snoozedUntil, snoozed > now, !task.completed, inputs.masterEnabled,
-           task.notificationEnabled {
+           task.notificationEnabled, planned.map({ snoozed >= $0 }) ?? true {
             base = snoozed
         } else {
             base = fireDate(for: task, inputs: inputs, now: now, calendar: calendar)
         }
         return base.map { applyQuietHours($0, quietStart: quietStart, quietEnd: quietEnd, calendar: calendar) }
+    }
+
+    /// The reminder's own time, past or not: `dueDate − offset`, or the all-day hour. Nil when
+    /// `shouldSchedule` is false.
+    private static func reminderTime(for task: Task, inputs: Inputs, calendar: Calendar) -> Date? {
+        guard shouldSchedule(task, inputs: inputs), let due = task.dueDate else { return nil }
+        let offsetMinutes = task.notifyBefore ?? inputs.defaultReminder
+        return DueTime.isAllDay(due, calendar: calendar)
+            ? allDayFire(due: due, offsetMinutes: offsetMinutes, calendar: calendar)
+            : due.addingTimeInterval(TimeInterval(-offsetMinutes * 60))
     }
 
     /// `allDayReminderHour` local on the due day, minus one day per whole day of offset. The day
