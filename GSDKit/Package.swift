@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "GSDKit",
-    platforms: [.iOS(.v26), .macOS(.v26)],
+    platforms: [.iOS(.v26), .macOS(.v26), .watchOS(.v26)],
     products: [
         .library(name: "GSDModel", targets: ["GSDModel"]),
         .library(name: "GSDStore", targets: ["GSDStore"]),
@@ -51,7 +51,13 @@ let package = Package(
             dependencies: ["GSDSync"],
             resources: [.copy("Fixtures")]
         ),
-        .testTarget(name: "GSDSnapshotTests", dependencies: ["GSDSnapshot"]),
+        .testTarget(
+            name: "GSDSnapshotTests",
+            dependencies: ["GSDSnapshot"],
+            // escalation-corpus.json is a byte-identical copy of the web repo's
+            // tests/fixtures/cross-platform/ file; the watch mapping test runs it.
+            resources: [.copy("Fixtures")]
+        ),
         .testTarget(name: "GSDWireTests", dependencies: ["GSDWire"]),
     ]
 )
