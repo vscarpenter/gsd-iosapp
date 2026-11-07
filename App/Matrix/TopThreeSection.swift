@@ -13,6 +13,7 @@ struct TopThreeSection: View {
     @Environment(TaskStore.self) private var store
     @Environment(\.escalationWindow) private var escalationWindow
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(PaletteController.self) private var palette
     @State private var now = Date()
     @State private var showingSuggestions = false
     @State private var tidyDismissed = false
@@ -67,6 +68,7 @@ struct TopThreeSection: View {
         }
         .padding(.vertical, 4)
         .task(id: today) { await sleepUntilMidnight() }
+        .onChange(of: palette.todaySuggestionsRequest) { _, _ in withAnimation { showingSuggestions = true } }
         .onChange(of: scenePhase) { _, phase in if phase == .active { now = Date() } }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
             now = Date()

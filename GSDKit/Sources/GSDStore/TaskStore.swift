@@ -823,6 +823,7 @@ public final class TaskStore {
     /// `schedule()` keeps final say (quiet hours, past-due → cancel).
     public func resyncReminders() async {
         await reminders.cancelAll()
+        await reminders.rescheduleSweepReminder()   // cancelAll also removed the repeating sweep reminder
         for task in soonestReminderTasks() { await refreshReminder(task) }
         await refreshBadge()
     }

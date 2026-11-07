@@ -43,6 +43,8 @@ final class PaletteController {
     /// scrolls to the quadrant and clears it.
     var focusedQuadrant: Quadrant?
     var focusedSavedTaskID: String?
+    /// One-shot request from the end of the weekly sweep: the Today section opens its suggestions.
+    var todaySuggestionsRequest = 0
     /// The task editor sheet, presented once at the root (`ContentView`) for every surface.
     /// Hosted here rather than per surface so an open editor survives the compact/regular
     /// root swap when the window is resized mid-session (iPad multitasking, iPhone on iPad,
