@@ -1093,5 +1093,6 @@ public final class TaskStore {
         defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAutoEnabled)
         defaults.removeObject(forKey: AppGroupDefaults.Key.archiveAfterDays)
         FeedbackLocalState.reset(in: feedbackDefaults)
+        WeeklySweepSettings.reset(in: defaults)
     }
 }
