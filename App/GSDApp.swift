@@ -15,6 +15,7 @@ struct GSDApp: App {
     @State private var coordinator: SyncCoordinator
     @State private var widgetRefresher: WidgetSnapshotRefresher
     @State private var reminderResyncer: ReminderResyncer
+    @State private var watchSession: WatchSessionCoordinator
     @State private var spotlightIndexer: SpotlightIndexer
     @State private var shareDrainer: ShareInboxDrainer
     /// True when the local database couldn't be opened even after recovery — the app shows a
@@ -128,11 +129,16 @@ struct GSDApp: App {
         // hooks; this rebuilds reminders+badge from the snapshot on every observed change.
         let reminderResyncer = ReminderResyncer(store: store)
         _reminderResyncer = State(initialValue: reminderResyncer)
+        // Apple Watch link (W2): sends the watch snapshot and applies its queued commands. A no-op
+        // in the harness and wherever WatchConnectivity is unsupported (Mac Catalyst).
+        let watchSession = WatchSessionCoordinator(store: store, enabled: !isolated)
+        _watchSession = State(initialValue: watchSession)
         let spotlightIndexer = SpotlightIndexer()
         _spotlightIndexer = State(initialValue: spotlightIndexer)
         store.onTasksChanged = {
             widgetRefresher.schedule()
             reminderResyncer.schedule()
+            watchSession.schedule()
             if !isolated { spotlightIndexer.schedule(tasks: store.tasks) }   // Spotlight is the real app's
         }
         // Share Extension inbox (Phase 6d): drains the App-Group outbox on launch, foreground, the
@@ -202,6 +208,7 @@ struct GSDApp: App {
                         _Concurrency.Task { await shareDrainer.drain() }
                     }
                     widgetRefresher.start()
+                    watchSession.start()
                     // Signed in, the sweep waits for the launch sync below to pull (afterCleanSync).
                     if !coordinator.isSignedIn { try? await store.runAutoArchiveSweep() }
                     _ = try? await store.runTrashRetentionSweep()
