@@ -17,8 +17,7 @@ struct SavedEditorView: View {
     @FocusState private var notesFocused: Bool
     @State private var notes: String
     @State private var quadrant: Quadrant
-    @State private var hasDueDate: Bool
-    @State private var dueDate: Date
+    @State private var dueDate: Date?
     @State private var isSaving = false
     @State private var failure: TaskActionFailure?
     let target: SavedEditorTarget
@@ -27,9 +26,11 @@ struct SavedEditorView: View {
         self.target = target
         _notes = State(initialValue: target.task.description)
         _quadrant = State(initialValue: target.task.quadrant)
-        _hasDueDate = State(initialValue: target.task.dueDate != nil)
-        _dueDate = State(initialValue: target.task.dueDate ?? .now)
+        _dueDate = State(initialValue: target.task.dueDate)
     }
+
+    /// The time picked when All day is switched off, matching the task editor.
+    private static let defaultDueTime: (hour: Int, minute: Int) = (9, 0)
 
     private var notesTooLong: Bool { notes.utf16.count > FieldLimits.descriptionMax }
 
@@ -92,10 +93,12 @@ struct SavedEditorView: View {
                     ForEach(Quadrant.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 .accessibilityIdentifier("saved-return-quadrant")
-                Toggle(String(localized: "Set a due date"), isOn: $hasDueDate)
-                if hasDueDate {
-                    DatePicker(String(localized: "Due date"), selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
-                }
+                // As in the task editor: a new due date starts all day today (D-1), not at this minute.
+                Toggle(String(localized: "Set a due date"), isOn: Binding(
+                    get: { dueDate != nil },
+                    set: { dueDate = $0 ? (dueDate ?? Calendar.current.startOfDay(for: .now)) : nil }
+                ))
+                if let due = dueDate { dueFields(due) }
             } footer: {
                 Text(String(localized: "Review the quadrant and date before making this an active task again."))
             }
@@ -109,13 +112,36 @@ struct SavedEditorView: View {
         }
     }
 
+    /// Date, All day, and time, with the task editor's rules: picking a day keeps the time already
+    /// set, and All day is a due date at local midnight (D-1).
+    @ViewBuilder private func dueFields(_ due: Date) -> some View {
+        DatePicker(String(localized: "Due date"),
+                   selection: Binding(get: { due }, set: { picked in
+                       dueDate = DueTime.onDate(due, to: Calendar.current.dateComponents([.year, .month, .day], from: picked),
+                                                calendar: .current)
+                   }),
+                   displayedComponents: .date)
+        Toggle(String(localized: "All day"), isOn: Binding(
+            get: { DueTime.isAllDay(due, calendar: .current) },
+            set: { allDay in dueDate = DueTime.atTime(due, allDay ? nil : Self.defaultDueTime, calendar: .current) }
+        ))
+        if !DueTime.isAllDay(due, calendar: .current) {
+            DatePicker(String(localized: "Due time"),
+                       selection: Binding(get: { due }, set: { picked in
+                           let time = Calendar.current.dateComponents([.hour, .minute], from: picked)
+                           dueDate = DueTime.atTime(due, (time.hour ?? 0, time.minute ?? 0), calendar: .current)
+                       }),
+                       displayedComponents: .hourAndMinute)
+        }
+    }
+
     private func save() {
         guard !isSaving, !target.isNotes || !notesTooLong else { return }
         isSaving = true
         _Concurrency.Task { @MainActor in
             do {
                 if target.isNotes { try await store.updateSavedNotes(id: target.task.id, notes: notes) }
-                else { try await store.returnToMatrix(id: target.task.id, quadrant: quadrant, dueDate: hasDueDate ? dueDate : nil) }
+                else { try await store.returnToMatrix(id: target.task.id, quadrant: quadrant, dueDate: dueDate) }
                 dismiss()
             } catch {
                 failure = TaskActionFailure(error.localizedDescription)
