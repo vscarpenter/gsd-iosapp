@@ -20,6 +20,8 @@ struct TaskCardView: View {
 
     /// When non-nil, the completion disc becomes a tappable button (parity with the
     /// web's complete circle). Nil keeps the disc decorative (previews/non-interactive hosts).
+    /// Spoken after the title for a Today row: "first", "second", or "third".
+    var accessibilityPosition: String?
     var onToggle: (() -> Void)?
     /// When non-nil, a trailing `⋯` button presents this menu content.
     var menu: (() -> AnyView)?
@@ -271,7 +273,8 @@ struct TaskCardView: View {
 
     private var accessibilityLabel: String {
         let state = task.completed ? String(localized: "completed") : String(localized: "active")
-        var parts = ["\(task.title)", task.quadrant.title, state]
+        // A Today row says its place right after the title: "<title>, first, ...".
+        var parts = ["\(task.title)"] + (accessibilityPosition.map { [$0] } ?? []) + [task.quadrant.title, state]
         if let dueDate = task.dueDate { parts.append(RelativeDate.dueString(for: dueDate, reference: now)) }
         if let days = escalation.daysUntilDue, escalation.escalating {
             parts.append(Escalation.accessibilityLabel(daysUntilDue: days))
