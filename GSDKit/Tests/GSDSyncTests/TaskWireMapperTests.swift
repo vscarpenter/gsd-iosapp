@@ -161,17 +161,21 @@ struct TaskWireMapperTests {
         #expect(merged.snoozedUntil == date("2026-06-15T10:00:00.000Z"))
     }
 
-    /// The symptom: a snooze for the old due date outlived the move and fired first.
+    /// The symptom: the due date moved earlier, and a snooze set for the old date outlived the move.
+    /// It ends after the new reminder, so it would win under either snooze rule and skip that reminder.
     @Test func aStaleSnoozeNoLongerBeatsAMovedDueDate() throws {
-        var wire = TaskWireMapper.toWire(remindedLocal(), owner: "u", deviceId: "web")
-        wire.dueDate = "2026-06-20T09:00:00.000Z"
-        let merged = TaskWireMapper.toDomain(wire, mergingInto: remindedLocal())
+        var local = remindedLocal()
+        local.dueDate = date("2026-06-20T09:00:00.000Z")
+        local.snoozedUntil = date("2026-06-19T10:00:00.000Z")
+        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "web")
+        wire.dueDate = "2026-06-16T09:00:00.000Z"
+        let merged = TaskWireMapper.toDomain(wire, mergingInto: local)
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = try #require(TimeZone(identifier: "UTC"))
         let fire = ReminderMath.nextFire(for: merged, inputs: .init(masterEnabled: true, defaultReminder: 15),
                                          quietStart: nil, quietEnd: nil,
                                          now: date("2026-06-15T09:30:00.000Z"), calendar: utc)
-        #expect(fire == date("2026-06-20T08:30:00.000Z"))              // notifyBefore 30 on the new date
+        #expect(fire == date("2026-06-16T08:30:00.000Z"))              // notifyBefore 30 on the new date
     }
 
     // MARK: round-trip
