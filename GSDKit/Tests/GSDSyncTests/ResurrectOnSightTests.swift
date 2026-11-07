@@ -339,16 +339,33 @@ struct ResurrectOnSightTests {
         #expect(stack.cursor.rememberedDeletes() == ["t1"])
     }
 
+    /// The Lead's decision on S-AND's note 2: nothing drains the queue before the sign-in drop. Here a
+    /// mutation's debounced push is the first engine run after sign-in, ahead of the sign-in sync.
+    @Test("a mutation-triggered push right after sign-in sends no signed-out delete")
+    func aMutationPushRightAfterSignInSendsNoSignedOutDelete() async throws {
+        let stack = try makeStack(.signedOut)
+        await stack.server.add("t1")
+        try await stack.store.delete(try await stack.seedActive("t1"))   // signed out
+
+        await stack.engine.beginSignIn()
+        _ = await stack.engine.pushNow()
+
+        #expect(await stack.server.deletedTaskIds.isEmpty)
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
+        _ = await stack.engine.sync(trigger: .signIn)
+        #expect(try await stack.isActive("t1"))
+    }
+
     @Test("a failed first sync doesn't drop a delete made while signed in")
     func aFailedFirstSyncDoesNotDropASignedInDelete() async throws {
         let stack = try makeStack(.signedOut)
         await stack.server.add("t5")
         let task = try await stack.seedActive("t5")
-        try await stack.engine.dropSignedOutDeletes()           // the sign-in moment, nothing queued yet
-        try await stack.store.delete(task)                      // signed in now
+        await stack.engine.beginSignIn()
         await stack.server.failListings(true)
-        _ = await stack.engine.sync(trigger: .signIn)            // fails, so the cursor stays nil
+        _ = await stack.engine.sync(trigger: .signIn)            // drops (nothing queued), then fails: cursor stays nil
         await stack.server.failListings(false)
+        try await stack.store.delete(task)                      // signed in now
 
         _ = await stack.engine.sync(trigger: .launch)
 
@@ -364,7 +381,7 @@ struct ResurrectOnSightTests {
         await stack.server.add("t1")
         try await stack.store.delete(try await stack.seedActive("t1"))
 
-        try await stack.engine.dropSignedOutDeletes()
+        await stack.engine.beginSignIn()
         let result = await stack.engine.sync(trigger: .signIn)
 
         #expect(result.error == nil)
@@ -386,7 +403,7 @@ struct ResurrectOnSightTests {
                                              createdAt: Self.now, updatedAt: Self.now)], exportedAt: Self.now)
         try await stack.store.importTasks(try TaskExport.encode(backup), mode: .replace)
 
-        try await stack.engine.dropSignedOutDeletes()
+        await stack.engine.beginSignIn()
         _ = await stack.engine.sync(trigger: .signIn)
 
         #expect(await stack.server.deletedTaskIds.isEmpty)
@@ -401,10 +418,10 @@ struct ResurrectOnSightTests {
         await stack.server.add("t3")
         try await stack.store.archive(try await stack.seedActive("t3"))
 
-        try await stack.engine.dropSignedOutDeletes()
-        #expect(stack.cursor.rememberedDeletes().isEmpty)
+        await stack.engine.beginSignIn()
         _ = await stack.engine.sync(trigger: .signIn)
 
+        #expect(stack.cursor.rememberedDeletes().isEmpty)
         #expect(try await stack.archive.fetchAll().contains { $0.id == "t3" })
         #expect(!(try await stack.isActive("t3")))
         #expect(await stack.server.has("t3"))

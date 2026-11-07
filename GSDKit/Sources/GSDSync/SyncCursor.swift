@@ -18,6 +18,7 @@ public struct SyncCursor: @unchecked Sendable {
     private let key = "gsd.sync.lastServerUpdated"
     private let legacyKey = "gsd.sync.lastSyncAt"
     private let versionKey = "gsd.sync.contractVersion"
+    private let signInDropKey = "gsd.sync.signInDropOwed"
 
     /// The pull contract this build speaks, numbered like the web's `PULL_CURSOR_VERSION` so
     /// the two histories read the same. Bump it when a build is the first to read a newly
@@ -78,6 +79,13 @@ public struct SyncCursor: @unchecked Sendable {
 
     /// Forget exactly `ids`. An id remembered since the caller read the list survives.
     func forgetRememberedDeletes(_ ids: Set<String>) { saveRemembered(rememberedDeletes().subtracting(ids)) }
+
+    /// A sign-in has begun and its drop hasn't run yet. Set before the token exists, so the next
+    /// engine run of any kind drops first. It records order, not who signed out: the drop itself
+    /// still decides by the cursor.
+    func markSignInDropOwed() { defaults.set(true, forKey: signInDropKey) }
+    func signInDropOwed() -> Bool { defaults.bool(forKey: signInDropKey) }
+    func clearSignInDropOwed() { defaults.removeObject(forKey: signInDropKey) }
 
     private func saveRemembered(_ ids: Set<String>) {
         if ids.isEmpty { defaults.removeObject(forKey: AppGroupDefaults.Key.resurrectOnSight) }

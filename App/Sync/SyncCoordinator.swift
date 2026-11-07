@@ -54,19 +54,15 @@ final class SyncCoordinator {
     // MARK: Lifecycle
 
     /// Launch / after-sign-in: begin cadence + reachability + SSE and run an initial sync.
-    /// `.signIn` is the sign-in moment, reached from every `SessionStore` path that records the owner.
     func start(trigger: SyncTrigger = .launch) {
         guard signedIn() else { return }
-        guard trigger == .signIn else { resume(trigger: trigger); return }
-        // Resurrect on sight (spec section 5): drop the deletes queued while signed out before
-        // anything starts that could push them. A queue that can't be read keeps today's behavior,
-        // where those deletes push.
-        _Concurrency.Task {
-            try? await self.engine.dropSignedOutDeletes()
-            guard self.signedIn() else { return }
-            self.resume(trigger: trigger)
-        }
+        resume(trigger: trigger)
     }
+
+    /// The user is starting to sign in, and no token exists yet. The engine's next run, whatever
+    /// triggers it, drops the deletes queued while signed out before anything else (resurrect on
+    /// sight, spec section 5).
+    func beginSignIn() async { await engine.beginSignIn() }
 
     /// Shared bring-up for launch and foreground-return (kept in one place so the two entry points
     /// never diverge in which subsystems they spin up). Cadence/SSE cancel-and-restart; reachability

@@ -74,6 +74,8 @@ final class SessionStore {
     func signIn(provider: String) async {
         inProgress = true; lastError = nil
         defer { inProgress = false }
+        // Before the token exists, so no sync or push can run ahead of the sign-in drop.
+        await coordinator?.beginSignIn()
         do {
             let result = try await auth.signIn(provider: provider)
             email = result.record.email
