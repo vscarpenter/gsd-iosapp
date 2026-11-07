@@ -49,7 +49,8 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
     /// PocketBase's server-stamped `updated` autodate (raw wire string). Deliberately absent
     /// from `CodingKeys`, so the synthesized encoder never sends it — PB owns its system fields.
     package var updated: String
-    package var savedAt: String = ""
+    /// `""` clears the placement on the server; nil leaves the key off, so the server keeps its value.
+    package var savedAt: String? = ""
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -105,7 +106,7 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
         clientUpdatedAt = try c.decodeIfPresent(String.self, forKey: .clientUpdatedAt) ?? ""
         clientCreatedAt = try c.decodeIfPresent(String.self, forKey: .clientCreatedAt) ?? ""
         deviceId = try c.decodeIfPresent(String.self, forKey: .deviceId) ?? ""
-        savedAt = try c.decodeIfPresent(String.self, forKey: .savedAt) ?? ""
+        savedAt = try c.decodeIfPresent(String.self, forKey: .savedAt)
         let system = try decoder.container(keyedBy: SystemKeys.self)
         updated = try system.decodeIfPresent(String.self, forKey: .updated) ?? ""
     }
@@ -118,7 +119,7 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
          dependencies: [String], notificationEnabled: Bool, notificationSent: Bool,
          notifyBefore: Int?, lastNotificationAt: String, estimatedMinutes: Int?, timeSpent: Int,
          timeEntries: [WireTimeEntry], snoozedUntil: String, clientUpdatedAt: String,
-         clientCreatedAt: String, deviceId: String, updated: String = "", savedAt: String = "") {
+         clientCreatedAt: String, deviceId: String, updated: String = "", savedAt: String? = "") {
         self.id = id; self.taskId = taskId; self.owner = owner; self.title = title
         self.description = description; self.urgent = urgent; self.important = important
         self.quadrant = quadrant; self.dueDate = dueDate; self.completed = completed

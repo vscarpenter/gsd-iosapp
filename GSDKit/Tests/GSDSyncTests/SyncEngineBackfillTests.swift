@@ -103,7 +103,7 @@ struct SyncEngineBackfillTests {
         #expect(plain.applied == 0)
         #expect(try await stack.repo.fetch(id: "article")?.isSaved == false)
 
-        let backfill = try await stack.engine.pull(token: Self.token, since: epoch, mergeSameVersion: true)
+        let backfill = try await stack.engine.pull(token: Self.token, since: epoch, backfillingFrom: 2)
         #expect(backfill.applied == 1 && backfill.conflicts == 0)      // a same-version merge is not a conflict
         #expect(try await stack.repo.fetch(id: "article")?.isSaved == true)
     }
