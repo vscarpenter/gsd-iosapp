@@ -30,12 +30,15 @@
 		2D10B56DA9254E08E89FE623 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 1453BDC2D91332EB87100A1D /* AppIcon.icon */; };
 		2DAC8455D9EDB41A5278D652 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 6A3C3A671584405B65D83D55 /* GSDModel */; };
 		305B1E2FEF9947D20EDC16CE /* SpotlightIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 874A98A2278EE80A36EC0976 /* SpotlightIndexer.swift */; };
+		32A2F1299F2A15FF3D699C1F /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = ABF1852CAAFA7631A9F9E920 /* GSDModel */; };
 		32AC8D69042D0AA6FEA03C34 /* PreviewChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 664E6FF5137DE167118E123D /* PreviewChoreography.swift */; };
 		330EE4300870006150028E1E /* SwipeRevealRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAAD187765FA87D80F92EA6D /* SwipeRevealRow.swift */; };
 		338318C973D7B497EA4FB1B3 /* WhatsNewContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA09252BC2EC2C89F99BAE7 /* WhatsNewContent.swift */; };
 		34A8E574358FAB0570162302 /* LiveReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */; };
 		359A72201638531D8F3DA616 /* MatrixGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */; };
 		38C43AD20BE29AACB50F60F3 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = BF8FC602D80E3FC0BFC933BC /* GSDSnapshot */; };
+		38C72083C76B25292EA890C7 /* GSDWatchWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88B41B49612973A61282823D /* GSDWatchWidgetBundle.swift */; };
+		39884D1D125AFE9F9FA9F3C2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2E61BF464A0EEA058FFBF78D /* PrivacyInfo.xcprivacy */; };
 		3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */; };
 		3C11F826D4D49CD581D5417D /* QuadrantCompletionRings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A24B9E5C99FB352649CFAF /* QuadrantCompletionRings.swift */; };
 		3CA0F82B70641EBE858F761D /* GSDWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA0D2F82C759037F6A2DD38 /* GSDWidgetBundle.swift */; };
@@ -58,11 +61,14 @@
 		608EC64CFB5500B4EACD3467 /* TaskListSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA709F7D76DD1A4951BD326 /* TaskListSkeleton.swift */; };
 		65F938AD7F2AD90B26C4E67A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AE084189B67CD4EE1370674E /* PrivacyInfo.xcprivacy */; };
 		6A4AD5FB25EE433098CB7293 /* MatrixSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E964818A1E1646D86A6966 /* MatrixSkeleton.swift */; };
+		6A709923A4AD4461B7A7FAD4 /* CaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8510779996EB9BE38884B352 /* CaptureView.swift */; };
 		6CAFA93976207C55ECB637C0 /* FeedbackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4667A49C453FFA30BFAF349B /* FeedbackView.swift */; };
 		73196690527F90814FB6BD90 /* SmartViewEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */; };
 		753ECCA79375230D59BEF00A /* TodaysFocusEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D02DE15F4CF357C7DB7F7B0 /* TodaysFocusEntry.swift */; };
 		76545B52D43B79FA49C3523A /* EditorSaveShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D986295B486E3122D21BC4C2 /* EditorSaveShortcutTests.swift */; };
 		7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ED783FE5C2324C295B0273 /* RelativeDate.swift */; };
+		7D74A755CBA29CD26D66838F /* WatchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1722C62916E4BD3A4B940F7C /* WatchModel.swift */; };
+		7E113F8BF182A852A2D45A4E /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = A8BD92DAA028E519D4CBD241 /* GSDModel */; };
 		8004840C42749CB157F55F18 /* MatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */; };
 		8036F79C226CB3A58EAD44E4 /* GSDWire in Frameworks */ = {isa = PBXBuildFile; productRef = E24393540B98A6395ECD91E2 /* GSDWire */; };
 		811A6652C2CAA6742807B5D6 /* ShareInboxDrainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341D1D06F9C4F12D204BDF12 /* ShareInboxDrainer.swift */; };
@@ -72,11 +78,13 @@
 		88A8C4B6149243B4E448B079 /* TaskListRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 721AA423A1BF176E1CB41486 /* TaskListRow.swift */; };
 		896ED8204A1392D20971DB5E /* GSDWire in Frameworks */ = {isa = PBXBuildFile; productRef = C826AA15ABBD521C905CBBAC /* GSDWire */; };
 		897BB67F86F05D4495DD802C /* DataStorageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A92D91657DBB6423E6BBE725 /* DataStorageView.swift */; };
+		8C30F32E30D29FB952F67A97 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 2444D90CF1FDABDDACDA124E /* GSDSnapshot */; };
 		8C598D4A09D89CC736EB8DD5 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */; };
 		8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */; };
 		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
 		983DA110817AB2C20438BDA1 /* EscalationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3552A0A16FD0BB873EEFE999 /* EscalationSupport.swift */; };
+		998EF4BF3910E777B236BE53 /* GSDWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 06F41EA36B890077D6F75320 /* GSDWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
 		9CD308BFBB0E718A9CCB091E /* SavedListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8531EBF76F33EB7D4F3D3D6 /* SavedListView.swift */; };
 		9D045973ADABC27A5E62E5C4 /* RefreshBaseline.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB571C8749323E0E3C429823 /* RefreshBaseline.swift */; };
@@ -85,9 +93,11 @@
 		9E629D3EB66EB065393218F5 /* EditorRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA78CA912A99CB33C5276C0 /* EditorRequest.swift */; };
 		A004032986C5ACEB406BB2C5 /* DemoHomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A7B229DAFAC4E845FCCC5C5 /* DemoHomeScreen.swift */; };
 		A13BB9B4DF7C7E96D8ABF2A9 /* ProviderSignInButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46017093D034FF7774FAD6CD /* ProviderSignInButtonLabel.swift */; };
+		A23E9C4D182DDCB7CA772EE0 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 21BAB82DCAFB07F2465B97B9 /* PrivacyInfo.xcprivacy */; };
 		A6BD5A7B14A9BEC633DE1C66 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
 		A80A9336C8AA201D0E27E535 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D97811D144C615B847BA217 /* SettingsView.swift */; };
 		A92FC63E75447B51AB504FE8 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = 10C5831BD27556073CD6CD9F /* GSDModel */; };
+		ABA530CA70A9B0457BB2AF94 /* DoFirstView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95AA630759C41A4CA80AF23E /* DoFirstView.swift */; };
 		AD6837183E00E04042A56ED0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 249F029B40FD9FDAA6A68A25 /* Assets.xcassets */; };
 		B0E0777479FAA6CF0F55A049 /* DueTimeEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4AED0C7E688157BC1106906 /* DueTimeEditorTests.swift */; };
 		B17361EAF4ABA6F4940F94B8 /* SmartViewListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8FB17173BD410FDE2B3AD58 /* SmartViewListView.swift */; };
@@ -103,6 +113,7 @@
 		CE679E1E1B908EA26EA9ADC6 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 98C26FEAF665B149C1D46E83 /* GSDSnapshot */; };
 		D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD99A69FF72AB17AB5968 /* DashboardView.swift */; };
 		D1A08D8A25028DD6A0CF3B82 /* GSDSync in Frameworks */ = {isa = PBXBuildFile; productRef = 4D69B433643C83344AA85FF9 /* GSDSync */; };
+		D60CB7324BAB1C0C08155644 /* GSDWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EDBD5EA890785FDB28B334 /* GSDWatchApp.swift */; };
 		DAD1C4162E0C6658137A4C21 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = A10EBE9AD3F19E9BF692E87E /* GSDModel */; };
 		DB380D23011DF9BDF0944B77 /* SavedEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B93691C9CC9D87C7E8FEB5B8 /* SavedEditorView.swift */; };
 		DE34977DF6EF7E76AB9FD310 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09135BA41682E832720B9DF /* WhatsNewView.swift */; };
@@ -120,6 +131,8 @@
 		F1B330A8B3AF352E918AA98B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 8908894C46A7A691FFED08F0 /* PrivacyInfo.xcprivacy */; };
 		F615EB4B72D895C0FBBA61CE /* AppleSignInButtonLabel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */; };
 		F6BD77CCE7D8D5B7A4953F00 /* TodaysFocusView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CB854FC328F174E62348856 /* TodaysFocusView.swift */; };
+		F79BB4ACFBC3611C3437A5D8 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 84A59E34F13D194670F006E4 /* GSDSnapshot */; };
+		F7D25C77173E1A0E9426A160 /* GSDWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 600E46409F14DC6B71CFFC32 /* GSDWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */; };
 		FE0F884C571B70DC1021DC4F /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A151034146B4714F731EE2 /* TaskActions.swift */; };
 		FF5DA971C1D7F0E459C85820 /* GSDAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A940BB6BB7707C5631927A0 /* GSDAppIntents.swift */; };
@@ -139,6 +152,20 @@
 			proxyType = 1;
 			remoteGlobalIDString = FB5769502DA33695CDF99A6E;
 			remoteInfo = GSDWidgets;
+		};
+		AFB1AA8F0360C80F04AD7AD3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0765B2E5667333C3066967A2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 6F33D3F80032A72309DFE99D;
+			remoteInfo = GSDWatch;
+		};
+		E3CAE94202D3823206CA8A6B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0765B2E5667333C3066967A2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CE225F9253E3D4B99B21BE31;
+			remoteInfo = GSDWatchWidgets;
 		};
 		F84A37D89CDEAAC02B1DA7F2 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -162,12 +189,35 @@
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5C9747AD49DE87A335EFFC08 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				998EF4BF3910E777B236BE53 /* GSDWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FC2F2717069BF9AAD40A8E5E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				F7D25C77173E1A0E9426A160 /* GSDWatchWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		02871AE0A2EA749E5DED2891 /* PageTitleFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageTitleFetcher.swift; sourceTree = "<group>"; };
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
 		05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButtonLabel.swift; sourceTree = "<group>"; };
+		06F41EA36B890077D6F75320 /* GSDWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = GSDWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0A9023F2981C348078C39712 /* WatchSessionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionCoordinator.swift; sourceTree = "<group>"; };
 		0B8A1791520E8DBCA8A05A3C /* TrashListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashListView.swift; sourceTree = "<group>"; };
@@ -176,23 +226,29 @@
 		107F6AD74CE5EC416DF2E1AA /* ReminderActionInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderActionInbox.swift; sourceTree = "<group>"; };
 		1226EAD759CBC2DA62A58442 /* DashboardSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardSkeleton.swift; sourceTree = "<group>"; };
 		1453BDC2D91332EB87100A1D /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = wrapper.icon; path = AppIcon.icon; sourceTree = "<group>"; };
+		1485B29EF7AB6F568ED25F01 /* GSDWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDWatch.entitlements; sourceTree = "<group>"; };
+		1722C62916E4BD3A4B940F7C /* WatchModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchModel.swift; sourceTree = "<group>"; };
 		18D8BB8C39DEADCA05DC6DDE /* BackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundRefresh.swift; sourceTree = "<group>"; };
 		1E44544249232FE202E59EB0 /* GSD.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSD.entitlements; sourceTree = "<group>"; };
 		1FA0D2F82C759037F6A2DD38 /* GSDWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWidgetBundle.swift; sourceTree = "<group>"; };
 		201AED667DF059BD3CEA6C01 /* ReminderResyncer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderResyncer.swift; sourceTree = "<group>"; };
+		21BAB82DCAFB07F2465B97B9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		2429471CF154E2FD234BA738 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		249F029B40FD9FDAA6A68A25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		263862633905FD14A543830B /* EscalationFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscalationFlowTests.swift; sourceTree = "<group>"; };
+		2E61BF464A0EEA058FFBF78D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		30895EFC952028C78E9F99EE /* BulkActionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BulkActionBar.swift; sourceTree = "<group>"; };
 		30A03169462530BB59EC808C /* CaptureBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureBar.swift; sourceTree = "<group>"; };
 		3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		341D1D06F9C4F12D204BDF12 /* ShareInboxDrainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInboxDrainer.swift; sourceTree = "<group>"; };
 		3552A0A16FD0BB873EEFE999 /* EscalationSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscalationSupport.swift; sourceTree = "<group>"; };
 		399AF4BCCB2AD2E7048DD9AE /* LiveReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveReminderScheduler.swift; sourceTree = "<group>"; };
+		39B7105A3C1535121A23EF33 /* GSDWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDWatchWidgets.entitlements; sourceTree = "<group>"; };
 		3D312C99EDD96DCCCA77715B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		3D8E3161EF21EF57F6E08CB8 /* GSDMenuCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDMenuCommands.swift; sourceTree = "<group>"; };
 		4461CA37B177CF2071DEE24E /* NotificationResponder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationResponder.swift; sourceTree = "<group>"; };
 		454069942C9F75AFFB235E5C /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		45BAB230ABC45A0A2358F312 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		45F742E0B4D949B966E92DDF /* GSDShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDShareExtension.entitlements; sourceTree = "<group>"; };
 		46017093D034FF7774FAD6CD /* ProviderSignInButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderSignInButtonLabel.swift; sourceTree = "<group>"; };
 		46573F92F98F5474E52D5C7F /* QuadrantStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantStyle.swift; sourceTree = "<group>"; };
@@ -211,6 +267,7 @@
 		5A940BB6BB7707C5631927A0 /* GSDAppIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDAppIntents.swift; sourceTree = "<group>"; };
 		5CAA477CE99B7420D83C9362 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		5D54F63BCE1089C7F540E0FD /* SmartViewEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartViewEditorView.swift; sourceTree = "<group>"; };
+		600E46409F14DC6B71CFFC32 /* GSDWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = GSDWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		664E6FF5137DE167118E123D /* PreviewChoreography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewChoreography.swift; sourceTree = "<group>"; };
 		6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuadrantSection.swift; sourceTree = "<group>"; };
 		6B5B63F4644937DA0EA0B403 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
@@ -230,14 +287,18 @@
 		7C0F320A150281F72B39E5C5 /* SkeletonShimmer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonShimmer.swift; sourceTree = "<group>"; };
 		834FF1E8BA076E31BA383962 /* GSDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDApp.swift; sourceTree = "<group>"; };
 		84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GSDScreenshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8510779996EB9BE38884B352 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
 		874A98A2278EE80A36EC0976 /* SpotlightIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightIndexer.swift; sourceTree = "<group>"; };
 		87A78E38615C8196A51B466F /* DatabaseUnavailableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseUnavailableView.swift; sourceTree = "<group>"; };
+		88B41B49612973A61282823D /* GSDWatchWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWatchWidgetBundle.swift; sourceTree = "<group>"; };
 		8908894C46A7A691FFED08F0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		8A2616E2AED32805AED8C11B /* GSDWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GSDWidgets.entitlements; sourceTree = "<group>"; };
 		8FECB334B943916706D8E944 /* TodaysFocusWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodaysFocusWidget.swift; sourceTree = "<group>"; };
 		90129986F7968EDDC63918F0 /* SyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncCoordinator.swift; sourceTree = "<group>"; };
 		923FB39E62F676CE76DDE26A /* ArchiveListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArchiveListView.swift; sourceTree = "<group>"; };
 		94ED783FE5C2324C295B0273 /* RelativeDate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelativeDate.swift; sourceTree = "<group>"; };
+		95AA630759C41A4CA80AF23E /* DoFirstView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoFirstView.swift; sourceTree = "<group>"; };
+		960BE2263C3DBDA017E7EE2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusChip.swift; sourceTree = "<group>"; };
 		9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredTaskListView.swift; sourceTree = "<group>"; };
 		A2C9EE64F35A42788D229B1E /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
@@ -258,6 +319,7 @@
 		BF4C433062F9C387CDFB316C /* LiveWebAuthPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWebAuthPresenter.swift; sourceTree = "<group>"; };
 		BF4FCB5B3E30B3503D038737 /* MatrixGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixGridView.swift; sourceTree = "<group>"; };
 		BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MatrixView.swift; sourceTree = "<group>"; };
+		C5EDBD5EA890785FDB28B334 /* GSDWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWatchApp.swift; sourceTree = "<group>"; };
 		C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		CDA09252BC2EC2C89F99BAE7 /* WhatsNewContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewContent.swift; sourceTree = "<group>"; };
 		D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
@@ -292,6 +354,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		15AC56AA36F7409A6F8ADC67 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				32A2F1299F2A15FF3D699C1F /* GSDModel in Frameworks */,
+				F79BB4ACFBC3611C3437A5D8 /* GSDSnapshot in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		1E2B9DE3E141C148262BAACD /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -311,6 +382,15 @@
 				8036F79C226CB3A58EAD44E4 /* GSDWire in Frameworks */,
 				D1A08D8A25028DD6A0CF3B82 /* GSDSync in Frameworks */,
 				CE679E1E1B908EA26EA9ADC6 /* GSDSnapshot in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EF8FD441C1B7F6108DBAF86F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7E113F8BF182A852A2D45A4E /* GSDModel in Frameworks */,
+				8C30F32E30D29FB952F67A97 /* GSDSnapshot in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -446,6 +526,17 @@
 			path = Widgets;
 			sourceTree = "<group>";
 		};
+		57D4453528321EB8F831A0DA /* WatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				88B41B49612973A61282823D /* GSDWatchWidgetBundle.swift */,
+				39B7105A3C1535121A23EF33 /* GSDWatchWidgets.entitlements */,
+				45BAB230ABC45A0A2358F312 /* Info.plist */,
+				2E61BF464A0EEA058FFBF78D /* PrivacyInfo.xcprivacy */,
+			);
+			path = WatchWidgets;
+			sourceTree = "<group>";
+		};
 		673A791563D7F81CCA41A63F /* Bulk */ = {
 			isa = PBXGroup;
 			children = (
@@ -474,6 +565,20 @@
 				A706546D6BC547A4D13660DC /* ShareViewController.swift */,
 			);
 			path = ShareExtension;
+			sourceTree = "<group>";
+		};
+		81C7940217B9D50D672060DA /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				8510779996EB9BE38884B352 /* CaptureView.swift */,
+				95AA630759C41A4CA80AF23E /* DoFirstView.swift */,
+				1485B29EF7AB6F568ED25F01 /* GSDWatch.entitlements */,
+				C5EDBD5EA890785FDB28B334 /* GSDWatchApp.swift */,
+				960BE2263C3DBDA017E7EE2A /* Info.plist */,
+				21BAB82DCAFB07F2465B97B9 /* PrivacyInfo.xcprivacy */,
+				1722C62916E4BD3A4B940F7C /* WatchModel.swift */,
+			);
+			path = Watch;
 			sourceTree = "<group>";
 		};
 		90EBAFD44A99F0DBD17A24F5 /* Theme */ = {
@@ -526,6 +631,8 @@
 				5786EAF6D1A1869947855193 /* GSD.app */,
 				84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */,
 				085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */,
+				06F41EA36B890077D6F75320 /* GSDWatch.app */,
+				600E46409F14DC6B71CFFC32 /* GSDWatchWidgets.appex */,
 				E77900FA416C5BD27D556B5F /* GSDWidgets.appex */,
 			);
 			name = Products;
@@ -557,6 +664,8 @@
 				D515A28E5AA76CE02716A6EF /* Packages */,
 				D91E23D34EABC2DCA97A941B /* ScreenshotTests */,
 				7A441FD94D17954A83BEB281 /* ShareExtension */,
+				81C7940217B9D50D672060DA /* Watch */,
+				57D4453528321EB8F831A0DA /* WatchWidgets */,
 				1EB3D99838DFC3431761508F /* Widgets */,
 				A8F4EE28B10703F63C52EDE9 /* Products */,
 			);
@@ -753,6 +862,29 @@
 			productReference = 84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		6F33D3F80032A72309DFE99D /* GSDWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8579FA30B7ED662D5580EB25 /* Build configuration list for PBXNativeTarget "GSDWatch" */;
+			buildPhases = (
+				8BC9B167697E6F5E34A902AC /* Sources */,
+				38E258804D420532310EFCC4 /* Resources */,
+				15AC56AA36F7409A6F8ADC67 /* Frameworks */,
+				FC2F2717069BF9AAD40A8E5E /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				99442A492D3F757C03E9ED10 /* PBXTargetDependency */,
+			);
+			name = GSDWatch;
+			packageProductDependencies = (
+				ABF1852CAAFA7631A9F9E920 /* GSDModel */,
+				84A59E34F13D194670F006E4 /* GSDSnapshot */,
+			);
+			productName = GSDWatch;
+			productReference = 06F41EA36B890077D6F75320 /* GSDWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 		C9092E2A5E48E2CA69F326A5 /* GSD */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 5212041C283BCD7F5730074B /* Build configuration list for PBXNativeTarget "GSD" */;
@@ -761,11 +893,13 @@
 				7269501374F697ADBB5A18EE /* Resources */,
 				D623D4C309A48A086606013F /* Frameworks */,
 				4025ACAA09BB68A76D66661A /* Embed Foundation Extensions */,
+				5C9747AD49DE87A335EFFC08 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				4E68D6359FE50C2C55CABBEF /* PBXTargetDependency */,
+				200CB3329D7950847BACAE72 /* PBXTargetDependency */,
 				23293F0D3E5D5FC728EE1818 /* PBXTargetDependency */,
 			);
 			name = GSD;
@@ -779,6 +913,27 @@
 			productName = GSD;
 			productReference = 5786EAF6D1A1869947855193 /* GSD.app */;
 			productType = "com.apple.product-type.application";
+		};
+		CE225F9253E3D4B99B21BE31 /* GSDWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0329E10FCF85E29DEEB14203 /* Build configuration list for PBXNativeTarget "GSDWatchWidgets" */;
+			buildPhases = (
+				CF8718B22EACC70AC77FCC7E /* Sources */,
+				CC96E709C4144F64B65C3E00 /* Resources */,
+				EF8FD441C1B7F6108DBAF86F /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = GSDWatchWidgets;
+			packageProductDependencies = (
+				A8BD92DAA028E519D4CBD241 /* GSDModel */,
+				2444D90CF1FDABDDACDA124E /* GSDSnapshot */,
+			);
+			productName = GSDWatchWidgets;
+			productReference = 600E46409F14DC6B71CFFC32 /* GSDWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 		FB5769502DA33695CDF99A6E /* GSDWidgets */ = {
 			isa = PBXNativeTarget;
@@ -818,7 +973,15 @@
 						DevelopmentTeam = 52HVJ3VDSM;
 						TestTargetID = C9092E2A5E48E2CA69F326A5;
 					};
+					6F33D3F80032A72309DFE99D = {
+						DevelopmentTeam = 52HVJ3VDSM;
+						ProvisioningStyle = Automatic;
+					};
 					C9092E2A5E48E2CA69F326A5 = {
+						DevelopmentTeam = 52HVJ3VDSM;
+						ProvisioningStyle = Automatic;
+					};
+					CE225F9253E3D4B99B21BE31 = {
 						DevelopmentTeam = 52HVJ3VDSM;
 						ProvisioningStyle = Automatic;
 					};
@@ -847,6 +1010,8 @@
 			targets = (
 				C9092E2A5E48E2CA69F326A5 /* GSD */,
 				FB5769502DA33695CDF99A6E /* GSDWidgets */,
+				6F33D3F80032A72309DFE99D /* GSDWatch */,
+				CE225F9253E3D4B99B21BE31 /* GSDWatchWidgets */,
 				3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */,
 				514075EFE8DBD13643C750B5 /* GSDScreenshotTests */,
 			);
@@ -859,6 +1024,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				8C598D4A09D89CC736EB8DD5 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		38E258804D420532310EFCC4 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A23E9C4D182DDCB7CA772EE0 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -877,6 +1050,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				F1B330A8B3AF352E918AA98B /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC96E709C4144F64B65C3E00 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				39884D1D125AFE9F9FA9F3C2 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -901,6 +1082,25 @@
 			files = (
 				511369ABE5B10E9AB12EEE51 /* ShareComposeView.swift in Sources */,
 				52AD5212537B728E13851A19 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BC9B167697E6F5E34A902AC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6A709923A4AD4461B7A7FAD4 /* CaptureView.swift in Sources */,
+				ABA530CA70A9B0457BB2AF94 /* DoFirstView.swift in Sources */,
+				D60CB7324BAB1C0C08155644 /* GSDWatchApp.swift in Sources */,
+				7D74A755CBA29CD26D66838F /* WatchModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CF8718B22EACC70AC77FCC7E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				38C72083C76B25292EA890C7 /* GSDWatchWidgetBundle.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1013,6 +1213,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		200CB3329D7950847BACAE72 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			platformFilter = ios;
+			target = 6F33D3F80032A72309DFE99D /* GSDWatch */;
+			targetProxy = AFB1AA8F0360C80F04AD7AD3 /* PBXContainerItemProxy */;
+		};
 		23293F0D3E5D5FC728EE1818 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 3C9C23BC1E54FC4FB785F94F /* GSDShareExtension */;
@@ -1023,6 +1229,11 @@
 			platformFilter = ios;
 			target = FB5769502DA33695CDF99A6E /* GSDWidgets */;
 			targetProxy = 9F2BB16D90F4AFDB23B6F144 /* PBXContainerItemProxy */;
+		};
+		99442A492D3F757C03E9ED10 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CE225F9253E3D4B99B21BE31 /* GSDWatchWidgets */;
+			targetProxy = E3CAE94202D3823206CA8A6B /* PBXContainerItemProxy */;
 		};
 		F4F60C2B58C5ED34B0CD1F0A /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -1047,6 +1258,22 @@
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = GSD;
+			};
+			name = Debug;
+		};
+		348A7521F6A07C1C83F9B654 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Watch/GSDWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Watch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.watchkitapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
 			};
 			name = Debug;
 		};
@@ -1095,6 +1322,46 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
+		};
+		716DDA5E52BB1102EB3B154A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = WatchWidgets/GSDWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.watchkitapp.widgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
+		748220BF383BCEC03BD3F097 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = WatchWidgets/GSDWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = WatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.watchkitapp.widgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
 		};
 		798D30A1D51972C43F76CAB5 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -1151,11 +1418,11 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Release;
 		};
@@ -1241,6 +1508,22 @@
 			};
 			name = Debug;
 		};
+		D414E0C72A2A79C9463D7D8C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Watch/GSDWatch.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Watch/Info.plist;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.vinny.gsd.watchkitapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
+		};
 		EA50656F6A20E80E24B5E5CE /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1321,17 +1604,26 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 26.0;
 			};
 			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		0329E10FCF85E29DEEB14203 /* Build configuration list for PBXNativeTarget "GSDWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				716DDA5E52BB1102EB3B154A /* Debug */,
+				748220BF383BCEC03BD3F097 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		13196E8866F24C5D04C343A1 /* Build configuration list for PBXNativeTarget "GSDScreenshotTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1368,6 +1660,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
+		8579FA30B7ED662D5580EB25 /* Build configuration list for PBXNativeTarget "GSDWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				348A7521F6A07C1C83F9B654 /* Debug */,
+				D414E0C72A2A79C9463D7D8C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		B23B1FA258338C9FECED2302 /* Build configuration list for PBXNativeTarget "GSDWidgets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1391,6 +1692,10 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = GSDModel;
 		};
+		2444D90CF1FDABDDACDA124E /* GSDSnapshot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GSDSnapshot;
+		};
 		4D69B433643C83344AA85FF9 /* GSDSync */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GSDSync;
@@ -1407,11 +1712,23 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = GSDSnapshot;
 		};
+		84A59E34F13D194670F006E4 /* GSDSnapshot */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GSDSnapshot;
+		};
 		98C26FEAF665B149C1D46E83 /* GSDSnapshot */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GSDSnapshot;
 		};
 		A10EBE9AD3F19E9BF692E87E /* GSDModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GSDModel;
+		};
+		A8BD92DAA028E519D4CBD241 /* GSDModel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GSDModel;
+		};
+		ABF1852CAAFA7631A9F9E920 /* GSDModel */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = GSDModel;
 		};
