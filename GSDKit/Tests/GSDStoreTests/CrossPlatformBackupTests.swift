@@ -167,7 +167,7 @@ struct CrossPlatformBackupTests {
         let object = try #require(try JSONSerialization.jsonObject(with: out) as? [String: Any])
 
         // The web's Zod schema requires a string version and these exact key names.
-        #expect(object["version"] as? String == "2.1.0")
+        #expect(object["version"] as? String == "2.2.0")
         #expect(object["exportedAt"] is String)
         #expect((object["tasks"] as? [Any])?.count == 2)
         #expect((object["archivedTasks"] as? [Any])?.count == 1)
