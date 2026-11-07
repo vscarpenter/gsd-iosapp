@@ -303,7 +303,7 @@ private struct SweepDateSheet: View {
     private func save() {
         _Concurrency.Task { @MainActor in
             do {
-                let original = EditorMerge.untouched(task)
+                let original = EditorMerge.untouched(task, defaultReminder: store.notificationSettings.defaultReminder)
                 var edited = original
                 edited.dueDate = due
                 _ = try await store.saveEdits(edited, openedAs: original)
