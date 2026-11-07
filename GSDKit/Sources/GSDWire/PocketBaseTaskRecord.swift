@@ -51,6 +51,11 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
     package var updated: String
     /// `""` clears the placement on the server; nil leaves the key off, so the server keeps its value.
     package var savedAt: String? = ""
+    /// Top three (spec section 5). `""` and `0` mean no pick, because PocketBase never stores a null
+    /// number; nil leaves the key off, so the server keeps its value. The rank decodes as a `Double` so
+    /// `TopThree.fromWire` can treat a fractional one as unset.
+    package var focusDate: String? = ""
+    package var focusRank: Double? = 0
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -72,6 +77,8 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
         case clientCreatedAt = "client_created_at"
         case deviceId = "device_id"
         case savedAt = "saved_at"
+        case focusDate = "focus_date"
+        case focusRank = "focus_rank"
     }
 
     private enum SystemKeys: String, CodingKey { case updated }
@@ -107,6 +114,9 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
         clientCreatedAt = try c.decodeIfPresent(String.self, forKey: .clientCreatedAt) ?? ""
         deviceId = try c.decodeIfPresent(String.self, forKey: .deviceId) ?? ""
         savedAt = try c.decodeIfPresent(String.self, forKey: .savedAt)
+        // A pick of the wrong type reads as unset: a bad pick must not cost the user the task (spec 3.5).
+        focusDate = (try? c.decodeIfPresent(String.self, forKey: .focusDate)) ?? nil
+        focusRank = (try? c.decodeIfPresent(Double.self, forKey: .focusRank)) ?? nil
         let system = try decoder.container(keyedBy: SystemKeys.self)
         updated = try system.decodeIfPresent(String.self, forKey: .updated) ?? ""
     }
@@ -119,7 +129,8 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
          dependencies: [String], notificationEnabled: Bool, notificationSent: Bool,
          notifyBefore: Int, lastNotificationAt: String, estimatedMinutes: Int?, timeSpent: Int,
          timeEntries: [WireTimeEntry], snoozedUntil: String, clientUpdatedAt: String,
-         clientCreatedAt: String, deviceId: String, updated: String = "", savedAt: String? = "") {
+         clientCreatedAt: String, deviceId: String, updated: String = "", savedAt: String? = "",
+         focusDate: String? = "", focusRank: Double? = 0) {
         self.id = id; self.taskId = taskId; self.owner = owner; self.title = title
         self.description = description; self.urgent = urgent; self.important = important
         self.quadrant = quadrant; self.dueDate = dueDate; self.completed = completed
@@ -132,6 +143,7 @@ package struct PocketBaseTaskRecord: Codable, Equatable {
         self.clientUpdatedAt = clientUpdatedAt; self.clientCreatedAt = clientCreatedAt
         self.deviceId = deviceId; self.updated = updated
         self.savedAt = savedAt
+        self.focusDate = focusDate; self.focusRank = focusRank
     }
 }
 

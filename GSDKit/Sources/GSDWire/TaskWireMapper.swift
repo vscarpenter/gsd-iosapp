@@ -13,7 +13,8 @@ package enum TaskWireMapper {
     /// things on different devices. `defaultReminder` is required so the compiler finds every path.
     package static func toWire(_ task: Task, owner: String, deviceId: String, recordId: String = "",
                                defaultReminder: Int) -> PocketBaseTaskRecord {
-        PocketBaseTaskRecord(
+        let pick = TopThree.toWire(focusDate: task.focusDate, focusRank: task.focusRank)
+        return PocketBaseTaskRecord(
             id: recordId,
             taskId: task.id,
             owner: owner,
@@ -40,18 +41,24 @@ package enum TaskWireMapper {
             clientUpdatedAt: WireDate.format(task.updatedAt),
             clientCreatedAt: WireDate.format(task.createdAt),
             deviceId: deviceId,
-            savedAt: WireDate.format(task.savedAt)
+            savedAt: WireDate.format(task.savedAt),
+            focusDate: pick.focusDate,
+            focusRank: Double(pick.focusRank)
         )
     }
 
-    /// The push form of a queued payload. Placement comes from the row as it is now, because a payload
-    /// queued before the backfill repaired the row has none (C4-6's shape, applied to `saved_at`).
-    /// With no live row, `saved_at` stays off the wire and the server keeps its value.
+    /// The push form of a queued payload. Placement and the pick come from the row as it is now,
+    /// because a payload queued before the backfill repaired the row lacks them (C4-6). With no live
+    /// row, `saved_at` and both focus keys stay off the wire, and the server keeps its values.
     package static func toWire(_ payload: Task, current: Task?, owner: String, deviceId: String,
                                recordId: String = "", defaultReminder: Int) -> PocketBaseTaskRecord {
         var wire = toWire(payload, owner: owner, deviceId: deviceId, recordId: recordId,
                           defaultReminder: defaultReminder)
         wire.savedAt = current.map { WireDate.format($0.savedAt) }
+        let focus = TopThree.pushFocus(payload: (payload.focusDate, payload.focusRank),
+                                       current: current.map { ($0.focusDate, $0.focusRank) })
+        wire.focusDate = focus?.focusDate
+        wire.focusRank = focus.map { Double($0.focusRank) }
         return wire
     }
 
@@ -76,7 +83,8 @@ package enum TaskWireMapper {
 
     /// New-from-remote: reconstruct. No local lineage; device-local fields come from the wire.
     private static func reconstructed(from r: PocketBaseTaskRecord) -> Task {
-        Task(
+        let pick = TopThree.fromWire(focusDate: r.focusDate, focusRank: r.focusRank)
+        return Task(
             id: r.taskId, title: r.title, description: r.description,
             urgent: r.urgent, important: r.important,
             completed: r.completed, completedAt: WireDate.parse(r.completedAt),
@@ -94,7 +102,8 @@ package enum TaskWireMapper {
             estimatedMinutes: r.estimatedMinutes,
             timeSpent: r.timeSpent,
             timeEntries: r.timeEntries.map(reconstruct),
-            savedAt: WireDate.parse(r.savedAt ?? "")
+            savedAt: WireDate.parse(r.savedAt ?? ""),
+            focusDate: pick.focusDate, focusRank: pick.focusRank
         )
     }
 
@@ -108,6 +117,7 @@ package enum TaskWireMapper {
         let returning = local.isSaved && savedAt == nil
         let dueDate = WireDate.parse(r.dueDate)
         let keepsReminder = !returning && isSameInstant(local.dueDate, dueDate)
+        let pick = TopThree.fromWire(focusDate: r.focusDate, focusRank: r.focusRank)
         return Task(
             id: r.taskId, title: r.title, description: r.description,
             urgent: r.urgent, important: r.important,
@@ -126,7 +136,8 @@ package enum TaskWireMapper {
             estimatedMinutes: r.estimatedMinutes,
             timeSpent: local.timeSpent,                     // derived from timeEntries → stays local
             timeEntries: local.timeEntries,                 // wire form lossy → prefer local
-            savedAt: savedAt
+            savedAt: savedAt,
+            focusDate: pick.focusDate, focusRank: pick.focusRank
         )
     }
 

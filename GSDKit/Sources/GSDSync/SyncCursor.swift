@@ -24,7 +24,8 @@ public struct SyncCursor: @unchecked Sendable {
     /// synced field: a cursor stamped with an older version, or none, pulls everything once
     /// and merges same-version records, which backfills the field onto rows an older build
     /// pulled and stored without it (docs/2026-10-27-synced-field-backfill.md). 3: `saved_at`.
-    static let contractVersion = 3
+    /// 4: `focus_date` and `focus_rank` (top three). `TopThree` holds each field's first contract.
+    static let contractVersion = 4
 
     // public so the App can construct it (C3) and pass it to the public SyncEngine.init;
     // load/advance/clear stay internal — only the same-module engine calls them.

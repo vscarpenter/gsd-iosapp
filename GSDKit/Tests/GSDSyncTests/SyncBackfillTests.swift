@@ -54,3 +54,42 @@ struct SyncBackfillTests {
         #expect(SyncBackfill.fillingUnreadFields(of: local(timeEntries: [running]), from: remote, storedVersion: 2) == nil)
     }
 }
+
+/// C4-4 at contract 4: the top three pick joins `savedAt`, through `TopThree.unreadFieldsToCopy`.
+extension SyncBackfillTests {
+    private var picked: Task {
+        var picked = remote
+        picked.savedAt = nil
+        picked.focusDate = "2026-10-20"
+        picked.focusRank = 2
+        return picked
+    }
+
+    @Test func aRowPulledUnderContractThreeTakesTheServersPickAndKeepsEverythingElse() throws {
+        let filled = try #require(SyncBackfill.fillingUnreadFields(of: local(), from: picked, storedVersion: 3))
+        var expected = local()
+        expected.focusDate = "2026-10-20"
+        expected.focusRank = 2
+        #expect(filled == expected)
+    }
+
+    @Test func aRowPulledUnderContractFourKeepsItsUnpick() {
+        #expect(SyncBackfill.fillingUnreadFields(of: local(), from: picked, storedVersion: 4) == nil)
+    }
+
+    @Test func aRowThatAlreadyHasAPickKeepsIt() {
+        var mine = local()
+        mine.focusDate = "2026-10-21"
+        mine.focusRank = 1
+        #expect(SyncBackfill.fillingUnreadFields(of: mine, from: picked, storedVersion: 3) == nil)
+    }
+
+    /// SPEC-1: a pick on a completed row is inert, and skipping the copy would let the push clear it.
+    @Test func aCompletedRowStillTakesThePickButNotThePlacement() throws {
+        var both = picked
+        both.savedAt = savedOnWeb
+        let filled = try #require(SyncBackfill.fillingUnreadFields(of: local(completed: true), from: both, storedVersion: 2))
+        #expect(filled.focusDate == "2026-10-20" && filled.focusRank == 2)
+        #expect(filled.savedAt == nil)
+    }
+}

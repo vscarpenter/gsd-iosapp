@@ -8,12 +8,16 @@ import GSDStore
 /// The finding's server (`sprint/findings/saved-at-exposure.md`): one task another device Saved at
 /// 10-20. Lists by the `updated` filter, so an older build's cursor past the record hides it from an
 /// incremental pull, and merges a PATCH body like PocketBase, so a key left off keeps its value.
-private actor UnreadServer: RequestExecuting {
+/// `TopThreeContract4Tests` reuses it with a pick on the record (`saved: false`, `focus`).
+actor UnreadServer: RequestExecuting {
     static let savedStamp = "2026-10-20T10:00:00.000Z"
 
     struct Write: Sendable {
         let sentSavedAt: Bool
         let savedAt: String?
+        let sentFocus: Bool
+        let focusDate: String?
+        let focusRank: Double?
     }
 
     private var record: [String: Any]
@@ -21,9 +25,10 @@ private actor UnreadServer: RequestExecuting {
     private(set) var writes: [Write] = []
     private var listingFails = false
 
-    init(clientUpdatedAt: String = savedStamp) {
+    init(clientUpdatedAt: String = savedStamp, saved: Bool = true, focus: (date: String, rank: Int)? = nil) {
         record = ["id": "rec_a", "task_id": "a", "owner": "u1", "title": "Read later", "description": "",
-                  "urgent": false, "important": true, "saved_at": Self.savedStamp,
+                  "urgent": false, "important": true, "saved_at": saved ? Self.savedStamp : "",
+                  "focus_date": focus?.date ?? "", "focus_rank": focus?.rank ?? 0,
                   "client_created_at": "2026-10-01T10:00:00.000Z", "client_updated_at": clientUpdatedAt,
                   "updated": "2026-10-20 10:00:01.000Z", "device_id": "web"]
     }
@@ -31,6 +36,8 @@ private actor UnreadServer: RequestExecuting {
     func failListing() { listingFails = true }
     func savedAt() -> String? { record["saved_at"] as? String }
     func completed() -> Bool { record["completed"] as? Bool ?? false }
+    func focusDate() -> String? { record["focus_date"] as? String }
+    func focusRank() -> Double? { (record["focus_rank"] as? NSNumber)?.doubleValue }
 
     func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let method = request.httpMethod ?? "GET"
@@ -42,7 +49,10 @@ private actor UnreadServer: RequestExecuting {
             return (try JSONSerialization.data(withJSONObject: page), response(request, status: 200))
         }
         let body = try #require(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
-        writes.append(Write(sentSavedAt: body["saved_at"] != nil, savedAt: body["saved_at"] as? String))
+        writes.append(Write(sentSavedAt: body["saved_at"] != nil, savedAt: body["saved_at"] as? String,
+                            sentFocus: body["focus_date"] != nil || body["focus_rank"] != nil,
+                            focusDate: body["focus_date"] as? String,
+                            focusRank: (body["focus_rank"] as? NSNumber)?.doubleValue))
         record.merge(body) { _, new in new }
         return (try JSONSerialization.data(withJSONObject: record), response(request, status: 200))
     }
