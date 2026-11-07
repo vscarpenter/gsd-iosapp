@@ -27,6 +27,7 @@ private struct MatrixGridContent: View {
     @AppStorage("showCompleted", store: .shared) private var showCompleted = false
     @AppStorage(AppGroupDefaults.Key.matrixLayout, store: .shared) private var matrixLayout: MatrixLayout = .default
     @State private var actionFailure: TaskActionFailure?
+    @State private var showSweep = false
     @State private var selection = Set<String>()
     @Environment(\.editMode) private var editMode
     var onCompleted: () -> Void
@@ -62,6 +63,8 @@ private struct MatrixGridContent: View {
                 GeometryReader { viewport in
                     let pinnedHeight = Self.pinnedRowHeight(for: viewport.size.height)
                     ScrollView {
+                        SweepEntryLine { showSweep = true }
+                            .padding(.horizontal, Self.gridInset)
                         TopThreeSection(actions: TaskActions(
                                             store: store,
                                             onCompleted: onCompleted,
@@ -114,6 +117,7 @@ private struct MatrixGridContent: View {
         // content (see BulkActionBar) so they don't get reparented out of existence.
         .bulkActionBar(selection: $selection, failure: $actionFailure)
         .taskActionFailureAlert($actionFailure)
+        .navigationDestination(isPresented: $showSweep) { SweepView() }
         .onChange(of: editMode?.wrappedValue) { _, mode in
             if mode?.isEditing == false { selection.removeAll() }
         }

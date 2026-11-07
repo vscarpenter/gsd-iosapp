@@ -80,6 +80,29 @@ final class LiveReminderScheduler: ReminderScheduling, @unchecked Sendable {
         }
     }
 
+    /// The weekly sweep reminder (spec-weekly-sweep section 6): one repeating calendar trigger from the
+    /// stored setting. Fixed words, no count, no task content. It fires whether or not cards exist,
+    /// and quiet hours don't defer it because the user picked the time.
+    func rescheduleSweepReminder() async {
+        let id = Self.sweepIdentifier
+        center.removePendingNotificationRequests(withIdentifiers: [id])
+        let reminder = WeeklySweepSettings.reminder()
+        guard reminder.enabled else { return }
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: "Weekly sweep")
+        content.body = String(localized: "A few minutes to clear what’s gone quiet.")
+        content.sound = settingsProvider().soundEnabled ? .default : nil
+        var when = DateComponents()
+        when.weekday = reminder.calendarWeekday
+        when.hour = reminder.hour
+        when.minute = reminder.minute
+        let trigger = UNCalendarNotificationTrigger(dateMatching: when, repeats: true)
+        do { try await center.add(UNNotificationRequest(identifier: id, content: content, trigger: trigger)) }
+        catch { /* delivery is best-effort; ignore add failure */ }
+    }
+
+    static let sweepIdentifier = "weekly-sweep"
+
     func setBadge(_ count: Int) async {
         try? await center.setBadgeCount(count)
     }

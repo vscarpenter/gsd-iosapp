@@ -96,6 +96,9 @@ public enum WeeklySweep {
 
         public static let off = Reminder(enabled: false, weekday: 7, hour: 9, minute: 0)
 
+        /// The weekday in `Calendar`'s numbering (1 is Sunday), for a calendar trigger.
+        public var calendarWeekday: Int { weekday % 7 + 1 }
+
         public init(enabled: Bool, weekday: Int, hour: Int, minute: Int) {
             self.enabled = enabled
             self.weekday = weekday
