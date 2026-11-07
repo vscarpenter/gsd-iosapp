@@ -19,47 +19,52 @@ struct TaskActions {
         self.onError = onError
     }
 
-    func toggle(_ t: Task) {
+    /// `then` runs only after the write succeeds, so the weekly sweep moves to its next card on a
+    /// success and stays put on an error.
+    func toggle(_ t: Task, then: @escaping () -> Void = {}) {
         let willComplete = !t.completed
         run(String(localized: "Couldn’t update that task")) {
             try await store.toggleComplete(t)
         } onSuccess: {
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             if willComplete { onCompleted() }
+            then()
         }
     }
 
-    func delete(_ t: Task) {
+    func delete(_ t: Task, then: @escaping () -> Void = {}) {
         run(String(localized: "Couldn’t delete that task")) {
             try await store.delete(t)
         } onSuccess: {
             // The root UndoTaskToast listens and offers a recovery window; delete
             // itself commits immediately (tombstone-safe), so this is fire-and-forget.
             NotificationCenter.default.post(name: .gsdTaskDeleted, object: t)
+            then()
         }
     }
 
-    func move(_ t: Task, to q: Quadrant) {
+    func move(_ t: Task, to q: Quadrant, then: @escaping () -> Void = {}) {
         run(String(localized: "Couldn’t move that task")) {
             try await store.move(t, to: q)
-        }
+        } onSuccess: { then() }
     }
 
     /// Escalation's one action: set urgent through the ordinary move, then offer Undo.
     /// No celebration; the card simply changes quadrant.
-    func markUrgent(_ t: Task, target: Escalation.Target) {
+    func markUrgent(_ t: Task, target: Escalation.Target, then: @escaping () -> Void = {}) {
         run(String(localized: "Couldn’t mark that task urgent")) {
             try await store.move(t, to: target.quadrant)
         } onSuccess: {
             NotificationCenter.default.post(name: .gsdTaskMarkedUrgent, object: t)
+            then()
         }
     }
 
-    func moveToSaved(_ task: Task) {
+    func moveToSaved(_ task: Task, then: @escaping () -> Void = {}) {
         run(String(localized: "Couldn’t move that task to Saved")) {
             let saved = try await store.moveToSaved(task)
             NotificationCenter.default.post(name: .gsdTaskSaved, object: saved)
-        }
+        } onSuccess: { then() }
     }
 
     func duplicate(_ t: Task) {
