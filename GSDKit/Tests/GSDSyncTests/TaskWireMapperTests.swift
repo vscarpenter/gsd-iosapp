@@ -134,7 +134,7 @@ struct TaskWireMapperTests {
     }
 
     @Test func aPulledDueDateAtANewInstantResetsThisDevicesReminderState() {
-        var wire = TaskWireMapper.toWire(remindedLocal(), owner: "u", deviceId: "web")
+        var wire = TaskWireMapper.toWire(remindedLocal(), owner: "u", deviceId: "web", defaultReminder: 15)
         wire.dueDate = "2026-06-16T09:00:00.000Z"
         let merged = TaskWireMapper.toDomain(wire, mergingInto: remindedLocal())
         #expect(merged.dueDate == date("2026-06-16T09:00:00.000Z"))
@@ -145,14 +145,14 @@ struct TaskWireMapperTests {
     func aPulledDueDateAddedOrRemovedResetsThisDevicesReminderState(dated: (local: Bool, remote: Bool)) {
         var local = remindedLocal()
         local.dueDate = dated.local ? date("2026-06-15T09:00:00.000Z") : nil
-        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "web")
+        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "web", defaultReminder: 15)
         wire.dueDate = dated.remote ? "2026-06-15T09:00:00.000Z" : ""
         expectReminderReset(TaskWireMapper.toDomain(wire, mergingInto: local))
     }
 
     @Test(arguments: ["2026-06-15T09:00:00Z", "2026-06-15T04:00:00.000-05:00"])
     func theSameDueInstantInAnotherFormKeepsThisDevicesReminderState(remoteDue: String) {
-        var wire = TaskWireMapper.toWire(remindedLocal(), owner: "u", deviceId: "web")
+        var wire = TaskWireMapper.toWire(remindedLocal(), owner: "u", deviceId: "web", defaultReminder: 15)
         wire.dueDate = remoteDue
         wire.title = "Renamed on the web"
         let merged = TaskWireMapper.toDomain(wire, mergingInto: remindedLocal())
@@ -167,7 +167,7 @@ struct TaskWireMapperTests {
         var local = remindedLocal()
         local.dueDate = date("2026-06-20T09:00:00.000Z")
         local.snoozedUntil = date("2026-06-19T10:00:00.000Z")
-        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "web")
+        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "web", defaultReminder: 15)
         wire.dueDate = "2026-06-16T09:00:00.000Z"
         let merged = TaskWireMapper.toDomain(wire, mergingInto: local)
         var utc = Calendar(identifier: .gregorian)

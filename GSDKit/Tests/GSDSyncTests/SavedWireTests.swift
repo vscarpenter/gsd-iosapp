@@ -59,7 +59,7 @@ struct SavedWireTests {
     }
 
     private func pushBody(_ payload: Task, current: Task?) throws -> [String: Any] {
-        let wire = TaskWireMapper.toWire(payload, current: current, owner: "user", deviceId: "ios")
+        let wire = TaskWireMapper.toWire(payload, current: current, owner: "user", deviceId: "ios", defaultReminder: 15)
         return try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(wire)) as? [String: Any])
     }
 

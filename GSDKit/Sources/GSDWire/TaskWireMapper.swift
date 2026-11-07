@@ -48,8 +48,9 @@ package enum TaskWireMapper {
     /// queued before the backfill repaired the row has none (C4-6's shape, applied to `saved_at`).
     /// With no live row, `saved_at` stays off the wire and the server keeps its value.
     package static func toWire(_ payload: Task, current: Task?, owner: String, deviceId: String,
-                               recordId: String = "") -> PocketBaseTaskRecord {
-        var wire = toWire(payload, owner: owner, deviceId: deviceId, recordId: recordId)
+                               recordId: String = "", defaultReminder: Int) -> PocketBaseTaskRecord {
+        var wire = toWire(payload, owner: owner, deviceId: deviceId, recordId: recordId,
+                          defaultReminder: defaultReminder)
         wire.savedAt = current.map { WireDate.format($0.savedAt) }
         return wire
     }
