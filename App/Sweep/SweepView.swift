@@ -203,6 +203,7 @@ struct SweepView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Surface.tint)
+                .foregroundStyle(Surface.paper)   // paper on tide passes AA in both modes; the default white does not in dark
             }
             Button(String(localized: "Back to the matrix")) { dismiss() }
                 .buttonStyle(.borderless)
