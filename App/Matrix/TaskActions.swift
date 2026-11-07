@@ -86,6 +86,54 @@ struct TaskActions {
         }
     }
 
+    // MARK: Top three (D-13)
+    // Each is an ordinary edit through `store.save`, which stamps `updatedAt` and queues the push.
+    // Nothing here writes at midnight or on its own.
+
+    func addToToday(_ t: Task) {
+        run(String(localized: "Couldn’t add that task to today")) {
+            let now = Date(), zone = TimeZone.current
+            guard let rank = TopThree.nextRank(store.tasks, now: now, timeZone: zone) else { return }
+            try await setFocus(id: t.id, date: TopThree.localDate(now, timeZone: zone), rank: rank)
+        }
+    }
+
+    func removeFromToday(_ t: Task) {
+        run(String(localized: "Couldn’t remove that task from today")) {
+            try await setFocus(id: t.id, date: nil, rank: nil)
+        }
+    }
+
+    /// Swaps ranks with the neighbor. Offered only while there is nothing to tidy.
+    func moveInToday(_ t: Task, by delta: Int) {
+        run(String(localized: "Couldn’t reorder today")) {
+            let picks = TopThree.todaysPicks(store.tasks, now: Date(), timeZone: .current)
+            guard !picks.needsTidy, let index = picks.picks.firstIndex(of: t.id),
+                  picks.picks.indices.contains(index + delta),
+                  let mine = store.tasks.first(where: { $0.id == t.id }),
+                  let other = store.tasks.first(where: { $0.id == picks.picks[index + delta] })
+            else { return }
+            try await setFocus(id: mine.id, date: mine.focusDate, rank: other.focusRank)
+            try await setFocus(id: other.id, date: other.focusDate, rank: mine.focusRank)
+        }
+    }
+
+    /// Accepting "Tidy up?" only. Rows already correct aren't written.
+    func tidyToday() {
+        run(String(localized: "Couldn’t tidy today")) {
+            for write in TopThree.tidy(store.tasks, now: Date(), timeZone: .current) {
+                try await setFocus(id: write.id, date: write.focusDate, rank: write.focusRank)
+            }
+        }
+    }
+
+    private func setFocus(id: String, date: String?, rank: Int?) async throws {
+        guard var current = store.tasks.first(where: { $0.id == id }) else { return }
+        current.focusDate = date
+        current.focusRank = rank
+        try await store.save(current)
+    }
+
     private func run(
         _ failureMessage: String,
         operation: @escaping () async throws -> Void,

@@ -20,6 +20,8 @@ struct TaskCardView: View {
 
     /// When non-nil, the completion disc becomes a tappable button (parity with the
     /// web's complete circle). Nil keeps the disc decorative (previews/non-interactive hosts).
+    /// Spoken after the title for a Today row: "first", "second", or "third".
+    var accessibilityPosition: String?
     var onToggle: (() -> Void)?
     /// When non-nil, a trailing `⋯` button presents this menu content.
     var menu: (() -> AnyView)?
@@ -77,6 +79,7 @@ struct TaskCardView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityPosition ?? "")
         // Stable handle for the demo-video XCUITest (and a useful UI-test anchor generally).
         // `.combine` above merges the disc into this element, so the card is addressed as a whole.
         .accessibilityIdentifier("task-card-\(task.id)")

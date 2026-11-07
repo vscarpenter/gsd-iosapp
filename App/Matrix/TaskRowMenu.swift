@@ -10,6 +10,7 @@ struct TaskRowMenu: View {
     let actions: TaskActions
     var onEdit: (Task) -> Void
     @Environment(\.escalationWindow) private var escalationWindow
+    @Environment(TaskStore.self) private var store
 
     var body: some View {
         Button { onEdit(task) } label: { Label(String(localized: "Edit"), systemImage: "pencil") }
@@ -27,6 +28,7 @@ struct TaskRowMenu: View {
         Button { actions.toggle(task) } label: {
             Label(task.completed ? String(localized: "Uncomplete") : String(localized: "Complete"), systemImage: "checkmark")
         }
+        todayItems
         if TimeTracking.runningEntry(task.timeEntries) == nil {
             Button(String(localized: "Start Timer")) { actions.startTimer(task) }
         } else {
@@ -49,6 +51,38 @@ struct TaskRowMenu: View {
             }
         }
         Button(role: .destructive) { actions.delete(task) } label: { Label(String(localized: "Delete"), systemImage: "trash") }
+    }
+
+    /// "Add to today" or "Remove from today", plus Move up and Move down for a pick. A full day
+    /// shows "Today is full", disabled. Completed and Saved tasks can't be picked.
+    @ViewBuilder private var todayItems: some View {
+        let picks = TopThree.todaysPicks(store.tasks, now: Date(), timeZone: .current)
+        if let index = picks.picks.firstIndex(of: task.id) {
+            Button { actions.removeFromToday(task) } label: {
+                Label(String(localized: "Remove from today"), systemImage: "sun.max")
+            }
+            if !picks.needsTidy {
+                if index > 0 {
+                    Button { actions.moveInToday(task, by: -1) } label: {
+                        Label(String(localized: "Move up"), systemImage: "arrow.up")
+                    }
+                }
+                if index < picks.picks.count - 1 {
+                    Button { actions.moveInToday(task, by: 1) } label: {
+                        Label(String(localized: "Move down"), systemImage: "arrow.down")
+                    }
+                }
+            }
+        } else if !task.completed && !task.isSaved {
+            if TopThree.nextRank(store.tasks, now: Date(), timeZone: .current) != nil {
+                Button { actions.addToToday(task) } label: {
+                    Label(String(localized: "Add to today"), systemImage: "sun.max")
+                }
+            } else {
+                Button {} label: { Label(String(localized: "Today is full"), systemImage: "sun.max") }
+                    .disabled(true)
+            }
+        }
     }
 
     /// Six §6.7 snooze presets — intentionally duplicated (not a shared constant), per the Phase-2 decision.

@@ -42,6 +42,16 @@ private struct MatrixListContent: View {
             } else {
                 ScrollViewReader { proxy in
                     List(selection: $selection) {
+                        Section {
+                            TopThreeSection(actions: TaskActions(
+                                                store: store,
+                                                onCompleted: onCompleted,
+                                                onError: { actionFailure = TaskActionFailure($0) }),
+                                            onEdit: { palette.editor = .edit($0) })
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                        }
                         ForEach(Quadrant.allCases, id: \.self) { q in
                             QuadrantSection(
                                 quadrant: q, showCompleted: showCompleted,
