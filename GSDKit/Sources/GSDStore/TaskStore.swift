@@ -302,7 +302,8 @@ public final class TaskStore {
             description: parsed.descriptionAdditions.joined(separator: "\n"),
             urgent: override?.isUrgent ?? parsed.urgent,
             important: override?.isImportant ?? parsed.important,
-            createdAt: now, updatedAt: now, dueDate: dueDate, tags: parsed.tags
+            createdAt: now, updatedAt: now, dueDate: dueDate, tags: parsed.tags,
+            notifyBefore: notificationSettings.defaultReminder
         )
         try TaskValidator.validate(task)
         try await upsertEnqueued(task, op: .create)   // capture-bar quick-add is a creation path → must enqueue (else reconcile deletes it)
@@ -324,6 +325,7 @@ public final class TaskStore {
     public func create(_ task: Task) async throws {
         var t = task
         t.tags = Self.canonicalTags(task.tags)
+        t.notifyBefore = t.notifyBefore ?? notificationSettings.defaultReminder   // D-10: a new task stores a number
         let now = clock()
         t.createdAt = now
         t.updatedAt = now
@@ -340,6 +342,7 @@ public final class TaskStore {
     public func ingestSynced(_ task: Task) async throws {
         var t = task
         t.tags = Self.canonicalTags(task.tags)
+        t.notifyBefore = t.notifyBefore ?? notificationSettings.defaultReminder
         try TaskValidator.validate(t)
         try await repository.upsert(t)
         await refreshReminder(t)
@@ -372,6 +375,7 @@ public final class TaskStore {
         if let current = try await repository.fetch(id: task.id) { t.savedAt = current.savedAt }
         guard !(t.isSaved && t.completed) else { throw TaskStoreError.savedItemRequiresReturn }
         t.tags = Self.canonicalTags(task.tags)
+        t.notifyBefore = t.notifyBefore ?? notificationSettings.defaultReminder   // D-10: any write settles a legacy null
         t.updatedAt = clock()
         try TaskValidator.validate(t)
         try await upsertEnqueued(t, op: .update)
@@ -985,8 +989,11 @@ public final class TaskStore {
             let result = try TaskImporter.replace(from: data)
             let importedIDs = Set(result.tasks.map(\.id))
             let now = clock()
+            let defaultReminder = notificationSettings.defaultReminder
             let stamped = result.tasks.map { task -> Task in
-                var t = task; t.updatedAt = now; return t
+                var t = task; t.updatedAt = now
+                t.notifyBefore = t.notifyBefore ?? defaultReminder   // D-10: a backup with no offset
+                return t
             }
             var enqueued: [String] = []
             for t in stamped {
@@ -1010,6 +1017,7 @@ public final class TaskStore {
             let result = try TaskImporter.merge(from: data, existingIDs: existing, newID: { self.newID() })
             for task in result.tasks {
                 var t = task; t.updatedAt = clock()
+                t.notifyBefore = t.notifyBefore ?? notificationSettings.defaultReminder
                 try await upsertEnqueued(t, op: .update)
             }
             try await restoreCompanionStores(result, mode: .merge)

@@ -18,7 +18,11 @@ final class ShareViewController: UIViewController {
     private let push = DirectTaskPush(
         client: PocketBaseClient(baseURL: PocketBaseEndpoint.liveBaseURL, session: ShareViewController.shortBudgetSession()),
         token: { SharedTokenKeychain.load() },
-        deviceID: { UserDefaults(suiteName: AppGroup.id)?.string(forKey: AppGroup.deviceIDKey) })
+        deviceID: { UserDefaults(suiteName: AppGroup.id)?.string(forKey: AppGroup.deviceIDKey) },
+        defaultReminder: {
+            UserDefaults(suiteName: AppGroup.id)?.object(forKey: AppGroup.defaultReminderKey) as? Int
+                ?? AppGroup.fallbackDefaultReminder
+        })
 
     private static func shortBudgetSession() -> URLSession {
         let config = URLSessionConfiguration.ephemeral

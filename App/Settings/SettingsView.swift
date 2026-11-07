@@ -286,6 +286,9 @@ struct SettingsView: View {
                     }
                 }
                 .tint(Surface.ink3)   // value graphite
+                Text("For new tasks")
+                    .font(.footnote)
+                    .foregroundStyle(Surface.ink2)
 
                 Toggle(String(localized: "Sound"), isOn: Binding(
                     get: { notificationSettings.soundEnabled },

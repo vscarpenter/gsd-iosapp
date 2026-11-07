@@ -29,19 +29,24 @@ public struct DirectTaskPush: Sendable {
     private let token: @Sendable () -> String?
     private let deviceID: @Sendable () -> String?
     private let now: @Sendable () -> Date
+    private let defaultReminder: @Sendable () -> Int
 
     /// - Parameters:
     ///   - client: a `PocketBaseClient`; the extension passes one over a short-timeout session.
     ///   - token: the raw session JWT, or nil when signed out (`SharedTokenKeychain.load`).
     ///   - deviceID: the App-Group `deviceId`, or nil if the app has never set it.
+    ///   - defaultReminder: this device's Default reminder in minutes; a shared task has no offset
+    ///     of its own, and the wire always carries a number (D-10).
     public init(client: PocketBaseClient,
                 token: @escaping @Sendable () -> String?,
                 deviceID: @escaping @Sendable () -> String?,
+                defaultReminder: @escaping @Sendable () -> Int,
                 now: @escaping @Sendable () -> Date = { Date() }) {
         self.client = client
         self.token = token
         self.deviceID = deviceID
         self.now = now
+        self.defaultReminder = defaultReminder
     }
 
     public func attempt(_ task: Task) async -> Outcome {
@@ -49,7 +54,7 @@ public struct DirectTaskPush: Sendable {
         guard !JWT.expiresWithin(0, of: token, now: now()) else { return .skipped(.tokenExpired) }
         guard let owner = JWT.userId(token) else { return .skipped(.malformedToken) }
         guard let deviceID = deviceID(), !deviceID.isEmpty else { return .skipped(.noDeviceIdentity) }
-        let record = TaskWireMapper.toWire(task, owner: owner, deviceId: deviceID)
+        let record = TaskWireMapper.toWire(task, owner: owner, deviceId: deviceID, defaultReminder: defaultReminder())
         do {
             return .pushed(recordID: try await client.createTask(record, token: token))
         } catch {
