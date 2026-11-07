@@ -102,6 +102,25 @@ struct TaskStoreDataTests {
         #expect(feedback.object(forKey: FeedbackLocalState.Key.lastSentAt) == nil)
     }
 
+    /// Resurrect on sight, rule 2: the ids of tasks deleted while signed out are device-local, and
+    /// Erase all data forgets them, or an erased task could come back at the next sign-in.
+    @Test("erasing local data forgets every remembered id")
+    func erasingLocalDataForgetsEveryRememberedId() async throws {
+        let db = try AppDatabase.inMemory()
+        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        defaults.set(["t1", "t2"], forKey: AppGroupDefaults.Key.resurrectOnSight)
+        let store = TaskStore(repository: GRDBTaskRepository(db),
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db),
+                              trashRepository: GRDBTrashRepository(db),
+                              defaults: defaults,
+                              clock: { Date(timeIntervalSince1970: 1000) })
+
+        try await store.eraseAllData()
+
+        #expect(defaults.object(forKey: AppGroupDefaults.Key.resurrectOnSight) == nil)
+    }
+
     @Test func eraseAllDataClearsTheSyncQueue() async throws {
         // A signed-out user's mutations all enqueue; an erase that leaves them queued would
         // re-create every "erased" task on the server (and then locally) at the next sign-in.

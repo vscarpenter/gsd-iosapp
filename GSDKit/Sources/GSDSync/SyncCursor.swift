@@ -64,4 +64,23 @@ public struct SyncCursor: @unchecked Sendable {
         defaults.removeObject(forKey: key)
         defaults.removeObject(forKey: legacyKey)
     }
+
+    // MARK: Resurrect on sight (spec-resurrect-on-sight.md, section 5)
+
+    /// Tasks deleted while signed out, remembered at the next sign-in so they come back when the
+    /// account lists them. Sign-out keeps them, as it keeps the version, and Erase all data clears
+    /// them (`TaskStore.eraseAllData`).
+    func rememberedDeletes() -> Set<String> {
+        Set(defaults.stringArray(forKey: AppGroupDefaults.Key.resurrectOnSight) ?? [])
+    }
+
+    func rememberDeletes(_ ids: some Sequence<String>) { saveRemembered(rememberedDeletes().union(ids)) }
+
+    /// Forget every remembered id except `ids`.
+    func keepRememberedDeletes(only ids: Set<String>) { saveRemembered(rememberedDeletes().intersection(ids)) }
+
+    private func saveRemembered(_ ids: Set<String>) {
+        if ids.isEmpty { defaults.removeObject(forKey: AppGroupDefaults.Key.resurrectOnSight) }
+        else { defaults.set(ids.sorted(), forKey: AppGroupDefaults.Key.resurrectOnSight) }
+    }
 }

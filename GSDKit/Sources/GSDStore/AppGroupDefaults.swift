@@ -35,6 +35,10 @@ public enum AppGroupDefaults {
         /// never synced, never in the backup, and cleared by Erase All Data.
         public static let weeklySweepLastSweptAt = "weeklySweepLastSweptAt"
         public static let weeklySweepReminder = "weeklySweepReminder"
+        /// Ids of tasks deleted while signed out, which come back when the account lists them
+        /// (resurrect on sight). Kept beside the sync cursor by `SyncCursor`; sign-out keeps them,
+        /// and Erase all data clears them. Per device, never synced.
+        public static let resurrectOnSight = "gsd.sync.resurrectOnSight"
     }
 }
 
