@@ -1,5 +1,17 @@
 # Lessons
 
+## A backfill has to repair what push reads (2026-11-07)
+
+The October backfill fixed the row, and the push still cleared `saved_at`, because push sent the
+payload queued before the repair. It also skipped rows newer than the server, needed a cursor that
+sign-out had cleared, and `pushNow` drained before any pull. Three tests that guard the fix
+passed on `main` too, so a green run proved nothing about them until the guard was removed and
+they went red.
+
+**Rule:** a synced field reaches the wire from the row at drain time, never from a queued payload,
+and every push path waits for the backfill pull, push-only paths included. Give a guard test that
+already passes one mutation run before trusting it.
+
 ## Keyboard tests on the simulator have two traps (2026-11-01)
 
 The simulators usually drop the first ⌘ key after a launch, whichever shortcut it is, and the second press works. A swipe that starts over the iPad's software keyboard types instead of scrolling: a form swipe turned a title into `File the receipts77777777`.
