@@ -40,6 +40,16 @@ package enum TaskWireMapper {
         )
     }
 
+    /// The push form of a queued payload. Placement comes from the row as it is now, because a payload
+    /// queued before the backfill repaired the row has none (C4-6's shape, applied to `saved_at`).
+    /// With no live row, `saved_at` stays off the wire and the server keeps its value.
+    package static func toWire(_ payload: Task, current: Task?, owner: String, deviceId: String,
+                               recordId: String = "") -> PocketBaseTaskRecord {
+        var wire = toWire(payload, owner: owner, deviceId: deviceId, recordId: recordId)
+        wire.savedAt = current.map { WireDate.format($0.savedAt) }
+        return wire
+    }
+
     private static func flatten(_ entry: TimeEntry) -> WireTimeEntry {
         let minutes: Int
         if let ended = entry.endedAt {
@@ -79,7 +89,7 @@ package enum TaskWireMapper {
             estimatedMinutes: r.estimatedMinutes,
             timeSpent: r.timeSpent,
             timeEntries: r.timeEntries.map(reconstruct),
-            savedAt: WireDate.parse(r.savedAt)
+            savedAt: WireDate.parse(r.savedAt ?? "")
         )
     }
 
@@ -87,7 +97,7 @@ package enum TaskWireMapper {
     /// derived set is preserved from `local` (conventions 7). Returning from Saved resets this
     /// device's reminder state just like a native return. `quadrant` recomputed from flags.
     private static func merged(_ r: PocketBaseTaskRecord, into local: Task) -> Task {
-        let savedAt = WireDate.parse(r.savedAt)
+        let savedAt = WireDate.parse(r.savedAt ?? "")
         let returning = local.isSaved && savedAt == nil
         return Task(
             id: r.taskId, title: r.title, description: r.description,

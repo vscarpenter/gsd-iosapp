@@ -34,9 +34,12 @@ struct SyncEnginePushNowTests {
                           createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: toPush))
         let exec = IndexExecutor()
+        // A device on this build's contract; one that still owes a backfill syncs fully instead.
+        let cursor = SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
+        cursor.markBackfilled()
         let eng = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
                              tasks: tasks, queue: queue,
-                             cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
+                             cursor: cursor,
                              deviceId: "dev-A", tokenProvider: { self.token },
                              now: { Date(timeIntervalSince1970: 2_000_000_000) }, throttleMs: 0,
                              history: GRDBSyncHistoryRepository(db))

@@ -62,3 +62,9 @@ field of its own.
 
 A device that upgraded before this fix has a cursor with no version, so its first
 sync on the fixed build runs the backfill. No manual step is needed.
+
+## Changed on 2026-11-07
+
+Two lines above no longer hold. A backfill no longer needs a cursor, and `clear` keeps
+the version. The backfill also repairs rows newer than the server, and push reads
+`saved_at` from the row. `docs/2026-11-07-saved-at-unread-push.md` has the details.

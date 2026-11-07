@@ -60,8 +60,12 @@ struct SyncCursorTests {
 // MARK: Pull contract (a newly synced field reaches rows an older build already pulled)
 
 extension SyncCursorTests {
-    @Test func unsetCursorNeedsNoBackfill() {
-        #expect(!SyncCursor(defaults: freshDefaults()).needsBackfill())
+    /// C4-1: an older build that signed out has no cursor, and its rows still lack the field.
+    @Test func aMissingContractNeedsBackfillWithoutACursor() {
+        let cursor = SyncCursor(defaults: freshDefaults())
+        #expect(cursor.load() == nil)
+        #expect(cursor.storedVersion() == 0)
+        #expect(cursor.needsBackfill())
     }
 
     @Test func cursorWrittenBeforeTheContractNeedsBackfill() {
@@ -91,12 +95,23 @@ extension SyncCursorTests {
         #expect(!cursor.needsBackfill())
     }
 
-    @Test func clearForgetsTheContract() {
-        let defaults = freshDefaults()
-        let cursor = SyncCursor(defaults: defaults)
+    /// C4-1, C4-3: sign-out forgets the cursor, and only a completed pull changes the version.
+    @Test func clearKeepsTheContract() {
+        let cursor = SyncCursor(defaults: freshDefaults())
         cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000_000_000))
         cursor.clear()
+        #expect(cursor.load() == nil)
+        #expect(cursor.storedVersion() == SyncCursor.contractVersion)
+        #expect(!cursor.needsBackfill())
+    }
+
+    @Test func clearLeavesAnOlderContractOwed() {
+        let defaults = freshDefaults()
         defaults.set("2026-10-27 00:00:00.000Z", forKey: "gsd.sync.lastServerUpdated")
+        defaults.set(2, forKey: "gsd.sync.contractVersion")
+        let cursor = SyncCursor(defaults: defaults)
+        cursor.clear()
+        #expect(cursor.storedVersion() == 2)
         #expect(cursor.needsBackfill())
     }
 }
