@@ -69,6 +69,49 @@ final class SavedFlowTests: XCTestCase {
         XCTAssertTrue((description.value as? String ?? "").contains("Read when the project restarts"))
     }
 
+    /// B-57: Return offers All day like the task editor, and a new due date starts all day.
+    func testReturnPickerOffersAllDay() throws {
+        let app = XCUIApplication()
+        app.launchArguments = ["--demo-seed", "--demo-clock", "1789146000", "--demo-appearance", "light"]
+        app.launch()
+        let card = element(app, "task-card-demo-investor")
+        XCTAssertTrue(card.waitForExistence(timeout: 35))
+        card.buttons["More actions"].firstMatch.tap()
+        app.buttons["Move to Saved"].firstMatch.tap()
+        XCTAssertTrue(card.waitForNonExistence(timeout: 8))
+        openSaved(app)
+        let actions = element(app, "saved-actions-demo-investor")
+        XCTAssertTrue(actions.waitForExistence(timeout: 8))
+        actions.tap()
+        app.buttons["Return to matrix"].firstMatch.tap()
+        XCTAssertTrue(element(app, "saved-return-quadrant").waitForExistence(timeout: 5))
+
+        // The demo task is due yesterday at a time of day, and Return opens on that time.
+        let hasDue = app.switches["Set a due date"]
+        XCTAssertTrue(hasDue.waitForExistence(timeout: 5))
+        XCTAssertEqual(hasDue.value as? String, "1")
+        let allDay = app.switches["All day"]
+        XCTAssertTrue(allDay.waitForExistence(timeout: 3), "All day toggle missing")
+        XCTAssertEqual(allDay.value as? String, "0", "a timed due date should keep its time")
+        XCTAssertTrue(dueTime(app).exists, "a timed due date should show its time")
+
+        // Off, then on: a new due date starts all day, as in the task editor.
+        hasDue.switches.firstMatch.tap()
+        XCTAssertTrue(allDay.waitForNonExistence(timeout: 3))
+        hasDue.switches.firstMatch.tap()
+        XCTAssertTrue(allDay.waitForExistence(timeout: 3))
+        XCTAssertEqual(allDay.value as? String, "1", "a new due date should start all day")
+        XCTAssertFalse(dueTime(app).exists, "time picker should be hidden while All day is on")
+        try capture(app, "return-all-day")
+        allDay.switches.firstMatch.tap()
+        XCTAssertTrue(dueTime(app).waitForExistence(timeout: 3), "time picker should appear when All day is off")
+        try capture(app, "return-timed")
+    }
+
+    private func dueTime(_ app: XCUIApplication) -> XCUIElement {
+        app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Due time'")).firstMatch
+    }
+
     func testSaveAndDeleteUndo() throws {
         let app = XCUIApplication()
         app.launchArguments = ["--demo-seed", "--demo-appearance",
