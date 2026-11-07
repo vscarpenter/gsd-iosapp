@@ -32,17 +32,19 @@ then the push sent the queued delete. The task left every device.
 - **The step.** In `sync()`, after the pull and before the push. One complete listing
   (`listEveryTask`, which also refuses a record it can't read), then `auth-refresh` to confirm the
   owner, because a rejected token lists as an empty account. Each remembered id the account lists
-  comes back: a Trash row goes, and an active copy follows last-write-wins. Like Android today, it
-  brings a task back over either kind of tombstone. The far-future hold-off
+  comes back: a Trash row goes, and an active copy follows last-write-wins. The far-future hold-off
   applies, and a held-off id stays remembered so the push heals its record first. Everything else
   is forgotten. A throw forgets nothing.
+- **An archive row stays archived** (spec section 8, reading 2, owner item 26). It's its own
+  commit, so it can be reverted cleanly if Vinny overrules it. Android brings the task back today,
+  until AND-RESURRECT-ARCHIVE lands.
 
 ## Evidence
 
 `ResurrectOnSightTests` runs every iOS row of the spec's section 6 table under its exact name,
 through the real `SyncEngine`, GRDB repositories, and `TaskStore`, against a fake account that
-lists, deletes, and confirms the owner. The Erase row is in `TaskStoreDataTests`. Thirteen of the
-16 failed before the change, including the three journeys, where today's iOS sent the delete to
+lists, deletes, and confirms the owner. The Erase row is in `TaskStoreDataTests`. Fourteen of the
+17 failed before the change, including the three journeys, where today's iOS sent the delete to
 the server. The other three are guards that pass both ways: a re-sign-in drops nothing, a failed
 first sync swallows nothing, and a signed-in delete still deletes. The real-server run is pending
 on owner item 24.

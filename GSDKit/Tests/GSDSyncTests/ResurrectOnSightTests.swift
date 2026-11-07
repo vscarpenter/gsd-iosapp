@@ -284,6 +284,22 @@ struct ResurrectOnSightTests {
         #expect(stack.cursor.rememberedDeletes() == ["t9"])
     }
 
+    /// Section 8, reading 2 (owner item 26): trashed, restored, then archived while signed out. The
+    /// archive is the user's last act, so it stands. The id is still forgotten.
+    @Test("a remembered id with an archive row stays archived")
+    func aRememberedIdWithAnArchiveRowStaysArchived() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        try await stack.archive.archive(try await stack.seedActive("t1"))
+        stack.cursor.rememberDeletes(["t1"])
+
+        _ = try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+
+        #expect(try await stack.archive.fetchAll().contains { $0.id == "t1" })
+        #expect(!(try await stack.isActive("t1")))
+        #expect(stack.cursor.rememberedDeletes().isEmpty)
+    }
+
     @Test("nothing remembered means no extra listing")
     func nothingRememberedMeansNoExtraListing() async throws {
         let quiet = try makeStack(.signedIn)
