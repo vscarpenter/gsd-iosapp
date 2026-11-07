@@ -97,3 +97,65 @@ struct NotifyBeforeWireTests {
         #expect(r.sent == 0)
     }
 }
+
+/// D2: the drain's write-back must set only `notifyBefore`, and only where it is still null. A
+/// whole-row save reverts a local write that lands between the read and the write, and a second
+/// complete in that window spawns a duplicate recurring instance.
+struct NotifyBeforeDrainRaceTests {
+    /// Reads the row, then lets a local write land before the engine's write-back, as an edit made
+    /// on the main actor while the drain awaited the network would.
+    final class RacyTasks: TaskRepository, @unchecked Sendable {
+        let base: GRDBTaskRepository
+        private var raced = false
+        init(_ base: GRDBTaskRepository) { self.base = base }
+        func upsert(_ task: Task) async throws { try await base.upsert(task) }
+        func fetchAll() async throws -> [Task] { try await base.fetchAll() }
+        func fetch(id: String) async throws -> Task? {
+            let row = try await base.fetch(id: id)
+            if !raced, var local = row {
+                raced = true
+                local.completed = true
+                local.updatedAt = local.updatedAt.addingTimeInterval(60)
+                try await base.upsert(local)   // the local toggle, landing after the engine's read
+            }
+            return row
+        }
+        func setNotifyBeforeIfNull(id: String, value: Int) async throws {
+            try await base.setNotifyBeforeIfNull(id: id, value: value)
+        }
+        func delete(id: String) async throws { try await base.delete(id: id) }
+        func replaceAll(_ tasks: [Task]) async throws { try await base.replaceAll(tasks) }
+        func observeAll() -> AsyncThrowingStream<[Task], Error> { base.observeAll() }
+    }
+
+    @Test func aLocalToggleInTheWindowSurvivesTheWriteBack() async throws {
+        let db = try AppDatabase.inMemory()
+        let base = GRDBTaskRepository(db), queue = GRDBSyncQueueRepository(db)
+        let stamp = Date(timeIntervalSince1970: 1_780_000_000)
+        let legacy = Task(id: "a", title: "t", urgent: false, important: false, createdAt: stamp, updatedAt: stamp)
+        try await base.upsert(legacy)
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update, timestamp: 1, payload: legacy))
+        let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io",
+                                                         executor: NotifyBeforeWireTests.BodyExecutor()),
+                                tasks: RacyTasks(base), queue: queue,
+                                cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
+                                deviceId: "dev-A", tokenProvider: { "TOK" }, throttleMs: 0,
+                                defaultReminder: { 20 })
+        _ = try await engine.push(token: "TOK", owner: "u")
+        let row = try #require(try await base.fetch(id: "a"))
+        #expect(row.completed)                    // the toggle was not reverted
+        #expect(row.updatedAt == stamp.addingTimeInterval(60))
+        #expect(row.notifyBefore == 20)           // and the number still settled
+    }
+
+    @Test func theWriteBackLeavesANumberAlone() async throws {
+        let db = try AppDatabase.inMemory()
+        let repo = GRDBTaskRepository(db)
+        let stamp = Date(timeIntervalSince1970: 1_780_000_000)
+        try await repo.upsert(Task(id: "a", title: "t", urgent: false, important: false,
+                                   createdAt: stamp, updatedAt: stamp, notifyBefore: 45))
+        try await repo.setNotifyBeforeIfNull(id: "a", value: 20)
+        #expect(try await repo.fetch(id: "a")?.notifyBefore == 45)
+        try await repo.setNotifyBeforeIfNull(id: "gone", value: 20)   // a missing row is a no-op
+    }
+}
