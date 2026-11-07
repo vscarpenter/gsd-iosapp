@@ -40,15 +40,14 @@ public enum EditorMerge {
     }
 
     /// What the editor's Save produces from a task the user didn't change. It trims the title,
-    /// shows no reminder without a due date, drops the offset of a reminder that is off, and reads
-    /// an estimate of 0 as none. Merging against this, not the raw row, keeps those tidy-ups from
+    /// shows no reminder without a due date, resolves a null offset to `defaultReminder` (D-10:
+    /// a saved task stores a number, and Off keeps it), and reads an estimate of 0 as none. Merging against this, not the raw row, keeps those tidy-ups from
     /// overwriting values synced in while the sheet was open. It must match `TaskEditorView`'s save.
-    public static func untouched(_ task: Task) -> Task {
+    public static func untouched(_ task: Task, defaultReminder: Int) -> Task {
         var tidy = task
         tidy.title = task.title.trimmingCharacters(in: .whitespaces)
-        let reminderOn = task.notificationEnabled && task.dueDate != nil
-        tidy.notificationEnabled = reminderOn
-        tidy.notifyBefore = reminderOn ? task.notifyBefore : nil
+        tidy.notificationEnabled = task.notificationEnabled && task.dueDate != nil
+        tidy.notifyBefore = task.notifyBefore ?? defaultReminder
         tidy.estimatedMinutes = FieldLimits.normalizedEstimate(task.estimatedMinutes)
         return tidy
     }

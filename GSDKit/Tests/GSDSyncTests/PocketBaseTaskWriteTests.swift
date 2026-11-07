@@ -17,7 +17,7 @@ struct PocketBaseTaskWriteTests {
     private func record(_ id: String, recordId: String = "") -> PocketBaseTaskRecord {
         TaskWireMapper.toWire(Task(id: id, title: "t", urgent: false, important: false,
                                    createdAt: Date(timeIntervalSince1970: 0), updatedAt: Date(timeIntervalSince1970: 0)),
-                              owner: "u", deviceId: "d", recordId: recordId)
+                              owner: "u", deviceId: "d", recordId: recordId, defaultReminder: 15)
     }
 
     @Test func createPostsAndReturnsRecordId() async throws {

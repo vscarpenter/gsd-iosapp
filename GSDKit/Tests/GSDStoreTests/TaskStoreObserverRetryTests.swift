@@ -27,6 +27,7 @@ struct TaskStoreObserverRetryTests {
         func upsert(_ task: Task) async throws {}
         func fetchAll() async throws -> [Task] { [] }
         func fetch(id: String) async throws -> Task? { nil }
+        func setNotifyBeforeIfNull(id: String, value: Int) async throws {}
         func delete(id: String) async throws {}
         func replaceAll(_ tasks: [Task]) async throws {}
     }

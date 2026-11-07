@@ -8,7 +8,11 @@ package enum TaskWireMapper {
 
     // MARK: Local → Wire (push)
 
-    package static func toWire(_ task: Task, owner: String, deviceId: String, recordId: String = "") -> PocketBaseTaskRecord {
+    /// `notify_before` always carries a number (D-10): the task's own, else this device's Default
+    /// reminder. PocketBase never stores a null number, so a null or omitted key meant different
+    /// things on different devices. `defaultReminder` is required so the compiler finds every path.
+    package static func toWire(_ task: Task, owner: String, deviceId: String, recordId: String = "",
+                               defaultReminder: Int) -> PocketBaseTaskRecord {
         PocketBaseTaskRecord(
             id: recordId,
             taskId: task.id,
@@ -27,7 +31,7 @@ package enum TaskWireMapper {
             dependencies: task.dependencies,
             notificationEnabled: task.notificationEnabled,
             notificationSent: task.notificationSent,
-            notifyBefore: task.notifyBefore,
+            notifyBefore: task.notifyBefore ?? defaultReminder,
             lastNotificationAt: WireDate.format(task.lastNotificationAt),
             estimatedMinutes: task.estimatedMinutes,
             timeSpent: task.timeSpent ?? 0,

@@ -71,11 +71,34 @@ struct EditorMergeTests {
         var task = opened
         task.title = "  padded  "; task.estimatedMinutes = 0
         task.notificationEnabled = true; task.notifyBefore = 30   // on, but no due date
-        let untouched = EditorMerge.untouched(task)
+        let untouched = EditorMerge.untouched(task, defaultReminder: 15)
         #expect(untouched.title == "padded")
         #expect(untouched.estimatedMinutes == nil)
         #expect(untouched.notificationEnabled == false)            // the editor shows no reminder without a date
-        #expect(untouched.notifyBefore == nil)
+        #expect(untouched.notifyBefore == 30)                      // D-10: Off keeps the number
+    }
+
+    @Test func turningAReminderOffKeepsTheOffset() {
+        var task = opened; task.notificationEnabled = false; task.notifyBefore = 60
+        #expect(EditorMerge.untouched(task, defaultReminder: 15).notifyBefore == 60)
+    }
+
+    @Test func aLegacyNullResolvesToTheDefaultSoOpeningAndSavingIsNoEdit() {
+        // Section 4: compare effective values. A null offset and the default it fires at are the same.
+        var current = opened; current.dueDate = t0.addingTimeInterval(3600); current.notificationEnabled = true
+        let original = EditorMerge.untouched(current, defaultReminder: 15)
+        #expect(original.notifyBefore == 15)
+        let edited = original   // the editor saved without a change
+        let merged = EditorMerge.merge(current: current, original: original, edited: edited)
+        #expect(merged.dueDate == current.dueDate)
+        #expect(merged.notifyBefore == nil)   // nothing changed, so the stored row is left for the store to settle
+    }
+
+    @Test func aRealChangeToTheOffsetStillWins() {
+        var current = opened; current.dueDate = t0.addingTimeInterval(3600); current.notificationEnabled = true
+        let original = EditorMerge.untouched(current, defaultReminder: 15)
+        var edited = original; edited.notifyBefore = 60
+        #expect(EditorMerge.merge(current: current, original: original, edited: edited).notifyBefore == 60)
     }
 
     @Test func aTitleOnlyEditKeepsAReminderSetElsewhere() {
@@ -84,8 +107,8 @@ struct EditorMergeTests {
         var original = opened; original.notificationEnabled = true
         var current = original
         current.dueDate = t0.addingTimeInterval(86_400); current.notifyBefore = 30
-        var edited = EditorMerge.untouched(original); edited.title = "retitled"
-        let merged = EditorMerge.merge(current: current, original: EditorMerge.untouched(original), edited: edited)
+        var edited = EditorMerge.untouched(original, defaultReminder: 15); edited.title = "retitled"
+        let merged = EditorMerge.merge(current: current, original: EditorMerge.untouched(original, defaultReminder: 15), edited: edited)
         #expect(merged.title == "retitled")
         #expect(merged.dueDate == t0.addingTimeInterval(86_400))
         #expect(merged.notificationEnabled)
@@ -95,8 +118,8 @@ struct EditorMergeTests {
     @Test func aTitleTheEditorOnlyTrimmedKeepsARenameFromElsewhere() {
         var original = opened; original.title = "  opened  "
         var current = original; current.title = "renamed elsewhere"
-        let edited = EditorMerge.untouched(original)
-        let merged = EditorMerge.merge(current: current, original: EditorMerge.untouched(original), edited: edited)
+        let edited = EditorMerge.untouched(original, defaultReminder: 15)
+        let merged = EditorMerge.merge(current: current, original: EditorMerge.untouched(original, defaultReminder: 15), edited: edited)
         #expect(merged.title == "renamed elsewhere")
     }
 
@@ -104,8 +127,8 @@ struct EditorMergeTests {
         // The due date and its reminder move together, so the save matches what the sheet showed:
         // a new date with the reminder still off.
         var original = opened; original.notificationEnabled = true
-        var edited = EditorMerge.untouched(original); edited.dueDate = t0
-        let merged = EditorMerge.merge(current: original, original: EditorMerge.untouched(original), edited: edited)
+        var edited = EditorMerge.untouched(original, defaultReminder: 15); edited.dueDate = t0
+        let merged = EditorMerge.merge(current: original, original: EditorMerge.untouched(original, defaultReminder: 15), edited: edited)
         #expect(merged.dueDate == t0)
         #expect(merged.notificationEnabled == false)
     }

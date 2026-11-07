@@ -55,6 +55,7 @@ struct SyncEngineSessionFenceTests {
         init(_ base: GRDBTaskRepository, _ session: Session) { self.base = base; self.session = session }
         func upsert(_ task: Task) async throws { try await base.upsert(task); session.token = nil }
         func fetch(id: String) async throws -> Task? { try await base.fetch(id: id) }
+        func setNotifyBeforeIfNull(id: String, value: Int) async throws { try await base.setNotifyBeforeIfNull(id: id, value: value) }
         func fetchAll() async throws -> [Task] { try await base.fetchAll() }
         func delete(id: String) async throws { try await base.delete(id: id); session.token = nil }
         func replaceAll(_ tasks: [Task]) async throws { try await base.replaceAll(tasks) }

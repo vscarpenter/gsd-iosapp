@@ -35,7 +35,7 @@ struct TaskWireMapperTests {
     // MARK: toWire
 
     @Test func toWireMapsScalarsAndDerivesQuadrant() {
-        let r = TaskWireMapper.toWire(sampleTask(), owner: "user-1", deviceId: "dev-A", recordId: "rec-9")
+        let r = TaskWireMapper.toWire(sampleTask(), owner: "user-1", deviceId: "dev-A", recordId: "rec-9", defaultReminder: 15)
         #expect(r.id == "rec-9")                             // recordId param
         #expect(r.taskId == "task-1")                        // join key = Task.id
         #expect(r.owner == "user-1")
@@ -53,7 +53,7 @@ struct TaskWireMapperTests {
             TimeEntry(id: "te1", startedAt: start, endedAt: start.addingTimeInterval(95), notes: "x"),
             TimeEntry(id: "te2", startedAt: start, endedAt: nil, notes: nil)   // running
         ])
-        let r = TaskWireMapper.toWire(task, owner: "u", deviceId: "d")
+        let r = TaskWireMapper.toWire(task, owner: "u", deviceId: "d", defaultReminder: 15)
         #expect(r.timeEntries == [
             WireTimeEntry(id: "te1", startedAt: "2026-06-15T08:00:00.000Z", minutes: 1),  // floor(95s)
             WireTimeEntry(id: "te2", startedAt: "2026-06-15T08:00:00.000Z", minutes: 0)   // running → 0
@@ -67,7 +67,7 @@ struct TaskWireMapperTests {
         let wire = TaskWireMapper.toWire(
             sampleTask(timeEntries: [TimeEntry(id: "te1", startedAt: start,
                                                endedAt: start.addingTimeInterval(120), notes: "n")]),
-            owner: "u", deviceId: "d")
+            owner: "u", deviceId: "d", defaultReminder: 15)
         let task = TaskWireMapper.toDomain(wire, mergingInto: nil)
         #expect(task.id == "task-1")                         // task_id → Task.id
         #expect(task.quadrant == Quadrant(urgent: true, important: false))  // recomputed from flags
@@ -91,7 +91,7 @@ struct TaskWireMapperTests {
             timeSpent: 10
         )
         // Remote has DIFFERENT title + its own (would-be) device-local values.
-        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "remote-dev")
+        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "remote-dev", defaultReminder: 15)
         wire.title = "Remote title"
         wire.notificationSent = false
         wire.lastNotificationAt = ""
@@ -112,7 +112,7 @@ struct TaskWireMapperTests {
     @Test func mergePreservesLocalNilDeviceLocalFields() {
         // The trap: local exists but its device-local fields are nil — merge must KEEP nil, not pull remote.
         let local = sampleTask(notificationSent: false, lastNotificationAt: nil, snoozedUntil: nil)
-        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "d")
+        var wire = TaskWireMapper.toWire(local, owner: "u", deviceId: "d", defaultReminder: 15)
         wire.lastNotificationAt = "2026-06-14T09:00:00.000Z"          // remote has a value
         wire.snoozedUntil = "2026-06-16T09:00:00.000Z"
         let merged = TaskWireMapper.toDomain(wire, mergingInto: local)
@@ -126,7 +126,7 @@ struct TaskWireMapperTests {
         let start = date("2026-06-15T08:00:00.000Z")
         let original = sampleTask(timeEntries: [TimeEntry(id: "te1", startedAt: start,
                                                           endedAt: start.addingTimeInterval(125), notes: "keep?")])
-        let wire = TaskWireMapper.toWire(original, owner: "u", deviceId: "d", recordId: "rec-1")
+        let wire = TaskWireMapper.toWire(original, owner: "u", deviceId: "d", recordId: "rec-1", defaultReminder: 15)
         let restored = TaskWireMapper.toDomain(wire, mergingInto: nil)
         #expect(restored.id == original.id)                           // Task.id ↔ task_id preserved
         #expect(wire.id == "rec-1" && wire.id != wire.taskId)         // record id kept distinct from join key
