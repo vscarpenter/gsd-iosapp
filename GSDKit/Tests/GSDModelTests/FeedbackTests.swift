@@ -63,9 +63,17 @@ struct FeedbackTests {
         #expect(payload.votes == ["calendar-sync", "apple-watch"])
     }
 
+    @Test func aStoredVoteForWeeklyReviewIsntSent() throws {
+        // The slug is retired on iOS: a vote saved by an older build is dropped, not sent.
+        var draft = fullDraft()
+        draft.votes = ["weekly-review", "calendar-sync"]
+        let payload = try build(draft)
+        #expect(payload.votes == ["calendar-sync"])
+    }
+
     @Test func roadmapListMatchesTheCuratedSlugs() {
         #expect(Feedback.roadmapItems.map(\.slug) == [
-            "natural-language-dates", "calendar-sync", "task-templates", "weekly-review",
+            "natural-language-dates", "calendar-sync", "task-templates",
             "focus-timer", "task-notes", "apple-watch", "shared-lists",
         ])
     }
