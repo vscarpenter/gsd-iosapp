@@ -108,4 +108,18 @@ struct TaskStoreBulkTests {
         #expect(copy.completed == false)
         #expect(store.tasks.contains { $0.id == copy.id })
     }
+
+    /// Top three spec section 7: a copy is a new task, so it starts with no pick.
+    @Test func duplicateStartsWithNoPick() async throws {
+        let store = try makeStore()
+        var picked = task("original")
+        picked.focusDate = "2026-11-07"
+        picked.focusRank = 1
+        try await seed(store, [picked])
+        let original = try #require(store.tasks.first { $0.id == "original" })
+        #expect(original.focusRank == 1)
+        let copy = try await store.duplicate(original)
+        #expect(copy.focusDate == nil && copy.focusRank == nil)
+        #expect(try await store.fetchTask(id: copy.id)?.focusRank == nil)
+    }
 }

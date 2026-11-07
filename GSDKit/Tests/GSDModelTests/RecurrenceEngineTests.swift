@@ -71,6 +71,16 @@ struct RecurrenceEngineTests {
         )
     }
 
+    /// Top three spec section 7: the next instance is a new task, so it starts with no pick.
+    @Test func spawnStartsWithNoPick() throws {
+        var picked = recurringTask()
+        picked.focusDate = "2026-01-31"
+        picked.focusRank = 2
+        let next = try #require(RecurrenceEngine.spawnNext(from: picked, now: date(2026, 1, 31),
+                                                           newID: "newid", calendar: cal))
+        #expect(next.focusDate == nil && next.focusRank == nil)
+    }
+
     @Test func spawnAdvancesDueDateAndAssignsNewIdentity() throws {
         let now = date(2026, 1, 31)
         let next = try #require(RecurrenceEngine.spawnNext(from: recurringTask(), now: now,
