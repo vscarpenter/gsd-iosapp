@@ -31,6 +31,10 @@ public enum AppGroupDefaults {
         public static let matrixLayout = "matrixLayout"
         /// The newest release this device has acknowledged in What's New. Per device, never synced (D-15).
         public static let whatsNewLastSeenVersion = "whatsNewLastSeenVersion"
+        /// Weekly sweep (D-14): when this device last finished a sweep, and its reminder. Per device,
+        /// never synced, never in the backup, and cleared by Erase All Data.
+        public static let weeklySweepLastSweptAt = "weeklySweepLastSweptAt"
+        public static let weeklySweepReminder = "weeklySweepReminder"
     }
 }
 
