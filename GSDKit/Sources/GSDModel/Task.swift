@@ -27,6 +27,10 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
     public var timeSpent: Int?                 // calculated from timeEntries
     public var timeEntries: [TimeEntry]
     public var savedAt: Date?
+    /// Top three (D-13): the local `YYYY-MM-DD` the user picked this task for, and its place 1 to 3.
+    /// A pick counts only while `focusDate` is today (`TopThree`). Both nil when unpicked.
+    public var focusDate: String?
+    public var focusRank: Int?
 
     public var isSaved: Bool { savedAt != nil }
 
@@ -58,7 +62,9 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         estimatedMinutes: Int? = nil,
         timeSpent: Int? = nil,
         timeEntries: [TimeEntry] = [],
-        savedAt: Date? = nil
+        savedAt: Date? = nil,
+        focusDate: String? = nil,
+        focusRank: Int? = nil
     ) {
         self.id = id
         self.title = title
@@ -84,6 +90,8 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         self.timeSpent = timeSpent
         self.timeEntries = timeEntries
         self.savedAt = savedAt
+        self.focusDate = focusDate
+        self.focusRank = focusRank
     }
 
     /// Stored properties only. `quadrant` is computed (never persisted/encoded) and is
@@ -93,7 +101,7 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         case createdAt, updatedAt, dueDate, recurrence, tags, subtasks, dependencies
         case parentTaskId, notifyBefore, notificationEnabled, notificationSent
         case lastNotificationAt, snoozedUntil, estimatedMinutes, timeSpent, timeEntries
-        case savedAt
+        case savedAt, focusDate, focusRank
     }
 
     /// Lenient decode (import tolerance — design-spec §3): require only the fields that
@@ -126,5 +134,10 @@ public struct Task: Codable, Sendable, Identifiable, Equatable {
         timeSpent = try c.decodeIfPresent(Int.self, forKey: .timeSpent)
         timeEntries = try c.decodeIfPresent([TimeEntry].self, forKey: .timeEntries) ?? []
         savedAt = try c.decodeIfPresent(Date.self, forKey: .savedAt)
+        // A bad pick must not cost the user the task (top three spec 3.5): an invalid pair is unset.
+        let pick = TopThree.validated(focusDate: try? c.decodeIfPresent(String.self, forKey: .focusDate),
+                                      focusRank: try? c.decodeIfPresent(Int.self, forKey: .focusRank))
+        focusDate = pick.focusDate
+        focusRank = pick.focusRank
     }
 }
