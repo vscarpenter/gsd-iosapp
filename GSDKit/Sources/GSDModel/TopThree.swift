@@ -237,6 +237,25 @@ public enum TopThree {
     public static let focusFirstReadContract = 4
     public static let savedAtFirstReadContract = 3
 
+    /// Which fields a build that never read them may copy from the server onto a row. `focus` is the
+    /// pair (`focusDate` and `focusRank` together); `savedAt` is its own. Mirrors web's
+    /// `unreadFieldsToCopy`, so the sync backfill and `pullMerge` share one decision.
+    public struct UnreadFields: Sendable, Equatable {
+        public let focus: Bool
+        public let savedAt: Bool
+        public var any: Bool { focus || savedAt }
+    }
+
+    /// A field is copyable when the stored contract version is below the one that first read it
+    /// (a missing version is below every version), the local value is unset, and the remote's is set.
+    /// A null `savedAt` on a build that already read it is a real Return, so it is never copied.
+    public static func unreadFieldsToCopy(storedContract: Int?, local: SyncRow, remote: SyncRow) -> UnreadFields {
+        let stored = storedContract ?? 0
+        return UnreadFields(
+            focus: stored < focusFirstReadContract && local.focusDate == nil && remote.focusDate != nil,
+            savedAt: stored < savedAtFirstReadContract && local.savedAt == nil && remote.savedAt != nil)
+    }
+
     /// How one pulled record meets the local row. `tombstoned` means a local archive or trash row
     /// exists and the remote isn't strictly newer than it. Ordinary pulls are strictly-newer-wins.
     /// During a backfill (stored version below a field's first read), a row that is not older
@@ -250,9 +269,8 @@ public enum TopThree {
         if remote.updatedAt > local.updatedAt {
             return PullResult(action: .takeRemote, conflict: true, row: remote)
         }
-        let stored = storedContract ?? 0
-        let copyFocus = stored < focusFirstReadContract && local.focusDate == nil && remote.focusDate != nil
-        let copySaved = stored < savedAtFirstReadContract && local.savedAt == nil && remote.savedAt != nil
+        let copy = unreadFieldsToCopy(storedContract: storedContract, local: local, remote: remote)
+        let (copyFocus, copySaved) = (copy.focus, copy.savedAt)
         guard copyFocus || copySaved else { return PullResult(action: .none, conflict: false, row: local) }
         if remote.updatedAt == local.updatedAt {
             return PullResult(action: .takeRemote, conflict: false, row: remote)
