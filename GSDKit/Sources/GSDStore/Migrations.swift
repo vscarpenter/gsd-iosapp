@@ -12,7 +12,21 @@ extension AppDatabase {
         registerV5(&migrator)
         registerV6(&migrator)
         registerV7(&migrator)
+        registerV8(&migrator)
         return migrator
+    }
+
+    /// Top three (spec `gsd-taskmanager/tasks/spec-top-three.md` section 5): nullable, unindexed,
+    /// no backfill. Archived and trashed rows carry the pick too, so a backup and a Restore keep it.
+    static func registerV8(_ migrator: inout DatabaseMigrator) {
+        migrator.registerMigration("v8-top-three") { db in
+            for table in ["tasks", "archivedTasks", "deletedTasks"] {
+                try db.alter(table: table) { definition in
+                    definition.add(column: "focusDate", .text)
+                    definition.add(column: "focusRank", .integer)
+                }
+            }
+        }
     }
 
     static func registerV7(_ migrator: inout DatabaseMigrator) {

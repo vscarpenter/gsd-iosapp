@@ -363,6 +363,8 @@ public final class TaskStore {
         copy.lastNotificationAt = nil
         copy.timeSpent = nil
         copy.timeEntries = []
+        copy.focusDate = nil                       // a copy is a new task, so it isn't one of today's picks
+        copy.focusRank = nil
         copy.subtasks = task.subtasks.map {
             Subtask(id: newID(size: IDGenerator.Size.task), title: $0.title, completed: $0.completed)
         }

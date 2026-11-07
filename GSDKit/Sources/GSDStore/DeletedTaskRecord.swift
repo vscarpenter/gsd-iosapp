@@ -35,6 +35,8 @@ struct DeletedTaskRecord: Codable, FetchableRecord, PersistableRecord {
     var timeEntries: String
     var deletedAt: Date
     var savedAt: Date? = nil
+    var focusDate: String? = nil
+    var focusRank: Int? = nil
 }
 
 extension DeletedTaskRecord {
@@ -54,6 +56,7 @@ extension DeletedTaskRecord {
         timeSpent = r.timeSpent; timeEntries = r.timeEntries
         self.deletedAt = deletedAt
         savedAt = r.savedAt
+        focusDate = r.focusDate; focusRank = r.focusRank
     }
 
     /// Reconstruct the domain task (drops `deletedAt`, which is trash-only metadata).
@@ -66,7 +69,8 @@ extension DeletedTaskRecord {
                            notifyBefore: notifyBefore, notificationEnabled: notificationEnabled,
                            notificationSent: notificationSent, lastNotificationAt: lastNotificationAt,
                            snoozedUntil: snoozedUntil, estimatedMinutes: estimatedMinutes,
-                           timeSpent: timeSpent, timeEntries: timeEntries, savedAt: savedAt)
+                           timeSpent: timeSpent, timeEntries: timeEntries, savedAt: savedAt,
+                           focusDate: focusDate, focusRank: focusRank)
         return try r.toDomain()
     }
 }

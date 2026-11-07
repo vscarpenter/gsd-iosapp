@@ -20,8 +20,8 @@ struct TaskExportEnvelopeTests {
 
     @Test func versionIsTheSemverStringTheWebWrites() throws {
         let export = TaskExport(tasks: [], exportedAt: epoch)
-        #expect(export.version == "2.1.0")
-        #expect(try json(export).contains("\"version\" : \"2.1.0\""))
+        #expect(export.version == "2.2.0")
+        #expect(try json(export).contains("\"version\" : \"2.2.0\""))
     }
 
     @Test func decodesALegacyNumericVersion() throws {

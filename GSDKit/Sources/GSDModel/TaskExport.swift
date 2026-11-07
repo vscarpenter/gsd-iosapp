@@ -12,8 +12,9 @@ import Foundation
 /// backup says nothing about that store", which import must treat differently from an
 /// empty array: silence leaves the store alone, `[]` clears it.
 public struct TaskExport: Codable, Equatable, Sendable {
-    /// What this build writes. Kept in lockstep with the web's `BACKUP_ENVELOPE_VERSION`.
-    public static let currentVersion = "2.1.0"
+    /// What this build writes. Kept in lockstep with the web's `BACKUP_ENVELOPE_VERSION`. 2.2.0 adds
+    /// the optional top three pick (`focusDate`, `focusRank`) to every task, archived and trashed too.
+    public static let currentVersion = "2.2.0"
 
     public var tasks: [Task]
     public var exportedAt: Date
