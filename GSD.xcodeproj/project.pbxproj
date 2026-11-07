@@ -52,6 +52,7 @@
 		5588BCC2EC76EC2BB763FD0C /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FCA43224F505628B890F546 /* HelpView.swift */; };
 		58FD9F5517C6F2C976FDDC84 /* FilteredTaskListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */; };
 		59071E4849DBEB9BD62E330F /* SyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90129986F7968EDDC63918F0 /* SyncCoordinator.swift */; };
+		5ED0D0B0864E09F9D5A2501E /* WatchSessionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A9023F2981C348078C39712 /* WatchSessionCoordinator.swift */; };
 		607FFB701B4CA73F83C3E8C4 /* DependencyPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CE116337BD91A8A51962B63 /* DependencyPickerView.swift */; };
 		608EC64CFB5500B4EACD3467 /* TaskListSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = FDA709F7D76DD1A4951BD326 /* TaskListSkeleton.swift */; };
 		65F938AD7F2AD90B26C4E67A /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AE084189B67CD4EE1370674E /* PrivacyInfo.xcprivacy */; };
@@ -165,6 +166,7 @@
 		0408B7C2649856ADA33B1BF0 /* GSDKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = GSDKit; path = GSDKit; sourceTree = SOURCE_ROOT; };
 		05D737A37C8C95E5AB3A36F7 /* AppleSignInButtonLabel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSignInButtonLabel.swift; sourceTree = "<group>"; };
 		085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = GSDShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0A9023F2981C348078C39712 /* WatchSessionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSessionCoordinator.swift; sourceTree = "<group>"; };
 		0B8A1791520E8DBCA8A05A3C /* TrashListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrashListView.swift; sourceTree = "<group>"; };
 		0C1CF4736BFC71BCFDCE6D45 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		0E938DCA2D038B4703954CF7 /* ShareTitleEnricher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareTitleEnricher.swift; sourceTree = "<group>"; };
@@ -344,6 +346,7 @@
 				CAB18B8FF69C32795537F4B3 /* Support */,
 				9A48F62AB639CAC93A507E7F /* Sync */,
 				90EBAFD44A99F0DBD17A24F5 /* Theme */,
+				0CEC1D2A438E0A077D57E58A /* Watch */,
 				C50F5D8C6111E191107B2E32 /* WhatsNew */,
 				52DDCB447C1EA39D55F1D7FD /* Widgets */,
 			);
@@ -366,6 +369,14 @@
 				5A7B229DAFAC4E845FCCC5C5 /* DemoHomeScreen.swift */,
 			);
 			path = Demo;
+			sourceTree = "<group>";
+		};
+		0CEC1D2A438E0A077D57E58A /* Watch */ = {
+			isa = PBXGroup;
+			children = (
+				0A9023F2981C348078C39712 /* WatchSessionCoordinator.swift */,
+			);
+			path = Watch;
 			sourceTree = "<group>";
 		};
 		13F17FD694362B5F0CFE7108 /* Browse */ = {
@@ -954,6 +965,7 @@
 				148AA16A0C680EF3D6CB9E40 /* TopThreeSection.swift in Sources */,
 				E04D1C40421CC1B5FFE98A7B /* TrashListView.swift in Sources */,
 				ED512A9397EA99B2B317A9D3 /* UndoTaskToast.swift in Sources */,
+				5ED0D0B0864E09F9D5A2501E /* WatchSessionCoordinator.swift in Sources */,
 				338318C973D7B497EA4FB1B3 /* WhatsNewContent.swift in Sources */,
 				28E7C2AA66534DD85B66C094 /* WhatsNewCue.swift in Sources */,
 				DE34977DF6EF7E76AB9FD310 /* WhatsNewView.swift in Sources */,
