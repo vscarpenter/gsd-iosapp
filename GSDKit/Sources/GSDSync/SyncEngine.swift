@@ -187,10 +187,10 @@ public actor SyncEngine {
     }
 
     /// A far-future stamp must not overwrite a row whose edit is still queued (S-AND-02). The web's
-    /// ordinary sync pushes before it pulls, so the edit has already healed the record; its backfill
-    /// sync pulls first and holds off the same way (S-SPEC-01). This engine always pulls first, so it
-    /// leaves the row for the push, and a failed row counts too: a later retry pushes it. A stamp
-    /// inside the window follows the normal rules.
+    /// ordinary sync pushes before it pulls, but a push that fails leaves the edit queued, so the web
+    /// now holds off in every pull too (WEB-HOLDOFF). This engine always pulls first, so it leaves the
+    /// row for the push, and a failed row counts too: a later retry pushes it. A stamp inside the
+    /// window follows the normal rules.
     private func hasQueuedWriteHoldingOff(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> Bool {
         guard LWW.isPastCeiling(remoteUpdated, now: now()) else { return false }
         return try await queue.all().contains { isQueuedWrite($0, for: record) }
