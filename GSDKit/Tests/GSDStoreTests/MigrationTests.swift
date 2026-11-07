@@ -39,11 +39,11 @@ struct MigrationTests {
         try db.writer.read { d in
             #expect(try d.tableExists("archivedTasks"))
             let columns = Set(try d.columns(in: "archivedTasks").map(\.name))
-            // Task columns, Saved placement and archivedAt.
+            // Task columns, Saved placement, the top three pick, and archivedAt.
             #expect(columns.contains("archivedAt"))
             #expect(columns.contains("id"))
             #expect(columns.contains("completedAt"))
-            #expect(columns.count == 26)
+            #expect(columns.count == 28)
             let indexed = Set(try d.indexes(on: "archivedTasks").flatMap(\.columns))
             #expect(indexed.contains("archivedAt"))
         }
@@ -55,7 +55,7 @@ struct MigrationTests {
             #expect(try d.tableExists("tasks"))
             let columns = Set(try d.columns(in: "tasks").map(\.name))
 
-            // Assert all current task columns, including Saved placement.
+            // Assert all current task columns, including Saved placement and the top three pick.
             let expectedColumns: Set<String> = [
                 "id",
                 "title",
@@ -82,6 +82,8 @@ struct MigrationTests {
                 "timeSpent",
                 "timeEntries",
                 "savedAt",
+                "focusDate",
+                "focusRank",
             ]
             for expected in expectedColumns.sorted() {
                 #expect(columns.contains(expected), "missing column: \(expected)")
