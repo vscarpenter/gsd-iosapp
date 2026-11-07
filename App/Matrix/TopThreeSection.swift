@@ -30,7 +30,7 @@ struct TopThreeSection: View {
     }
 
     private var carryOver: (label: String, tasks: [Task])? {
-        guard picks.picks.count < TopThree.maxPicks else { return nil }
+        guard hasFreeSlot else { return nil }
         let offer = TopThree.carryOver(store.tasks, now: now, timeZone: zone)
         guard let from = offer.fromDate else { return nil }
         let tasks = offer.ids.compactMap { id in store.tasks.first { $0.id == id } }
@@ -45,7 +45,8 @@ struct TopThreeSection: View {
             .compactMap { id in store.tasks.first { $0.id == id } }
     }
 
-    private var hasFreeSlot: Bool { picks.picks.count < TopThree.maxPicks }
+    /// Free means `nextRank` isn't nil, not "fewer than three picks": ranks 1, 1, and 2 leave rank 3 free.
+    private var hasFreeSlot: Bool { TopThree.nextRank(store.tasks, now: now, timeZone: zone) != nil }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
