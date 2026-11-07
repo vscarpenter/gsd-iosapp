@@ -350,9 +350,6 @@ struct TaskEditorView: View {
         }
     }
 
-    /// The time picked when All day is switched off; the user can change it right away.
-    private static let defaultDueTime: (hour: Int, minute: Int) = (9, 0)
-
     private var dueDateSection: some View {
         Section(String(localized: "Due Date")) {
             Toggle(String(localized: "Has due date"), isOn: Binding(
@@ -360,43 +357,10 @@ struct TaskEditorView: View {
                 set: { dueDate = $0 ? (dueDate ?? Calendar.current.startOfDay(for: .now)) : nil }
             ))
             .tint(Surface.tint)   // toggles read the single interactive tint, not a third "on" color
-            if let due = dueDate {
-                // Picking a day keeps the time already set (D-1), like Android's date picker.
-                DatePicker(String(localized: "Due"),
-                           selection: Binding(get: { dueDate ?? .now }, set: { picked in
-                               dueDate = DueTime.onDate(dueDate, to: Calendar.current.dateComponents([.year, .month, .day], from: picked),
-                                                        calendar: .current)
-                           }),
-                           displayedComponents: .date)
-                Toggle(String(localized: "All day"), isOn: Binding(
-                    get: { DueTime.isAllDay(due, calendar: .current) },
-                    set: { allDay in dueDate = DueTime.atTime(due, allDay ? nil : Self.defaultDueTime, calendar: .current) }
-                ))
-                .tint(Surface.tint)
-                if !DueTime.isAllDay(due, calendar: .current) {
-                    DatePicker(String(localized: "Due time"),
-                               selection: Binding(get: { due }, set: { picked in
-                                   let t = Calendar.current.dateComponents([.hour, .minute], from: picked)
-                                   dueDate = DueTime.atTime(due, (t.hour ?? 0, t.minute ?? 0), calendar: .current)
-                               }),
-                               displayedComponents: .hourAndMinute)
-                }
+            if dueDate != nil {
+                DueDateFields(dueDate: Binding(get: { dueDate ?? .now }, set: { dueDate = $0 }))
             }
-            HStack(spacing: 8) {
-                ForEach(DueDatePreset.allCases, id: \.self) { preset in
-                    let resolved = DueDatePresets.resolve(preset, today: .now, calendar: .current)
-                    let isSelected = sameDay(dueDate, resolved)
-                    Button(preset.label) {
-                        dueDate = resolved
-                    }
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(isSelected ? QuadrantStyle.accent(.notUrgentImportant) : Surface.tint)
-                    .padding(.horizontal, 14).padding(.vertical, 8)
-                    .background(isSelected ? QuadrantStyle.wash(.notUrgentImportant) : Surface.sunken,
-                                in: Capsule())
-                    .buttonStyle(.plain)
-                }
-            }
+            DueDatePresetRow(dueDate: $dueDate)
         }
     }
 
@@ -568,15 +532,6 @@ struct TaskEditorView: View {
             }
             Button(String(localized: "Add dependency…")) { showingDependencyPicker = true }
                 .disabled(dependencies.count >= FieldLimits.maxDependencies)
-        }
-    }
-
-    /// Whether two optional dates fall on the same calendar day (nil ≍ nil = "None").
-    private func sameDay(_ a: Date?, _ b: Date?) -> Bool {
-        switch (a, b) {
-        case (nil, nil): return true
-        case let (x?, y?): return Calendar.current.isDate(x, inSameDayAs: y)
-        default: return false
         }
     }
 

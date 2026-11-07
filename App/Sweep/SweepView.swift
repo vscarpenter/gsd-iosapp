@@ -14,7 +14,9 @@ struct SweepView: View {
     @State private var session: SweepSession?
     @State private var failure: TaskActionFailure?
     @State private var dateTarget: Task?
+    @State private var returnTarget: SavedEditorTarget?
     @AccessibilityFocusState private var titleFocused: Bool
+    @AccessibilityFocusState private var endFocused: Bool
 
     private var actions: TaskActions {
         TaskActions(store: store, onCompleted: {}, onError: { failure = TaskActionFailure($0) })
@@ -46,7 +48,11 @@ struct SweepView: View {
         }
         .taskActionFailureAlert($failure)
         .sheet(item: $dateTarget) { task in
-            SweepDateSheet(task: task) { dateTarget = nil }
+            SweepDateSheet(task: task, onSaved: { next() }, onClose: { dateTarget = nil })
+        }
+        .sheet(item: $returnTarget) { target in
+            // The same quadrant and due date choices as the Saved screen's Return.
+            SavedEditorView(target: target, onSaved: { next() }).environment(store)
         }
         .onAppear { openIfNeeded() }
     }
@@ -75,7 +81,7 @@ struct SweepView: View {
         session = s
         if s.reachedEnd { stampSwept() }
         announce()
-        titleFocused = true
+        if s.isFinished { endFocused = true } else { titleFocused = true }
     }
 
     private func finish() {
@@ -139,8 +145,9 @@ struct SweepView: View {
         .buttonStyle(.borderless)
     }
 
+    // Each action moves on only after its write succeeds: on an error the card stays and the alert shows.
     private func complete(_ t: Task) -> some View {
-        action(String(localized: "Complete"), systemImage: "checkmark.circle") { actions.toggle(t); next() }
+        action(String(localized: "Complete"), systemImage: "checkmark.circle") { actions.toggle(t, then: next) }
     }
     private func newDate(_ t: Task, _ title: String) -> some View {
         action(title, systemImage: "calendar") { dateTarget = t }
@@ -149,30 +156,26 @@ struct SweepView: View {
         if !t.urgent {
             let target: Escalation.Target = t.important ? .urgentImportant : .urgentNotImportant
             action(String(localized: "Mark urgent"), systemImage: "arrow.up") {
-                actions.markUrgent(t, target: target); next()
+                actions.markUrgent(t, target: target, then: next)
             }
             .accessibilityHint(target.markUrgentHint)
         }
     }
     private func saveForLater(_ t: Task) -> some View {
-        action(String(localized: "Save for later"), systemImage: "bookmark") { actions.moveToSaved(t); next() }
+        action(String(localized: "Save for later"), systemImage: "bookmark") { actions.moveToSaved(t, then: next) }
     }
     private func delete(_ t: Task) -> some View {
-        action(String(localized: "Delete"), systemImage: "trash", role: .destructive) { actions.delete(t); next() }
+        action(String(localized: "Delete"), systemImage: "trash", role: .destructive) { actions.delete(t, then: next) }
     }
     private func returnToMatrix(_ t: Task) -> some View {
         action(String(localized: "Return to matrix"), systemImage: "arrow.uturn.backward") {
-            _Concurrency.Task { @MainActor in
-                do { try await store.returnToMatrix(id: t.id, quadrant: t.quadrant, dueDate: t.dueDate) }
-                catch { failure = TaskActionFailure(String(localized: "Couldn’t return that task: \(error.localizedDescription)")) }
-            }
-            next()
+            returnTarget = .returnToMatrix(t)
         }
     }
     private func moveTo(_ t: Task) -> some View {
         Menu {
-            ForEach(Quadrant.allCases, id: \.self) { q in
-                Button(q.title) { actions.move(t, to: q); next() }
+            ForEach(Quadrant.allCases.filter { $0 != t.quadrant }, id: \.self) { q in
+                Button(q.title) { actions.move(t, to: q, then: next) }
             }
         } label: {
             Label(String(localized: "Move to quadrant"), systemImage: "square.grid.2x2")
@@ -194,6 +197,7 @@ struct SweepView: View {
                 .font(.serif(.title2).weight(.semibold))
                 .foregroundStyle(Surface.ink)
                 .accessibilityAddTraits(.isHeader)
+                .accessibilityFocused($endFocused)
             if SweepSession.offersTopThree(freeSlot: freeSlot, topThreeShipped: true) {
                 Button(String(localized: "Pick today’s top three")) {
                     palette.compactTab = 0
@@ -205,7 +209,12 @@ struct SweepView: View {
                 .tint(Surface.tint)
                 .foregroundStyle(Surface.paper)   // paper on tide passes AA in both modes; the default white does not in dark
             }
-            Button(String(localized: "Back to the matrix")) { dismiss() }
+            Button(String(localized: "Back to the matrix")) {
+                // Always the matrix, even when the sweep was opened from Settings.
+                palette.compactTab = 0
+                palette.regularSelection = .matrix
+                dismiss()
+            }
                 .buttonStyle(.borderless)
                 .frame(minHeight: 44)
             Spacer()
@@ -256,26 +265,29 @@ private struct SweepCardView: View {
     }
 }
 
-/// New date and Add date: a day picker that saves through the same merge the editor uses. A date
-/// with no time of day is an all-day due date.
+/// New date and Add date: the editor's own date control (day, All day, time of day, and presets),
+/// saved through the same merge the editor uses, so a set time of day survives. After a successful
+/// save the sweep moves to its next card.
 private struct SweepDateSheet: View {
     @Environment(TaskStore.self) private var store
     let task: Task
+    var onSaved: () -> Void
     var onClose: () -> Void
-    @State private var date: Date
+    @State private var due: Date
     @State private var error: String?
 
-    init(task: Task, onClose: @escaping () -> Void) {
+    init(task: Task, onSaved: @escaping () -> Void, onClose: @escaping () -> Void) {
         self.task = task
+        self.onSaved = onSaved
         self.onClose = onClose
-        _date = State(initialValue: Calendar.current.startOfDay(for: max(task.dueDate ?? Date(), Date())))
+        _due = State(initialValue: task.dueDate ?? Calendar.current.startOfDay(for: Date()))
     }
 
     var body: some View {
         NavigationStack {
             Form {
-                DatePicker(String(localized: "Due"), selection: $date, displayedComponents: .date)
-                    .datePickerStyle(.graphical)
+                DueDateFields(dueDate: $due)
+                DueDatePresetRow(dueDate: Binding(get: { due }, set: { if let new = $0 { due = new } }))
                 if let error { Text(error).foregroundStyle(Surface.alert) }
             }
             .navigationTitle(task.dueDate == nil ? String(localized: "Add date") : String(localized: "New date"))
@@ -293,11 +305,12 @@ private struct SweepDateSheet: View {
             do {
                 let original = EditorMerge.untouched(task)
                 var edited = original
-                edited.dueDate = Calendar.current.startOfDay(for: date)
+                edited.dueDate = due
                 _ = try await store.saveEdits(edited, openedAs: original)
                 onClose()
+                onSaved()
             } catch {
-                self.error = String(localized: "Couldn’t save that date: \(error.localizedDescription)")
+                self.error = String(localized: "Couldn’t change the due date")
             }
         }
     }
