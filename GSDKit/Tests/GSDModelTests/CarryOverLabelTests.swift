@@ -5,7 +5,7 @@ import Foundation
 /// T12: the carry-over label by how far back the pick is.
 struct CarryOverLabelTests {
     private let zone = TimeZone(identifier: "America/Chicago")!
-    private func label(_ from: String, today: String = "2026-11-09") -> String {
+    private func label(_ from: String, today: String = "2026-11-09") -> String? {
         TopThree.carryOverLabel(from: from, today: today, timeZone: zone)
     }
 
@@ -20,7 +20,7 @@ struct CarryOverLabelTests {
         #expect(label("2026-11-02") == "From a week ago")  // a Monday, and today is a Monday
     }
 
-    @Test func theLabelNeverFallsBackToUnlistedCopy() {
-        #expect(label("not a date") == "From yesterday")   // carryOver never offers one; no "From earlier"
+    @Test func aDateThatDoesntParseHasNoLabel() {
+        #expect(label("not a date") == nil)   // carryOver never offers one, and there is no "From earlier"
     }
 }
