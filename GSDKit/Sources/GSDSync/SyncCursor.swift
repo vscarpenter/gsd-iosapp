@@ -7,7 +7,7 @@ import GSDStore   // AppGroupDefaults
 /// completeness; LWW still resolves on `client_updated_at`). Client-side it's only parsed back
 /// to a `Date` or sent as the server-side filter value (the server does the comparison) — no
 /// client code relies on string ordering. `nil` ⇒ never synced (triggers the first-sign-in
-/// seed). Cleared on sign-out. A legacy CLIENT-time cursor (`gsd.sync.lastSyncAt`) migrates on
+/// seed). Cleared on sign-out; the contract version survives it. A legacy CLIENT-time cursor (`gsd.sync.lastSyncAt`) migrates on
 /// read with a 24 h rewind (old client stamps are usually near server time; re-pulls are
 /// idempotent via the LWW equal-ms no-op) and is retired on the first advance.
 // @unchecked Sendable: the engine (an actor) holds this as a dependency and the App constructs
@@ -46,17 +46,21 @@ public struct SyncCursor: @unchecked Sendable {
         defaults.removeObject(forKey: legacyKey)
     }
 
-    /// A cursor exists from a build that spoke an older contract. A fresh install has no cursor
-    /// and nothing to backfill; its first `advance` stamps the current contract.
-    func needsBackfill() -> Bool {
-        load() != nil && defaults.integer(forKey: versionKey) < Self.contractVersion
-    }
+    /// The contract the local rows were last pulled under. 0 when none is stored: a build from
+    /// before the contract existed, or a fresh install.
+    func storedVersion() -> Int { defaults.integer(forKey: versionKey) }
+
+    /// The stored version alone decides (top three spec C4-1). A missing cursor doesn't exempt a
+    /// device: an older build that signed out has none, and its rows still lack the field. A fresh
+    /// install has no rows, so its backfill changes nothing.
+    func needsBackfill() -> Bool { storedVersion() < Self.contractVersion }
 
     func markBackfilled() { defaults.set(Self.contractVersion, forKey: versionKey) }
 
+    /// Sign-out forgets the cursor and keeps the version. Only a completed pull stamps one, and
+    /// forgetting it would make this build's next sync read as an older build's (C4-1, C4-3).
     func clear() {
         defaults.removeObject(forKey: key)
         defaults.removeObject(forKey: legacyKey)
-        defaults.removeObject(forKey: versionKey)
     }
 }

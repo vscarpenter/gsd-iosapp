@@ -239,8 +239,11 @@ public final class TaskStore {
     @discardableResult
     public func moveToSaved(_ task: Task) async throws -> Task {
         guard var current = try await repository.fetch(id: task.id) else { throw TaskStoreError.savedItemUnavailable }
-        guard !current.completed else { throw TaskStoreError.completedTaskCannotBeSaved }
-        guard TimeTracking.runningEntry(current.timeEntries) == nil else { throw TaskStoreError.stopTimerBeforeSaving }
+        switch SavedPlacement.refusal(for: current) {
+        case .completed: throw TaskStoreError.completedTaskCannotBeSaved
+        case .timerRunning: throw TaskStoreError.stopTimerBeforeSaving
+        case nil: break
+        }
         if current.isSaved { return current }
         let now = clock()
         current.savedAt = now

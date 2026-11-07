@@ -57,4 +57,39 @@ struct SavedWireTests {
         let wire = try JSONDecoder().decode(PocketBaseTaskRecord.self, from: JSONSerialization.data(withJSONObject: json))
         #expect(!TaskWireMapper.toDomain(wire, mergingInto: nil).isSaved)
     }
+
+    private func pushBody(_ payload: Task, current: Task?) throws -> [String: Any] {
+        let wire = TaskWireMapper.toWire(payload, current: current, owner: "user", deviceId: "ios")
+        return try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(wire)) as? [String: Any])
+    }
+
+    @Test func pushTakesThePlacementFromTheCurrentRowNotThePayload() throws {
+        let stamp = try #require(WireDate.parse(savedString))
+        let payload = Task(id: "reading", title: "Queued before the backfill", urgent: false, important: true,
+                           createdAt: stamp, updatedAt: stamp.addingTimeInterval(60))
+        var current = payload
+        current.savedAt = stamp
+        let body = try pushBody(payload, current: current)
+        #expect(body["saved_at"] as? String == savedString)
+        #expect(body["title"] as? String == "Queued before the backfill")   // the rest is still the payload
+    }
+
+    @Test func pushSendsAnEmptyPlacementForACurrentRowThatIsNotSaved() throws {
+        let stamp = try #require(WireDate.parse(savedString))
+        var payload = Task(id: "reading", title: "Read later", urgent: false, important: true,
+                           createdAt: stamp, updatedAt: stamp, savedAt: stamp)
+        var current = payload
+        current.savedAt = nil
+        payload.title = "Saved, then returned"
+        #expect(try pushBody(payload, current: current)["saved_at"] as? String == "")
+    }
+
+    @Test func pushLeavesThePlacementOffWhenTheRowIsGone() throws {
+        let stamp = try #require(WireDate.parse(savedString))
+        let payload = Task(id: "reading", title: "Archived since", urgent: false, important: true,
+                           createdAt: stamp, updatedAt: stamp)
+        let body = try pushBody(payload, current: nil)
+        #expect(!body.keys.contains("saved_at"))
+        #expect(body["task_id"] as? String == "reading")
+    }
 }

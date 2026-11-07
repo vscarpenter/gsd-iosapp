@@ -116,10 +116,11 @@ public actor SyncEngine {
     private static let epoch = "1970-01-01 00:00:00.000Z"
 
     /// Pull remote → local (upsert-only; no deletes). LWW vs local; device-local preserved via the
-    /// mapper merge. `mergeSameVersion` also applies records at the local row's own version: the
-    /// one full pull after a contract bump (`SyncCursor.contractVersion`), when the local copy may
-    /// lack a field an older build never read. Returns the applied count + the max `updated` seen.
-    func pull(token: String, since: String, mergeSameVersion: Bool = false, owner: String? = nil) async throws -> (applied: Int, conflicts: Int, maxApplied: Date?) {
+    /// mapper merge. `backfillingFrom` is the stored contract when this is the one full pull after a
+    /// contract bump (`SyncCursor.contractVersion`): the local copy may lack a field an older build
+    /// never read, so a same-version record merges, and a local row that wins takes the fields it
+    /// never read (`fillUnread`). Returns the applied count + the max `updated` seen.
+    func pull(token: String, since: String, backfillingFrom storedVersion: Int? = nil, owner: String? = nil) async throws -> (applied: Int, conflicts: Int, maxApplied: Date?) {
         if isErasing { return (0, 0, nil) }       // §3.4 pull-suppression gate (set during a destructive drain)
         let records = try await client.listTasks(updatedSince: since, token: token)
         var applied = 0
@@ -127,13 +128,16 @@ public actor SyncEngine {
         var maxApplied: Date?
         for record in records {
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { continue }
-            if try await hasQueuedWriteHoldingOff(record, remoteUpdated: remoteUpdated) { continue }
+            let local = try await tasks.fetch(id: record.taskId)
+            if try await hasQueuedWriteHoldingOff(record, remoteUpdated: remoteUpdated) {
+                try await fillUnread(local, from: record, storedVersion: storedVersion, owner: owner)
+                continue
+            }
             // Cursor advances on SERVER stamps (Fix B); LWW below stays on client stamps.
             // Records with an unparseable `updated` apply but don't advance the cursor.
             if let serverUpdated = WireDate.parse(record.updated) {
                 maxApplied = max(maxApplied ?? .distantPast, serverUpdated)
             }
-            let local = try await tasks.fetch(id: record.taskId)
             if local == nil {
                 switch try await applyOverTombstone(record, remoteUpdated: remoteUpdated, owner: owner) {
                 case .noTombstone: break
@@ -145,7 +149,8 @@ public actor SyncEngine {
             // remote is the version this device already holds; it is merged only while backfilling.
             let ingested = LWW.capped(remoteUpdated, now: now())
             let decision = LWW.resolve(localUpdatedAt: local?.updatedAt, remoteClientUpdatedAt: ingested)
-            let accepted = local == nil || decision == .takeRemote || (mergeSameVersion && decision == .noOp)
+            if decision == .keepLocal { try await fillUnread(local, from: record, storedVersion: storedVersion, owner: owner) }
+            let accepted = local == nil || decision == .takeRemote || (storedVersion != nil && decision == .noOp)
             guard accepted else { continue }
             if local != nil && decision == .takeRemote { conflicts += 1 }   // a real conflict resolved in remote's favor
             var incoming = TaskWireMapper.toDomain(record, mergingInto: local)
@@ -157,10 +162,22 @@ public actor SyncEngine {
         return (applied, conflicts, maxApplied)
     }
 
-    /// A far-future stamp must not overwrite a row whose edit is still queued (S-AND-02). The web
-    /// never faces this because it pushes before it pulls, so the edit has already healed the record.
-    /// This engine pulls first, so it leaves the row for the push, and a failed row counts too: a later
-    /// retry pushes it. A stamp inside the window follows the normal rules.
+    /// Backfill only. A local row that wins this pull, because it's newer or because a queued write
+    /// holds off a far-future remote, is what the next push sends. So it first takes the synced fields
+    /// its build never read (`SyncBackfill`, C4-4), keeping its stamp. Nothing is queued or counted.
+    private func fillUnread(_ local: Task?, from record: PocketBaseTaskRecord, storedVersion: Int?, owner: String?) async throws {
+        guard let storedVersion, let local else { return }
+        let remote = TaskWireMapper.toDomain(record, mergingInto: nil)
+        guard let filled = SyncBackfill.fillingUnreadFields(of: local, from: remote, storedVersion: storedVersion) else { return }
+        try fence(owner)
+        try await tasks.upsert(filled)
+    }
+
+    /// A far-future stamp must not overwrite a row whose edit is still queued (S-AND-02). The web's
+    /// ordinary sync pushes before it pulls, so the edit has already healed the record; its backfill
+    /// sync pulls first and holds off the same way (S-SPEC-01). This engine always pulls first, so it
+    /// leaves the row for the push, and a failed row counts too: a later retry pushes it. A stamp
+    /// inside the window follows the normal rules.
     private func hasQueuedWriteHoldingOff(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> Bool {
         guard LWW.isPastCeiling(remoteUpdated, now: now()) else { return false }
         return try await queue.all().contains { isQueuedWrite($0, for: record) }
@@ -225,7 +242,9 @@ public actor SyncEngine {
                     index.removeValue(forKey: item.taskId)
                 case .create, .update:
                     guard let payload = item.payload else { break }
-                    let wire = TaskWireMapper.toWire(payload, owner: owner, deviceId: deviceId, recordId: remote?.recordId ?? "")
+                    let current = try await tasks.fetch(id: item.taskId)   // placement comes from the row, not the payload
+                    let wire = TaskWireMapper.toWire(payload, current: current, owner: owner, deviceId: deviceId,
+                                                     recordId: remote?.recordId ?? "")
                     if let recordId = remote?.recordId { try await client.updateTask(recordId: recordId, record: wire, token: token) }
                     else {
                         // Record the new recordId in the live index so a later same-drain DELETE for the
@@ -354,12 +373,15 @@ public actor SyncEngine {
             case .manual, .networkRegained, .launch, .foreground: try await requeueFailed(owner: owner)
             case .signIn, .periodic, .mutation, .background: break
             }
-            // An older build's cursor sits past records it stored without a field this build reads,
-            // so pull everything once and merge same-version rows. The seed above did not run: the
-            // cursor is set, so nothing re-pushes those rows with the field still empty.
+            // Rows pulled under an older contract lack a field this build reads, and an older build's
+            // cursor sits past them, so pull everything once before any push. The pull repairs those
+            // rows, and push reads placement from the row, so a seeded or queued payload that still
+            // lacks the field doesn't send it empty (C4-1, C4-2).
             let backfill = cursor.needsBackfill()
             let since = backfill ? Self.epoch : (cursor.load() ?? Self.epoch)
-            let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since, mergeSameVersion: backfill, owner: owner)
+            let (pulled, conflicts, maxApplied) = try await pull(token: token, since: since,
+                                                                 backfillingFrom: backfill ? cursor.storedVersion() : nil,
+                                                                 owner: owner)
             try fence(owner)
             if backfill { cursor.markBackfilled() }
             result.pulled = pulled
@@ -381,8 +403,11 @@ public actor SyncEngine {
     /// Push-only fast path for the debounced post-mutation trigger (§7.6): drains the queue with the
     /// same LWW-guard / throttle / 429-abort / across-sync-retry as `sync()`, but does NOT pull or
     /// reconcile. Shares the single-flight flag (a concurrent full `sync()` drops it). Records history.
+    /// While a backfill is due it runs the full `sync()` instead: a push before that pull would send
+    /// rows it hasn't repaired yet (C4-2).
     public func pushNow(trigger: SyncTrigger = .mutation) async -> SyncResult {
-        await drain(suppressPull: false, trigger: trigger)
+        if cursor.needsBackfill() { return await sync(trigger: trigger) }
+        return await drain(suppressPull: false, trigger: trigger)
     }
 
     /// Shared single-flight queue-drain (token → owner → push → record). `suppressPull` holds the
