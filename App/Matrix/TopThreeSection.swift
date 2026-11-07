@@ -16,7 +16,9 @@ struct TopThreeSection: View {
     @Environment(PaletteController.self) private var palette
     @State private var now = Date()
     @State private var showingSuggestions = false
-    @State private var tidyDismissed = false
+    /// "Not now" lasts until the next launch (spec section 4), so it lives in app-lifetime state
+    /// (`TidyOfferState.shared`), not in this view. This copy only drives the redraw.
+    @State private var tidyDismissed = TidyOfferState.shared.isDismissed
 
     let actions: TaskActions
     var onEdit: (Task) -> Void
@@ -34,7 +36,8 @@ struct TopThreeSection: View {
         let offer = TopThree.carryOver(store.tasks, now: now, timeZone: zone)
         guard let from = offer.fromDate else { return nil }
         let tasks = offer.ids.compactMap { id in store.tasks.first { $0.id == id } }
-        return tasks.isEmpty ? nil : (TopThree.carryOverLabel(from: from, today: today, timeZone: zone), tasks)
+        guard !tasks.isEmpty, let label = TopThree.carryOverLabel(from: from, today: today, timeZone: zone) else { return nil }
+        return (label, tasks)
     }
 
     private var suggestions: [Task] {
@@ -144,7 +147,10 @@ struct TopThreeSection: View {
             HStack(spacing: 16) {
                 Button(String(localized: "Tidy")) { actions.tidyToday() }
                     .font(.callout.weight(.semibold))
-                Button(String(localized: "Not now")) { tidyDismissed = true }
+                Button(String(localized: "Not now")) {
+                    TidyOfferState.shared.dismiss()
+                    tidyDismissed = true
+                }
                     .font(.callout)
             }
             .buttonStyle(.borderless)
