@@ -186,11 +186,15 @@ struct TopThreeContract4Tests {
     @Test("a far-future remote with a queued edit keeps the server pick through the backfill")
     func aFarFutureRemoteWithAQueuedEditKeepsTheServerPick() async throws {
         let stack = try makeStack(.contract3, server: pickedServer(clientUpdatedAt: "2027-01-01T00:00:00.000Z"))
-        try await stack.seedRow(at: "2026-10-21T10:00:00.000Z", queued: true)
+        var edit = try await stack.seedRow(at: "2026-10-21T10:00:00.000Z", queued: false)
+        edit.title = "Call the venue today"                             // differs from the server's title
+        try await stack.repo.upsert(edit)
+        try await stack.enqueue(edit)
 
         _ = await stack.engine.sync(trigger: .launch)
 
         #expect(await stack.server.writes.count == 1)
         #expect(await stack.serverKeepsThePick())
+        #expect(try await stack.local().title == "Call the venue today")   // the hold-off kept the edit
     }
 }
