@@ -79,7 +79,6 @@ struct TaskCardView: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(accessibilityPosition ?? "")
         // Stable handle for the demo-video XCUITest (and a useful UI-test anchor generally).
         // `.combine` above merges the disc into this element, so the card is addressed as a whole.
         .accessibilityIdentifier("task-card-\(task.id)")
@@ -274,7 +273,8 @@ struct TaskCardView: View {
 
     private var accessibilityLabel: String {
         let state = task.completed ? String(localized: "completed") : String(localized: "active")
-        var parts = ["\(task.title)", task.quadrant.title, state]
+        // A Today row says its place right after the title: "<title>, first, ...".
+        var parts = ["\(task.title)"] + (accessibilityPosition.map { [$0] } ?? []) + [task.quadrant.title, state]
         if let dueDate = task.dueDate { parts.append(RelativeDate.dueString(for: dueDate, reference: now)) }
         if let days = escalation.daysUntilDue, escalation.escalating {
             parts.append(Escalation.accessibilityLabel(daysUntilDue: days))
