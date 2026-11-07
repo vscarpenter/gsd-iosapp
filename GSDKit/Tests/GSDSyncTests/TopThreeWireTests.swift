@@ -22,13 +22,13 @@ struct TopThreeWireTests {
     }
 
     @Test func aPickGoesOutAsTextAndANumber() throws {
-        let sent = try body(TaskWireMapper.toWire(task(focusDate: "2026-11-07", focusRank: 2), owner: "u", deviceId: "ios"))
+        let sent = try body(TaskWireMapper.toWire(task(focusDate: "2026-11-07", focusRank: 2), owner: "u", deviceId: "ios", defaultReminder: 15))
         #expect(sent["focus_date"] as? String == "2026-11-07")
         #expect(sent["focus_rank"] as? Int == 2)
     }
 
     @Test func noPickGoesOutAsEmptyAndZero() throws {
-        let sent = try body(TaskWireMapper.toWire(task(), owner: "u", deviceId: "ios"))
+        let sent = try body(TaskWireMapper.toWire(task(), owner: "u", deviceId: "ios", defaultReminder: 15))
         #expect(sent["focus_date"] as? String == "")
         #expect(sent["focus_rank"] as? Int == 0)
     }
@@ -55,14 +55,14 @@ struct TopThreeWireTests {
 
     @Test func pushTakesThePickFromTheCurrentRowNotThePayload() throws {
         let sent = try body(TaskWireMapper.toWire(task(), current: task(focusDate: "2026-11-07", focusRank: 1),
-                                                  owner: "u", deviceId: "ios"))
+                                                  owner: "u", deviceId: "ios", defaultReminder: 15))
         #expect(sent["focus_date"] as? String == "2026-11-07")
         #expect(sent["focus_rank"] as? Int == 1)
     }
 
     @Test func pushLeavesBothKeysOffWhenTheRowIsGone() throws {
         let sent = try body(TaskWireMapper.toWire(task(focusDate: "2026-11-07", focusRank: 1), current: nil,
-                                                  owner: "u", deviceId: "ios"))
+                                                  owner: "u", deviceId: "ios", defaultReminder: 15))
         #expect(!sent.keys.contains("focus_date") && !sent.keys.contains("focus_rank"))
     }
 }
