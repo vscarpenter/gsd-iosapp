@@ -47,4 +47,22 @@ public struct WatchOutbox {
     }
 }
 
+/// Bounds the watch's resends (WATCH-REVIEW-FIX). Each command is offered again at most once per
+/// session activation, so a persistent failure can't start a new transfer for every unsent
+/// command on each error. The next activation clears the ledger and offers them again.
+public struct WatchResendLedger {
+    private var resent: Set<String> = []
+
+    public init() {}
+
+    public mutating func startActivation() { resent.removeAll() }
+
+    /// The unsent commands not already resent this activation; marks them resent.
+    public mutating func take(from outbox: WatchOutbox, excluding inFlight: Set<String>) -> [WatchCommand] {
+        let due = outbox.unsent(excluding: inFlight.union(resent))
+        resent.formUnion(due.map(\.id))
+        return due
+    }
+}
+
 public enum WatchStoreError: Error { case noContainer }

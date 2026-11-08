@@ -54,9 +54,12 @@ struct DoFirstView: View {
             }
             .sheet(isPresented: $capturing) { CaptureView() }
             .safeAreaInset(edge: .bottom) { undoBar }
-            // A tapped reminder opens on the list holding the task (spec 4.4).
+            // A tapped reminder scrolls to the task's row (spec 4.4).
             .onChange(of: model.openedTaskID, initial: true) { _, id in
-                if let id { proxy.scrollTo(id, anchor: .center) }
+                // A task past the first 20 rows isn't in the list, so this does nothing for it.
+                guard let id else { return }
+                proxy.scrollTo(id, anchor: .center)
+                model.consumeOpenedTask()
             }
           }
         }

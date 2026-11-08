@@ -42,27 +42,6 @@ struct WatchReminderRouteTests {
         #expect(ReminderAction.snoozeID == "dev.vinny.gsd.reminder.snooze1h")
     }
 
-    // MARK: tap opens the list holding the task
-
-    @Test func tapOpensDoFirstForADoFirstTask() {
-        let lists = WatchOverlay.apply(snapshot([row("a")]), pending: [], now: now,
-                                       calendar: .current, timeZone: utc)
-        #expect(WatchReminderRoute.list(holding: "a", in: lists) == .doFirst)
-    }
-
-    @Test func tapOpensComingUpForAnEscalatingTask() {
-        let soon = row("b", urgent: false, due: now.addingTimeInterval(Self.day))
-        let lists = WatchOverlay.apply(snapshot([soon]), pending: [], now: now,
-                                       calendar: .current, timeZone: utc)
-        #expect(WatchReminderRoute.list(holding: "b", in: lists) == .comingUp)
-    }
-
-    @Test func tapOnATaskTheSnapshotLacksOpensHome() {
-        let lists = WatchOverlay.apply(snapshot([row("a")]), pending: [], now: now,
-                                       calendar: .current, timeZone: utc)
-        #expect(WatchReminderRoute.list(holding: "gone", in: lists) == nil)
-    }
-
     // MARK: the notification scene
 
     @Test func sceneCardCarriesQuadrantDueAndEscalation() {

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import WatchConnectivity
 import GSDModel
 import GSDStore
@@ -15,6 +16,15 @@ final class WatchSessionCoordinator: NSObject {
     nonisolated static let snapshotKey = WatchWire.snapshotKey
 
     private let store: TaskStore
+    /// A command can land while the phone app is backgrounded and its database suspended. Mac
+    /// Catalyst never suspends, and a Mac app is routinely `.inactive` with its window live.
+    private let databaseWindow = BackgroundDatabaseWindow(isBackgrounded: {
+        #if targetEnvironment(macCatalyst)
+        false
+        #else
+        UIApplication.shared.applicationState != .active
+        #endif
+    })
     private let defaults: UserDefaults
     private let enabled: Bool
     private let now: () -> Date
@@ -95,6 +105,10 @@ final class WatchSessionCoordinator: NSObject {
     // MARK: Watch to phone
 
     private func apply(_ command: WatchCommand) async {
+        await databaseWindow.run { await applyWithDatabase(command) }
+    }
+
+    private func applyWithDatabase(_ command: WatchCommand) async {
         let task: Task?
         do { task = try await store.fetchTask(id: command.taskID ?? "") }
         catch { return }   // database unavailable: leave the id unrecorded so a retry can apply it

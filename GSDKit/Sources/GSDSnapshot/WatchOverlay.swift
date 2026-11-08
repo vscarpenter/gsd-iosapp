@@ -17,17 +17,20 @@ public struct WatchLists: Sendable, Equatable {
     public var comingUp: [WatchEscalatingRow]
     /// Commands not yet acknowledged by the iPhone, for "2 changes waiting for iPhone".
     public var pendingCount: Int
+    /// Do First rows the pending commands added (positive) or removed (negative).
+    public var doFirstDelta: Int
 
-    public init(doFirst: [WatchTask], comingUp: [WatchEscalatingRow], pendingCount: Int) {
+    public init(doFirst: [WatchTask], comingUp: [WatchEscalatingRow], pendingCount: Int, doFirstDelta: Int = 0) {
         self.doFirst = doFirst
         self.comingUp = comingUp
         self.pendingCount = pendingCount
+        self.doFirstDelta = doFirstDelta
     }
 
     /// "+N more on iPhone" (spec 6.1): what the phone holds beyond the rows drawn. Counts
-    /// against `doFirstTotal` when that is larger, since the snapshot itself is capped.
+    /// against `doFirstTotal` (adjusted for pending commands) when that is larger, since the snapshot itself is capped.
     public func doFirstMore(rowLimit: Int, doFirstTotal: Int) -> Int {
-        max(doFirstTotal, doFirst.count) - min(doFirst.count, rowLimit)
+        max(doFirstTotal + doFirstDelta, doFirst.count) - min(doFirst.count, rowLimit)
     }
 }
 
@@ -79,7 +82,12 @@ public enum WatchOverlay {
             return result.escalating ? WatchEscalatingRow(task: row, escalation: result) : nil
         }.sorted { ($0.escalation.daysUntilDue ?? 0, $0.task.createdAt) < ($1.escalation.daysUntilDue ?? 0, $1.task.createdAt) }
 
-        return WatchLists(doFirst: doFirst, comingUp: comingUp, pendingCount: waiting.count)
+        // The snapshot's `doFirstTotal` knows nothing of pending commands, so carry how many Do First
+        // rows they added or removed, and "+N more" stays honest.
+        let baseline = waiting.isEmpty ? doFirst.count
+            : apply(snapshot, pending: [], now: now, calendar: calendar, timeZone: timeZone).doFirst.count
+        return WatchLists(doFirst: doFirst, comingUp: comingUp, pendingCount: waiting.count,
+                          doFirstDelta: doFirst.count - baseline)
     }
 
     public enum UndoOutcome: Sendable, Equatable {

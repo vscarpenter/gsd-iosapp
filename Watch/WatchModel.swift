@@ -26,6 +26,8 @@ final class WatchModel: NSObject {
     static let shared = WatchModel()
 
     private let snapshotStore: WatchSnapshotStore
+    /// Each unsent command is offered again at most once per activation (WATCH-REVIEW-FIX).
+    private var resendLedger = WatchResendLedger()
     private var undoExpiry: _Concurrency.Task<Void, Never>?
 
     override init() {
@@ -75,6 +77,9 @@ final class WatchModel: NSObject {
 
     func open(taskID: String) { openedTaskID = taskID }
 
+    /// Called once the list has scrolled, so a second tap on the same task scrolls again.
+    func consumeOpenedTask() { openedTaskID = nil }
+
     func markUrgent(_ task: WatchTask) { queue(.markUrgent(taskID: task.id)) }
 
     func capture(text: String, quadrant: Quadrant) { queue(.capture(text: text, quadrant: quadrant)) }
@@ -116,7 +121,7 @@ final class WatchModel: NSObject {
     private func resendUnsent() {
         let inFlight = Set(WCSession.default.outstandingUserInfoTransfers
             .compactMap { WatchWire.command(from: $0.userInfo)?.id })
-        outbox.unsent(excluding: inFlight).forEach(send)
+        resendLedger.take(from: outbox, excluding: inFlight).forEach(send)
     }
 
     // MARK: Snapshot from the iPhone
@@ -137,6 +142,7 @@ extension WatchModel: WCSessionDelegate {
         let snapshot = Self.decode(session.receivedApplicationContext)
         _Concurrency.Task { @MainActor in
             if let snapshot { self.receive(snapshot) }
+            self.resendLedger.startActivation()
             self.resendUnsent()
         }
     }
