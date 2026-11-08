@@ -5,7 +5,8 @@ import GSDSnapshot
 
 struct WatchWidgetEntry: TimelineEntry {
     let date: Date
-    let snapshot: WatchSnapshot
+    /// `nil` until the phone's first snapshot reaches the watch.
+    let snapshot: WatchSnapshot?
 }
 
 /// Reads the snapshot the watch app saved. Entries: now, each due time left today, and the next
@@ -15,23 +16,22 @@ struct WatchWidgetProvider: TimelineProvider {
         WatchSnapshotStore(directoryURL: FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id))
     }
 
-    func placeholder(in context: Context) -> WatchWidgetEntry { WatchWidgetEntry(date: .now, snapshot: .empty) }
+    func placeholder(in context: Context) -> WatchWidgetEntry { WatchWidgetEntry(date: .now, snapshot: nil) }
 
     func getSnapshot(in context: Context, completion: @escaping (WatchWidgetEntry) -> Void) {
-        completion(WatchWidgetEntry(date: .now, snapshot: store.read() ?? .empty))
+        completion(WatchWidgetEntry(date: .now, snapshot: store.read()))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<WatchWidgetEntry>) -> Void) {
-        let snapshot = store.read() ?? .empty
-        let dates = WatchWidgetContent.timelineDates(snapshot, now: .now, calendar: .current)
+        let snapshot = store.read()
+        let dates = WatchWidgetContent.timelineDates(snapshot ?? .empty, now: .now, calendar: .current)
         completion(Timeline(entries: dates.map { WatchWidgetEntry(date: $0, snapshot: snapshot) }, policy: .atEnd))
     }
 
     /// Smart Stack relevance around the remaining due times. The older `date(from:to:)` form is
     /// deprecated in watchOS 26, so this uses `date(interval:kind:)`.
     func relevance() async -> WidgetRelevance<Void> {
-        let snapshot = store.read() ?? .empty
-        let windows = WatchWidgetContent.relevanceIntervals(snapshot, now: .now, calendar: .current)
+        let windows = WatchWidgetContent.relevanceIntervals(store.read() ?? .empty, now: .now, calendar: .current)
         return WidgetRelevance(windows.map { WidgetRelevanceAttribute(context: .date(interval: $0, kind: .scheduled)) })
     }
 }
@@ -60,12 +60,15 @@ private struct GSDWatchWidgetView: View {
     }
 
     private var rectangular: some View {
-        let titles = WatchWidgetContent.rectangularTitles(entry.snapshot, now: entry.date,
-                                                          calendar: .current, timeZone: .current)
+        let content = WatchWidgetContent.rectangular(entry.snapshot, now: entry.date,
+                                                     calendar: .current, timeZone: .current)
         return VStack(alignment: .leading, spacing: 2) {
-            if titles.isEmpty {
+            switch content {
+            case .needsPhone:
+                Text("Open GSD on your iPhone to load your tasks.").font(.footnote)
+            case .clear:
                 Text("Clear for now").font(.headline)
-            } else {
+            case .rows(let titles):
                 ForEach(titles, id: \.self) { Text($0).lineLimit(1) }
             }
         }
@@ -75,7 +78,8 @@ private struct GSDWatchWidgetView: View {
     }
 
     @ViewBuilder private var inline: some View {
-        if let line = WatchWidgetContent.inline(entry.snapshot, now: entry.date, calendar: .current) {
+        if let snapshot = entry.snapshot,
+           let line = WatchWidgetContent.inline(snapshot, now: entry.date, calendar: .current) {
             Text("\(line.time.formatted(date: .omitted, time: .shortened)) \(line.title)")
         } else {
             Text("GSD")

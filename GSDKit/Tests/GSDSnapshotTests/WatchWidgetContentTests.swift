@@ -30,7 +30,10 @@ struct WatchWidgetContentTests {
     }
 
     private func rows(_ s: WatchSnapshot, at date: Date? = nil) -> [String] {
-        WatchWidgetContent.rectangularTitles(s, now: date ?? now, calendar: cal, timeZone: utc)
+        if case .rows(let titles) = WatchWidgetContent.rectangular(s, now: date ?? now, calendar: cal, timeZone: utc) {
+            return titles
+        }
+        return []
     }
 
     // MARK: rectangular
@@ -39,8 +42,12 @@ struct WatchWidgetContentTests {
         #expect(rows(snap([row("a"), row("b"), row("c"), row("d")])) == ["a", "b", "c"])
     }
 
-    @Test func rectangularIsEmptyWhenNothingMatches() {
-        #expect(rows(snap([])).isEmpty)
+    @Test func rectangularIsClearWhenAFreshSnapshotHasNothing() {
+        #expect(WatchWidgetContent.rectangular(snap([]), now: now, calendar: cal, timeZone: utc) == .clear)
+    }
+
+    @Test func rectangularAsksForThePhoneBeforeTheFirstSnapshot() {
+        #expect(WatchWidgetContent.rectangular(nil, now: now, calendar: cal, timeZone: utc) == .needsPhone)
     }
 
     // MARK: inline
@@ -58,11 +65,11 @@ struct WatchWidgetContentTests {
                                           now: now, calendar: cal) == nil)
     }
 
-    @Test func inlineSkipsAnAllDayTaskEvenAtMidnightSharp() {
-        // An all-day task is due at 00:00, which only passes the "not yet past" check at 00:00.
-        let s = snap([row("allDay", due: at(0)), row("timed", due: at(8))])
-        let line = WatchWidgetContent.inline(s, now: at(0), calendar: cal)
-        #expect(line?.title == "timed")
+    @Test func inlineMovesOnAtTheDueTime() {
+        // At 11:00 sharp the 11:00 task has arrived; the line shows the next one, not the past one.
+        let s = snap([row("eleven", due: at(11)), row("three", due: at(15))])
+        #expect(WatchWidgetContent.inline(s, now: at(11), calendar: cal)?.title == "three")
+        #expect(WatchWidgetContent.inline(snap([row("eleven", due: at(11))]), now: at(11), calendar: cal) == nil)
     }
 
     // MARK: timeline
@@ -88,6 +95,14 @@ struct WatchWidgetContentTests {
         #expect(windows[0].duration < 3_600 * 2)   // never claims the stack for the day
     }
 
+    @Test func relevanceSkipsAnAllDayTaskEvenAtMidnightSharp() {
+        // An all-day task is due at 00:00, so only at 00:00 sharp does it pass the "not yet past" check.
+        let s = snap([row("allDay", due: at(0)), row("timed", due: at(8))])
+        let windows = WatchWidgetContent.relevanceIntervals(s, now: at(0), calendar: cal)
+        #expect(windows.count == 1)
+        #expect(windows[0].end == at(8).addingTimeInterval(15 * 60))
+    }
+
     @Test func relevanceIsCappedSoItNeverFillsTheDay() {
         let many = (0..<12).map { row("t\($0)", due: at(10, $0 * 5)) }
         #expect(WatchWidgetContent.relevanceLimit == 5)
@@ -96,11 +111,27 @@ struct WatchWidgetContentTests {
 
     // MARK: capture request
 
+    private func defaults() -> UserDefaults { UserDefaults(suiteName: "t.\(UUID().uuidString)")! }
+
     @Test func captureRequestIsConsumedOnce() {
-        let defaults = UserDefaults(suiteName: "t.\(UUID().uuidString)")!
-        #expect(!WatchCaptureRequest.consume(from: defaults))
-        WatchCaptureRequest.request(in: defaults)
-        #expect(WatchCaptureRequest.consume(from: defaults))
-        #expect(!WatchCaptureRequest.consume(from: defaults))
+        let d = defaults()
+        #expect(!WatchCaptureRequest.consume(from: d, now: now))
+        WatchCaptureRequest.request(in: d, now: now)
+        #expect(WatchCaptureRequest.consume(from: d, now: now.addingTimeInterval(5)))
+        #expect(!WatchCaptureRequest.consume(from: d, now: now.addingTimeInterval(6)))
+    }
+
+    @Test func captureRequestWithinTheLimitIsHonored() {
+        let d = defaults()
+        WatchCaptureRequest.request(in: d, now: now)
+        #expect(WatchCaptureRequest.consume(from: d, now: now.addingTimeInterval(WatchCaptureRequest.maxAge)))
+    }
+
+    @Test func aStaleCaptureRequestIsIgnoredAndCleared() {
+        let d = defaults()
+        WatchCaptureRequest.request(in: d, now: now)
+        #expect(!WatchCaptureRequest.consume(from: d, now: now.addingTimeInterval(WatchCaptureRequest.maxAge + 1)))
+        // Cleared too, so it can't fire on a later launch.
+        #expect(!WatchCaptureRequest.consume(from: d, now: now))
     }
 }

@@ -9,12 +9,22 @@ public enum WatchWidgetContent {
     /// Smart Stack windows per day. Without a cap the widget would claim the stack all day.
     public static let relevanceLimit = 5
 
-    /// `accessoryRectangular`: the first Do First rows. Empty means the widget says "Clear for
-    /// now". Today's picks join this family with W6, once the snapshot carries them.
-    public static func rectangularTitles(_ snapshot: WatchSnapshot, now: Date,
-                                         calendar: Calendar, timeZone: TimeZone) -> [String] {
+    public enum Rectangular: Sendable, Equatable {
+        /// No snapshot has reached the watch yet.
+        case needsPhone
+        case clear
+        case rows([String])
+    }
+
+    /// `accessoryRectangular`: the first Do First rows. `nil` is no snapshot yet, which is not
+    /// the same as nothing to do. Today's picks join this family with W6, once the snapshot
+    /// carries them.
+    public static func rectangular(_ snapshot: WatchSnapshot?, now: Date,
+                                   calendar: Calendar, timeZone: TimeZone) -> Rectangular {
+        guard let snapshot else { return .needsPhone }
         let lists = WatchOverlay.apply(snapshot, pending: [], now: now, calendar: calendar, timeZone: timeZone)
-        return lists.doFirst.prefix(rowLimit).map(\.title)
+        let titles = lists.doFirst.prefix(rowLimit).map(\.title)
+        return titles.isEmpty ? .clear : .rows(titles)
     }
 
     public struct InlineLine: Sendable, Equatable {
@@ -25,7 +35,10 @@ public enum WatchWidgetContent {
     /// `accessoryInline`: the next task due later today at a time of day ("2:00 PM Call the
     /// dentist"). All-day and already-past tasks don't count. `nil` shows the app name.
     public static func inline(_ snapshot: WatchSnapshot, now: Date, calendar: Calendar) -> InlineLine? {
-        remainingTimed(snapshot, now: now, calendar: calendar).first.map { InlineLine(time: $0.due, title: $0.title) }
+        // Strictly after `now`: the timeline puts an entry at each due time, and at that entry the
+        // task has arrived, so the line moves on to the next one.
+        remainingTimed(snapshot, now: now, calendar: calendar, includingNow: false).first
+            .map { InlineLine(time: $0.due, title: $0.title) }
     }
 
     /// Entries: now, each due time left today, and the next local midnight, when "later today"
@@ -45,11 +58,11 @@ public enum WatchWidgetContent {
         }
     }
 
-    private static func remainingTimed(_ snapshot: WatchSnapshot, now: Date,
-                                       calendar: Calendar) -> [(due: Date, title: String)] {
+    private static func remainingTimed(_ snapshot: WatchSnapshot, now: Date, calendar: Calendar,
+                                       includingNow: Bool = true) -> [(due: Date, title: String)] {
         let midnight = nextMidnight(after: now, calendar: calendar)
         return snapshot.tasks.compactMap { task -> (due: Date, title: String)? in
-            guard let due = task.dueDate, due >= now, due < midnight,
+            guard let due = task.dueDate, includingNow ? due >= now : due > now, due < midnight,
                   !DueTime.isAllDay(due, calendar: calendar) else { return nil }
             return (due, task.title)
         }.sorted { $0.due < $1.due }
@@ -62,15 +75,21 @@ public enum WatchWidgetContent {
 }
 
 /// A one-shot "open Capture" flag in the App Group, set by the Capture control's intent and
-/// consumed by the watch app when it comes forward.
+/// consumed by the watch app when it comes forward. It stores when it was set and expires, so
+/// a tap that never brought the app forward can't open Capture on a launch days later.
 public enum WatchCaptureRequest {
-    private static let key = "watch.captureRequested"
+    private static let key = "watch.captureRequestedAt"
 
-    public static func request(in defaults: UserDefaults) { defaults.set(true, forKey: key) }
+    /// Longer than this between the tap and the app coming forward, and it was not meant for now.
+    public static let maxAge: TimeInterval = 60
 
-    public static func consume(from defaults: UserDefaults) -> Bool {
-        guard defaults.bool(forKey: key) else { return false }
+    public static func request(in defaults: UserDefaults, now: Date = Date()) {
+        defaults.set(now.timeIntervalSince1970, forKey: key)
+    }
+
+    public static func consume(from defaults: UserDefaults, now: Date = Date()) -> Bool {
+        guard let at = defaults.object(forKey: key) as? Double else { return false }
         defaults.removeObject(forKey: key)
-        return true
+        return now.timeIntervalSince1970 - at <= maxAge
     }
 }
