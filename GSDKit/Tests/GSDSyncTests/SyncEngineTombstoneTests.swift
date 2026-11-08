@@ -122,3 +122,76 @@ struct SyncEngineTombstoneTests {
         #expect(try await GRDBTrashRepository(db).fetchAll().isEmpty)
     }
 }
+
+/// IOS-TOMBSTONE-MERGE (S-IOS-02, option A): a task that comes back over its archive or Trash row
+/// merges the server copy into that row, as every other way a task comes back does, so this
+/// device's own fields survive: rich time entries, `parentTaskId`, and reminder state.
+extension SyncEngineTombstoneTests {
+    private static let due = "2026-06-20T15:00:00.000Z"
+
+    /// A buried task carrying this device's own fields. Its due date matches the server copy's, so
+    /// B-55's moved-due reset doesn't apply.
+    private func richTask(_ id: String) -> Task {
+        let started = WireDate.parse("2026-06-10T09:00:00.000Z")!
+        var task = task(id)
+        task.dueDate = WireDate.parse(Self.due)
+        task.parentTaskId = "parent-1"
+        task.timeEntries = [TimeEntry(id: "e1", startedAt: started, endedAt: started.addingTimeInterval(1500),
+                                      notes: "Left a voicemail")]
+        task.notificationSent = true
+        task.lastNotificationAt = WireDate.parse("2026-06-14T14:45:00.000Z")
+        task.snoozedUntil = WireDate.parse("2026-06-20T14:30:00.000Z")
+        return task
+    }
+
+    private func remoteWithDue(_ id: String, updated: String) -> String {
+        #"{"id":"rec_\#(id)","task_id":"\#(id)","owner":"u1","title":"remote","urgent":false,"important":false,"due_date":"\#(Self.due)","client_updated_at":"\#(updated)","device_id":"dev-B","updated":"\#(updated)"}"#
+    }
+
+    private func expectDeviceFieldsKept(_ back: Task?, from buried: Task) {
+        #expect(back?.title == "remote")                                   // the server copy wins the synced fields
+        #expect(back?.timeEntries == buried.timeEntries)
+        #expect(back?.parentTaskId == "parent-1")
+        #expect(back?.notificationSent == true && back?.lastNotificationAt == buried.lastNotificationAt)
+        #expect(back?.snoozedUntil == buried.snoozedUntil)
+    }
+
+    @Test func aTrashedTaskPulledBackKeepsThisDevicesFields() async throws {
+        let db = try AppDatabase.inMemory()
+        let buried = richTask("a")
+        try await GRDBTrashRepository(db).trash(buried, at: Self.buriedAt)
+        _ = try await engine(db, pullListing(remoteWithDue("a", updated: Self.after)))
+            .pull(token: Self.jwt, since: "1970-01-01 00:00:00.000Z")
+        expectDeviceFieldsKept(try await GRDBTaskRepository(db).fetch(id: "a"), from: buried)
+    }
+
+    @Test func anArchivedTaskPulledBackKeepsThisDevicesFields() async throws {
+        let db = try AppDatabase.inMemory()
+        let buried = richTask("a")
+        try await GRDBArchiveRepository(db).archive(buried, at: Self.buriedAt)
+        _ = try await engine(db, pullListing(remoteWithDue("a", updated: Self.after)))
+            .pull(token: Self.jwt, since: "1970-01-01 00:00:00.000Z")
+        expectDeviceFieldsKept(try await GRDBTaskRepository(db).fetch(id: "a"), from: buried)
+    }
+
+    /// B-55 still applies through the mapper: a server copy that moved the due date is a new reminder.
+    @Test func aTrashedTaskPulledBackWithAMovedDueDateResetsItsReminderState() async throws {
+        let db = try AppDatabase.inMemory()
+        let buried = richTask("a")
+        try await GRDBTrashRepository(db).trash(buried, at: Self.buriedAt)
+        let moved = remoteWithDue("a", updated: Self.after).replacingOccurrences(of: Self.due, with: "2026-06-22T15:00:00.000Z")
+        _ = try await engine(db, pullListing(moved)).pull(token: Self.jwt, since: "1970-01-01 00:00:00.000Z")
+        let back = try await GRDBTaskRepository(db).fetch(id: "a")
+        #expect(back?.timeEntries == buried.timeEntries && back?.parentTaskId == "parent-1")
+        #expect(back?.notificationSent == false && back?.lastNotificationAt == nil && back?.snoozedUntil == nil)
+    }
+
+    @Test func aTrashedTaskBroughtBackByRealtimeKeepsThisDevicesFields() async throws {
+        let db = try AppDatabase.inMemory()
+        let buried = richTask("a")
+        try await GRDBTrashRepository(db).trash(buried, at: Self.buriedAt)
+        let event = #"{"action":"update","record":\#(remoteWithDue("a", updated: Self.after))}"#
+        await engine(db).applyRealtime(rawData: event)
+        expectDeviceFieldsKept(try await GRDBTaskRepository(db).fetch(id: "a"), from: buried)
+    }
+}

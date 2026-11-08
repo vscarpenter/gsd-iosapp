@@ -603,8 +603,11 @@ public actor SyncEngine {
             $0.taskId == record.taskId && $0.operation == .delete && !isStaleDelete($0, remoteUpdated: remoteUpdated)
         }
         if deleteWillLand { return .suppressed }
+        // Merge into the buried row, as every other way a task comes back does, so this device's own
+        // fields survive: rich time entries, `parentTaskId`, and reminder state (S-IOS-02).
+        let incoming = TaskWireMapper.toDomain(record, mergingInto: try await tombstones.buriedTask(id: record.taskId))
         try fence(owner)
-        try await tombstones.resurrect(TaskWireMapper.toDomain(record, mergingInto: nil))
+        try await tombstones.resurrect(incoming)
         return .resurrected
     }
 
