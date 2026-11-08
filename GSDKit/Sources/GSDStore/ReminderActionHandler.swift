@@ -1,15 +1,6 @@
 import Foundation
 import GSDModel
 
-/// Identifiers for the buttons on a reminder notification (B-17). Strings only, so the
-/// App target can build its `UNNotificationCategory` from them without this module
-/// importing `UserNotifications`.
-public enum ReminderAction {
-    public static let categoryID = "dev.vinny.gsd.reminder"
-    public static let completeID = "dev.vinny.gsd.reminder.complete"
-    public static let snoozeID = "dev.vinny.gsd.reminder.snooze1h"
-}
-
 /// Applies a tapped reminder button through `TaskStore`, the single mutation path, so the
 /// change is stamped, enqueued for sync, and seen by widgets and Spotlight like any edit.
 /// The notification's task may have changed since it was scheduled (completed on another
