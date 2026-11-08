@@ -91,3 +91,9 @@ decisions (2026-11-08) put them in one PR, each red first:
   push has no identity check of its own. The reconcile has one, but it runs after the push and only
   when something is missing from the server. Web pushes before its step, so it can skip the step
   safely. Test: `a step whose identity check fails stops the run before the push`.
+- **A token the server rejects still stops the run** (S-AND's second review of #97, F1). A rejected
+  token lists as an empty account, so the step's auth-refresh is the first to see it, as a
+  `PocketBaseError` with status 401 or 403. Those statuses stay fatal, read as `AccountDeleter`
+  reads them, so the push never sends queued writes to a dead session and spends no retry on them.
+  Android rethrows its `Unauthorized` for the same reason. Test, Android's name: `a dead session
+  found by the step pushes nothing`.

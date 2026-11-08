@@ -420,12 +420,11 @@ public actor SyncEngine {
             if backfill { cursor.markBackfilled() }
             // Tasks deleted while signed out come back before the push, so it never sees them. A step
             // that fails forgets nothing (rule 5), and it mustn't hold back the user's own edits, so
-            // it's logged and the run goes on to the push, as web does. An ended session still stops,
-            // and so does a token confirmed for another account: the push has no identity check.
+            // it's logged and the run goes on to the push, as web does, unless it ends the run.
             result.pulled = pulled
             do {
                 result.pulled += try await resurrectOnSight(token: token, owner: owner)
-            } catch where !(error is StaleSyncSession || error is SyncIdentityMismatch) {
+            } catch where !Self.endsTheRun(error) {
                 Self.log.error("Resurrect on sight failed, ids kept for the next run: \(String(describing: type(of: error)), privacy: .public) \(String(describing: error))")
             }
             let (pushed, failed) = try await push(token: token, owner: owner)
@@ -676,6 +675,19 @@ public actor SyncEngine {
         // may have remembered another id, and this run never looked for it.
         cursor.forgetRememberedDeletes(remembered.subtracting(waiting))
         return brought
+    }
+
+    /// A step error that must still stop the run before the push: an ended session, a token confirmed
+    /// for another account, or one the server rejects (401 or 403, read as `AccountDeleter` reads
+    /// them). The push has no identity check of its own, and a rejected token lists as an empty
+    /// account, so the step's auth-refresh is the first to see it. On a dead session the push would
+    /// spend a retry on every queued write.
+    private static func endsTheRun(_ error: Error) -> Bool {
+        switch error {
+        case is StaleSyncSession, is SyncIdentityMismatch: true
+        case PocketBaseError.http(let status, _), PocketBaseError.pocketBase(let status, _): status == 401 || status == 403
+        default: false
+        }
     }
 
     /// This device still has its own word on the task, so its id waits for a later run: a far-future

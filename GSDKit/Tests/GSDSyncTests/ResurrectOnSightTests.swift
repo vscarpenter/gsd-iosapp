@@ -51,7 +51,11 @@ actor AccountServer: RequestExecuting {
             let id = anotherAccount ? "u2" : "u1"
             return (Data(#"{"token":"fresh","record":{"id":"\#(id)","email":"\#(id)@example.com"}}"#.utf8), response(url, 200))
         }
-        switch request.httpMethod ?? "GET" {
+        let method = request.httpMethod ?? "GET"
+        if sessionDead, method != "GET" {   // the server rejects every write from a dead token
+            return (Data(#"{"message":"The request requires valid record authorization token."}"#.utf8), response(url, 401))
+        }
+        switch method {
         case "GET": return try list(request, url: url)
         case "DELETE":
             if let taskId = records.first(where: { $0.value["id"] as? String == url.lastPathComponent })?.key {
@@ -327,6 +331,28 @@ struct ResurrectOnSightTests {
         #expect(result.error != nil)
         #expect(result.pushed == 0)
         #expect(await stack.server.writtenTaskIds.isEmpty)
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
+    }
+
+    /// S-AND's second review of #97 (F1): a rejected token lists as an empty account, so the step's
+    /// auth-refresh is the first to see it. The run stops there. Otherwise the push would send every
+    /// queued write to a dead session and spend a retry on each.
+    @Test("a dead session found by the step pushes nothing")
+    func aDeadSessionFoundByTheStepPushesNothing() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        await stack.server.add("t2")
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        try await stack.store.toggleComplete(try await stack.seedActive("t2"))   // the user's own edit
+        await stack.server.killSession()
+
+        let result = await stack.engine.sync(trigger: .manual)
+
+        #expect(result.error != nil)
+        #expect(result.pushed == 0)
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+        #expect(try await stack.queue.all().map(\.retryCount) == [0])
         #expect(stack.cursor.rememberedDeletes() == ["t1"])
     }
 
