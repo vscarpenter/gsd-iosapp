@@ -65,4 +65,10 @@ public enum WatchCommandPlan {
         parsed.title = String(parsed.title.prefix(FieldLimits.titleRange.upperBound))
         return parsed
     }
+
+    /// Whether the watch should hold the draft: the title runs past the field limit the phone
+    /// would clamp it to.
+    public static func captureOverLimit(_ text: String) -> Bool {
+        CaptureParser.parse(text).title.count > FieldLimits.titleRange.upperBound
+    }
 }
