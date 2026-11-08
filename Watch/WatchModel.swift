@@ -75,6 +75,9 @@ final class WatchModel: NSObject {
 
     func open(taskID: String) { openedTaskID = taskID }
 
+    /// Called once the list has scrolled, so a second tap on the same task scrolls again.
+    func consumeOpenedTask() { openedTaskID = nil }
+
     func markUrgent(_ task: WatchTask) { queue(.markUrgent(taskID: task.id)) }
 
     func capture(text: String, quadrant: Quadrant) { queue(.capture(text: text, quadrant: quadrant)) }

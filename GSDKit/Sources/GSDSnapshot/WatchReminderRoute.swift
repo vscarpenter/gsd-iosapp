@@ -16,16 +16,6 @@ public enum WatchReminderRoute {
         }
     }
 
-    public enum List: Sendable, Equatable { case doFirst, comingUp }
-
-    /// The list that holds the task, so a notification tap can open the watch app there.
-    /// `nil` when the snapshot doesn't hold it (the app then opens on the home screen).
-    public static func list(holding taskID: String, in lists: WatchLists) -> List? {
-        if lists.doFirst.contains(where: { $0.id == taskID }) { return .doFirst }
-        if lists.comingUp.contains(where: { $0.task.id == taskID }) { return .comingUp }
-        return nil
-    }
-
     /// What the notification scene draws under the reminder's title: quadrant, due time, and
     /// the escalation marker. Read from the watch's snapshot rather than the notification
     /// payload, so reminders already scheduled on a device keep working unchanged.
