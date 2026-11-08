@@ -10,6 +10,7 @@ struct CaptureView: View {
     @State private var text = ""
     @State private var chosen: Quadrant?
 
+    private var overLimit: Bool { WatchCommandPlan.captureOverLimit(text) }
     private var parsed: ParsedCapture { CaptureParser.parse(text) }
     private var quadrant: Quadrant { chosen ?? Quadrant(urgent: parsed.urgent, important: parsed.important) }
 
@@ -18,6 +19,12 @@ struct CaptureView: View {
             List {
                 TextField("New task", text: $text)
                     .accessibilityIdentifier("watch-capture-field")
+
+                if overLimit {
+                    // Hold the draft rather than let the phone cut it after the fact.
+                    Text("Titles are limited to \(FieldLimits.titleRange.upperBound) characters. Shorten it to add.")
+                        .font(.footnote).foregroundStyle(.red)
+                }
 
                 if !parsed.title.isEmpty {
                     Section("Quadrant") {
@@ -38,6 +45,7 @@ struct CaptureView: View {
                         dismiss()
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(overLimit)
                 }
             }
             .navigationTitle("New task")

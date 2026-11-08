@@ -24,13 +24,21 @@ final class WatchModel: NSObject {
     private var undoExpiry: _Concurrency.Task<Void, Never>?
 
     override init() {
-        let directory = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id)
-            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let directory = Self.storageDirectory()
         snapshotStore = WatchSnapshotStore(directoryURL: directory)
         outbox = WatchOutbox(directoryURL: directory)
         snapshot = snapshotStore.read() ?? .empty
         super.init()
+    }
+
+    /// The App Group container, else Application Support, created first because the outbox
+    /// writes into it and the system doesn't make that directory.
+    private static func storageDirectory() -> URL? {
+        let files = FileManager.default
+        if let group = files.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id) { return group }
+        guard let support = files.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else { return nil }
+        try? files.createDirectory(at: support, withIntermediateDirectories: true)
+        return support
     }
 
     func start() {
@@ -50,8 +58,9 @@ final class WatchModel: NSObject {
     // MARK: Commands
 
     func complete(_ task: WatchTask) {
-        let command = queue(.complete(taskID: task.id))
-        undoOffer = UndoOffer(task: task, commandID: command?.id ?? "")
+        // No Undo for a command that never queued: there is nothing to take back.
+        guard let command = queue(.complete(taskID: task.id)) else { return }
+        undoOffer = UndoOffer(task: task, commandID: command.id)
         undoExpiry?.cancel()
         undoExpiry = _Concurrency.Task { [weak self] in
             try? await _Concurrency.Task.sleep(for: .seconds(4))
@@ -86,10 +95,21 @@ final class WatchModel: NSObject {
     private func queue(_ kind: WatchCommand.Kind) -> WatchCommand? {
         let command = WatchCommand(id: UUID().uuidString, issuedAt: .now, kind: kind)
         do { try outbox.add(command) } catch { return nil }   // no container: nothing to show or send
-        if let data = try? JSONEncoder().encode(command) {
-            WCSession.default.transferUserInfo(["command": data])
-        }
+        send(command)
         return command
+    }
+
+    private func send(_ command: WatchCommand) {
+        if let payload = WatchWire.userInfo(for: command) { WCSession.default.transferUserInfo(payload) }
+    }
+
+    /// Hands the session every unacknowledged command it isn't already carrying. The phone
+    /// leaves an id unrecorded when its store errors, so the watch has to offer it again; a
+    /// repeat is safe because the phone skips ids it has applied.
+    private func resendUnsent() {
+        let inFlight = Set(WCSession.default.outstandingUserInfoTransfers
+            .compactMap { WatchWire.command(from: $0.userInfo)?.id })
+        outbox.unsent(excluding: inFlight).forEach(send)
     }
 
     // MARK: Snapshot from the iPhone
@@ -107,8 +127,17 @@ extension WatchModel: WCSessionDelegate {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState,
                              error: Error?) {
         // A context that arrived while the app wasn't running is waiting here.
-        guard let snapshot = Self.decode(session.receivedApplicationContext) else { return }
-        _Concurrency.Task { @MainActor in self.receive(snapshot) }
+        let snapshot = Self.decode(session.receivedApplicationContext)
+        _Concurrency.Task { @MainActor in
+            if let snapshot { self.receive(snapshot) }
+            self.resendUnsent()
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer,
+                             error: Error?) {
+        guard error != nil else { return }
+        _Concurrency.Task { @MainActor in self.resendUnsent() }
     }
 
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
@@ -117,7 +146,7 @@ extension WatchModel: WCSessionDelegate {
     }
 
     private nonisolated static func decode(_ context: [String: Any]) -> WatchSnapshot? {
-        guard let data = context["snapshot"] as? Data else { return nil }
+        guard let data = context[WatchWire.snapshotKey] as? Data else { return nil }
         return try? JSONDecoder().decode(WatchSnapshot.self, from: data)
     }
 }

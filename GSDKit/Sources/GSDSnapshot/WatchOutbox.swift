@@ -35,6 +35,12 @@ public struct WatchOutbox {
         if commands.count != before { try save() }
     }
 
+    /// The commands to hand to the session again: those not already queued in a transfer. The
+    /// phone skips an id it has applied, so a repeat is safe (spec 6.3).
+    public func unsent(excluding inFlight: Set<String>) -> [WatchCommand] {
+        commands.filter { !inFlight.contains($0.id) }
+    }
+
     private func save() throws {
         guard let fileURL else { throw WatchStoreError.noContainer }
         try JSONEncoder().encode(commands).write(to: fileURL, options: .atomic)

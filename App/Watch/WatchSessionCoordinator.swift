@@ -12,7 +12,7 @@ import GSDSnapshot
 @MainActor
 final class WatchSessionCoordinator: NSObject {
     /// The key both ends use in the application context dictionary.
-    nonisolated static let snapshotKey = "snapshot"
+    nonisolated static let snapshotKey = WatchWire.snapshotKey
 
     private let store: TaskStore
     private let defaults: UserDefaults
@@ -143,8 +143,7 @@ extension WatchSessionCoordinator: WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
-        guard let data = userInfo["command"] as? Data,
-              let command = try? JSONDecoder().decode(WatchCommand.self, from: data) else { return }
+        guard let command = WatchWire.command(from: userInfo) else { return }
         commandSink.yield(command)
     }
 }

@@ -17,6 +17,18 @@ public struct WatchLists: Sendable, Equatable {
     public var comingUp: [WatchEscalatingRow]
     /// Commands not yet acknowledged by the iPhone, for "2 changes waiting for iPhone".
     public var pendingCount: Int
+
+    public init(doFirst: [WatchTask], comingUp: [WatchEscalatingRow], pendingCount: Int) {
+        self.doFirst = doFirst
+        self.comingUp = comingUp
+        self.pendingCount = pendingCount
+    }
+
+    /// "+N more on iPhone" (spec 6.1): what the phone holds beyond the rows drawn. Counts
+    /// against `doFirstTotal` when that is larger, since the snapshot itself is capped.
+    public func doFirstMore(rowLimit: Int, doFirstTotal: Int) -> Int {
+        max(doFirstTotal, doFirst.count) - min(doFirst.count, rowLimit)
+    }
 }
 
 public enum WatchOverlay {
@@ -42,7 +54,7 @@ public enum WatchOverlay {
             case .markUrgent(let id):
                 if let i = rows.firstIndex(where: { $0.id == id }), !rows[i].urgent { rows[i].urgent = true }
             case .capture(let text, let quadrant):
-                let title = CaptureParser.parse(text).title
+                let title = WatchCommandPlan.parseCapture(text).title
                 guard !title.isEmpty else { continue }
                 rows.append(WatchTask(id: "pending-\(command.id)", title: title,
                                       urgent: quadrant.isUrgent, important: quadrant.isImportant,

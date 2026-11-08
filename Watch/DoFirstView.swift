@@ -26,11 +26,9 @@ struct DoFirstView: View {
                         ForEach(lists.doFirst.prefix(rowLimit)) { task in
                             TaskRow(task: task, escalation: nil)
                         }
-                        if lists.doFirst.count > rowLimit {
-                            Text("+\(lists.doFirst.count - rowLimit) more on iPhone")
-                                .font(.footnote).foregroundStyle(.secondary)
-                        } else if model.snapshot.doFirstTotal > lists.doFirst.count {
-                            Text("+\(model.snapshot.doFirstTotal - lists.doFirst.count) more on iPhone")
+                        let more = lists.doFirstMore(rowLimit: rowLimit, doFirstTotal: model.snapshot.doFirstTotal)
+                        if more > 0 {
+                            Text("+\(more) more on iPhone")
                                 .font(.footnote).foregroundStyle(.secondary)
                         }
                     }
