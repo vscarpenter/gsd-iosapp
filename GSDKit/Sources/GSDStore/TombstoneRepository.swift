@@ -9,11 +9,16 @@ import GSDModel
 public protocol TombstoneRepository: Sendable {
     /// When the task was archived or trashed, or nil when it is in neither table.
     func tombstoneDate(id: String) async throws -> Date?
+    /// Whether the task is archived here (not trashed). Resurrect on sight leaves an archive alone.
+    func isArchived(id: String) async throws -> Bool
     /// Drop the archived or trashed row and save `task` as live, in one transaction.
     func resurrect(_ task: Task) async throws
     /// Move a live task to the trash and drop all its queue rows, in one transaction. Returns false
     /// and changes nothing when the task is gone or has a pending row by the time this runs.
     func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool
+    /// The trashed or archived copy of a task, or nil when it is in neither table. Resurrect on
+    /// sight merges the server copy into it, so this device's own fields survive.
+    func buriedTask(id: String) async throws -> Task?
 }
 
 public final class GRDBTombstoneRepository: TombstoneRepository {
@@ -29,6 +34,10 @@ public final class GRDBTombstoneRepository: TombstoneRepository {
             let deletedAt = try DeletedTaskRecord.fetchOne(db, key: id)?.deletedAt
             return [archivedAt, deletedAt].compactMap { $0 }.max()
         }
+    }
+
+    public func isArchived(id: String) async throws -> Bool {
+        try await dbWriter.read { db in try ArchivedTaskRecord.fetchOne(db, key: id) != nil }
     }
 
     public func resurrect(_ task: Task) async throws {
@@ -51,6 +60,13 @@ public final class GRDBTombstoneRepository: TombstoneRepository {
             _ = try TaskRecord.deleteOne(db, key: id)
             _ = try rows.deleteAll(db)
             return true
+        }
+    }
+
+    public func buriedTask(id: String) async throws -> Task? {
+        try await dbWriter.read { db in
+            if let trashed = try DeletedTaskRecord.fetchOne(db, key: id) { return try trashed.toDomain() }
+            return try ArchivedTaskRecord.fetchOne(db, key: id)?.toDomain()
         }
     }
 }
