@@ -112,7 +112,16 @@ final class WatchSessionCoordinator: NSObject {
         let task: Task?
         do { task = try await store.fetchTask(id: command.taskID ?? "") }
         catch { return }   // database unavailable: leave the id unrecorded so a retry can apply it
-        let decision = WatchCommandPlan.decide(command, task: task, alreadyApplied: ledger.contains(command.id))
+        let now = Date(), zone = TimeZone.current
+        // Read the rows fresh: `store.tasks` can lag behind a database that was just resumed.
+        var nextRank: Int?
+        if case .addToToday = command.kind {
+            do { nextRank = TopThree.nextRank(try await store.fetchAllTasks(), now: now, timeZone: zone) }
+            catch { return }
+        }
+        let decision = WatchCommandPlan.decide(
+            command, task: task, alreadyApplied: ledger.contains(command.id),
+            today: TopThree.localDate(now, timeZone: zone), nextRank: nextRank)
         if case .apply(let action) = decision {
             do { try await perform(action, on: task) }
             catch where Self.isPermanentRefusal(error) {
@@ -137,6 +146,16 @@ final class WatchSessionCoordinator: NSObject {
             if let task { try await store.snooze(task, by: .oneHour) }
         case .capture(let text, let quadrant):
             try await store.add(WatchCommandPlan.parseCapture(text), override: quadrant)
+        case .pickForToday(let rank):
+            guard var current = task else { return }
+            current.focusDate = TopThree.localDate(Date(), timeZone: .current)
+            current.focusRank = rank
+            try await store.save(current)
+        case .clearPick:
+            guard var current = task else { return }
+            current.focusDate = nil
+            current.focusRank = nil
+            try await store.save(current)
         }
     }
 }
