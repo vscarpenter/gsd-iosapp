@@ -19,6 +19,11 @@ final class WatchModel: NSObject {
     private(set) var snapshot: WatchSnapshot
     private(set) var outbox: WatchOutbox
     private(set) var undoOffer: UndoOffer?
+    /// The task a tapped reminder asked to show (spec 4.4); the list scrolls to it.
+    private(set) var openedTaskID: String?
+
+    /// One model for the app, its notification delegate, and the notification scene.
+    static let shared = WatchModel()
 
     private let snapshotStore: WatchSnapshotStore
     private var undoExpiry: _Concurrency.Task<Void, Never>?
@@ -68,6 +73,8 @@ final class WatchModel: NSObject {
         }
     }
 
+    func open(taskID: String) { openedTaskID = taskID }
+
     func markUrgent(_ task: WatchTask) { queue(.markUrgent(taskID: task.id)) }
 
     func capture(text: String, quadrant: Quadrant) { queue(.capture(text: text, quadrant: quadrant)) }
@@ -92,7 +99,7 @@ final class WatchModel: NSObject {
     }
 
     @discardableResult
-    private func queue(_ kind: WatchCommand.Kind) -> WatchCommand? {
+    func queue(_ kind: WatchCommand.Kind) -> WatchCommand? {
         let command = WatchCommand(id: UUID().uuidString, issuedAt: .now, kind: kind)
         do { try outbox.add(command) } catch { return nil }   // no container: nothing to show or send
         send(command)

@@ -12,6 +12,7 @@ struct DoFirstView: View {
     var body: some View {
         let lists = model.lists()
         NavigationStack {
+          ScrollViewReader { proxy in
             List {
                 if !model.hasSnapshot {
                     Text("Open GSD on your iPhone to load your tasks.")
@@ -53,6 +54,11 @@ struct DoFirstView: View {
             }
             .sheet(isPresented: $capturing) { CaptureView() }
             .safeAreaInset(edge: .bottom) { undoBar }
+            // A tapped reminder opens on the list holding the task (spec 4.4).
+            .onChange(of: model.openedTaskID, initial: true) { _, id in
+                if let id { proxy.scrollTo(id, anchor: .center) }
+            }
+          }
         }
     }
 

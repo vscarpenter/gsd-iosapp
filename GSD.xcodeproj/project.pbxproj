@@ -115,6 +115,7 @@
 		D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD99A69FF72AB17AB5968 /* DashboardView.swift */; };
 		D1A08D8A25028DD6A0CF3B82 /* GSDSync in Frameworks */ = {isa = PBXBuildFile; productRef = 4D69B433643C83344AA85FF9 /* GSDSync */; };
 		D60CB7324BAB1C0C08155644 /* GSDWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EDBD5EA890785FDB28B334 /* GSDWatchApp.swift */; };
+		D6B9C09BDC9C8E560A15D8DB /* ReminderNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = C997150B1A6CB40674C2D6A7 /* ReminderNotifications.swift */; };
 		DAD1C4162E0C6658137A4C21 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = A10EBE9AD3F19E9BF692E87E /* GSDModel */; };
 		DB380D23011DF9BDF0944B77 /* SavedEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B93691C9CC9D87C7E8FEB5B8 /* SavedEditorView.swift */; };
 		DE34977DF6EF7E76AB9FD310 /* WhatsNewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F09135BA41682E832720B9DF /* WhatsNewView.swift */; };
@@ -323,6 +324,7 @@
 		C0D1768451CD741551731CB9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C5EDBD5EA890785FDB28B334 /* GSDWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWatchApp.swift; sourceTree = "<group>"; };
 		C90EFCF94266B58982AD2070 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C997150B1A6CB40674C2D6A7 /* ReminderNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderNotifications.swift; sourceTree = "<group>"; };
 		CDA09252BC2EC2C89F99BAE7 /* WhatsNewContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewContent.swift; sourceTree = "<group>"; };
 		D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
 		D4AED0C7E688157BC1106906 /* DueTimeEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueTimeEditorTests.swift; sourceTree = "<group>"; };
@@ -579,6 +581,7 @@
 				C5EDBD5EA890785FDB28B334 /* GSDWatchApp.swift */,
 				960BE2263C3DBDA017E7EE2A /* Info.plist */,
 				21BAB82DCAFB07F2465B97B9 /* PrivacyInfo.xcprivacy */,
+				C997150B1A6CB40674C2D6A7 /* ReminderNotifications.swift */,
 				1722C62916E4BD3A4B940F7C /* WatchModel.swift */,
 			);
 			path = Watch;
@@ -1096,6 +1099,7 @@
 				6A709923A4AD4461B7A7FAD4 /* CaptureView.swift in Sources */,
 				ABA530CA70A9B0457BB2AF94 /* DoFirstView.swift in Sources */,
 				D60CB7324BAB1C0C08155644 /* GSDWatchApp.swift in Sources */,
+				D6B9C09BDC9C8E560A15D8DB /* ReminderNotifications.swift in Sources */,
 				7D74A755CBA29CD26D66838F /* WatchModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

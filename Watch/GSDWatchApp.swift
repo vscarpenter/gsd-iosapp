@@ -1,8 +1,10 @@
 import SwiftUI
+import GSDModel
 
 @main
 struct GSDWatchApp: App {
-    @State private var model = WatchModel()
+    @WKApplicationDelegateAdaptor(WatchAppDelegate.self) private var delegate
+    @State private var model = WatchModel.shared
 
     var body: some Scene {
         WindowGroup {
@@ -10,5 +12,7 @@ struct GSDWatchApp: App {
                 .environment(model)
                 .task { model.start() }
         }
+        WKNotificationScene(controller: ReminderNotificationController.self,
+                            category: ReminderAction.categoryID)
     }
 }
