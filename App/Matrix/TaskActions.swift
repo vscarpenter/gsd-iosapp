@@ -98,7 +98,11 @@ struct TaskActions {
     func addToToday(_ t: Task) {
         run(TodayError.add, appendDetail: false) {
             let now = Date(), zone = TimeZone.current
-            guard let rank = TopThree.nextRank(store.tasks, now: now, timeZone: zone) else { return }
+            // The add is hidden once the day is full, so this is a race only.
+            guard let rank = TopThree.nextRank(store.tasks, now: now, timeZone: zone) else {
+                onError(TodayError.full)
+                return
+            }
             try await setFocus(id: t.id, date: TopThree.localDate(now, timeZone: zone), rank: rank)
         }
     }
@@ -159,11 +163,12 @@ struct TaskActions {
 /// The top three errors, in web's words. No top three error says "failed", so these get a title
 /// without it too (`TaskActionFailure.title`) and carry no raw error text.
 enum TodayError {
+    static let full = String(localized: "Today is full")
     static let add = String(localized: "Couldn’t add to today. Try again.")
     static let remove = String(localized: "Couldn’t remove that from today. Try again.")
     static let reorder = String(localized: "Couldn’t reorder today. Try again.")
     static let tidy = String(localized: "Couldn’t tidy today. Try again.")
-    static var all: Set<String> { [add, remove, reorder, tidy] }
+    static var all: Set<String> { [full, add, remove, reorder, tidy] }
 }
 
 struct TaskActionFailure: Identifiable, Equatable {
