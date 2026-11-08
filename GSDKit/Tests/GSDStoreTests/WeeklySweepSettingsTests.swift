@@ -24,6 +24,19 @@ struct WeeklySweepSettingsTests {
         #expect(WeeklySweepSettings.lastSweptAt(from: d) == stamp)
     }
 
+    @Test func turningTheReminderOffAndOnKeepsItsLastDayAndTime() {
+        let d = freshDefaults()
+        let friday = WeeklySweep.Reminder(enabled: true, weekday: 5, hour: 17, minute: 30)
+        WeeklySweepSettings.setReminder(WeeklySweepSettings.toggled(friday, on: false), in: d)
+        let off = WeeklySweepSettings.reminder(from: d)
+        #expect(!off.enabled)
+        #expect(WeeklySweepSettings.toggled(off, on: true) == friday)
+    }
+
+    @Test func turningTheReminderOnForTheFirstTimeStartsAtSundayNine() {
+        #expect(WeeklySweepSettings.toggled(.off, on: true) == WeeklySweepSettings.defaultReminder)
+    }
+
     @Test func reminderRoundTrips() {
         let d = freshDefaults()
         let reminder = WeeklySweep.Reminder(enabled: true, weekday: 1, hour: 7, minute: 30)

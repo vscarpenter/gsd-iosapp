@@ -8,6 +8,15 @@ public enum WeeklySweepSettings {
     /// Turning the reminder on starts here: Sunday 09:00.
     public static let defaultReminder = WeeklySweep.Reminder(enabled: true, weekday: 7, hour: 9, minute: 0)
 
+    /// The reminder with its switch flipped and its day and time kept, so turning it back on
+    /// returns to the last choice. A never-set reminder reads as `.off`, which already holds
+    /// Sunday 09:00, so the first turn-on starts there.
+    public static func toggled(_ reminder: WeeklySweep.Reminder, on: Bool) -> WeeklySweep.Reminder {
+        var next = reminder
+        next.enabled = on
+        return next
+    }
+
     public static func lastSweptAt(from defaults: UserDefaults = AppGroupDefaults.shared) -> Date? {
         defaults.object(forKey: AppGroupDefaults.Key.weeklySweepLastSweptAt) as? Date
     }

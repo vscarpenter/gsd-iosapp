@@ -37,10 +37,12 @@ struct DueDateFields: View {
 /// The preset chips under the editor's date controls (Today, Tomorrow, and so on), shared the same way.
 struct DueDatePresetRow: View {
     @Binding var dueDate: Date?
+    /// The sweep's date control sets a new date and leaves clearing one to the editor.
+    var offersNone = true
 
     var body: some View {
         HStack(spacing: 8) {
-            ForEach(DueDatePreset.allCases, id: \.self) { preset in
+            ForEach(DueDatePreset.allCases.filter { offersNone || $0 != .none }, id: \.self) { preset in
                 let resolved = DueDatePresets.resolve(preset, today: .now, calendar: .current)
                 let isSelected = Self.sameDay(dueDate, resolved)
                 Button(preset.label) {

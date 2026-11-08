@@ -86,6 +86,13 @@ struct SweepView: View {
 
     private func finish() {
         stampSwept()
+        backToMatrix()
+    }
+
+    /// Always the matrix, even when the sweep was opened from Settings.
+    private func backToMatrix() {
+        palette.compactTab = 0
+        palette.regularSelection = .matrix
         dismiss()
     }
 
@@ -209,12 +216,7 @@ struct SweepView: View {
                 .tint(Surface.tint)
                 .foregroundStyle(Surface.paper)   // paper on tide passes AA in both modes; the default white does not in dark
             }
-            Button(String(localized: "Back to the matrix")) {
-                // Always the matrix, even when the sweep was opened from Settings.
-                palette.compactTab = 0
-                palette.regularSelection = .matrix
-                dismiss()
-            }
+            Button(String(localized: "Back to the matrix")) { backToMatrix() }
                 .buttonStyle(.borderless)
                 .frame(minHeight: 44)
             Spacer()
@@ -287,7 +289,7 @@ private struct SweepDateSheet: View {
         NavigationStack {
             Form {
                 DueDateFields(dueDate: $due)
-                DueDatePresetRow(dueDate: Binding(get: { due }, set: { if let new = $0 { due = new } }))
+                DueDatePresetRow(dueDate: Binding(get: { due }, set: { if let new = $0 { due = new } }), offersNone: false)
                 if let error { Text(error).foregroundStyle(Surface.alert) }
             }
             .navigationTitle(task.dueDate == nil ? String(localized: "Add date") : String(localized: "New date"))

@@ -317,12 +317,12 @@ struct SettingsView: View {
     }
 
     /// "Weekly sweep reminder", with day and time (spec-weekly-sweep section 7). Turning it on starts
-    /// at Sunday 09:00. Per device, never synced. The notification text is fixed and has no count.
+    /// at Sunday 09:00, then keeps the last day and time. Per device, never synced. The notification text is fixed and has no count.
     @ViewBuilder private var sweepReminderControls: some View {
         Toggle(String(localized: "Weekly sweep reminder"), isOn: Binding(
             get: { sweepReminder.enabled },
             set: { on in
-                sweepReminder = on ? WeeklySweepSettings.defaultReminder : .off
+                sweepReminder = WeeklySweepSettings.toggled(sweepReminder, on: on)
                 applySweepReminder(askPermission: on)
             }
         ))
