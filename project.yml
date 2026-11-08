@@ -3,6 +3,7 @@ options:
   bundleIdPrefix: dev.vinny
   deploymentTarget:
     iOS: "26.0"
+    watchOS: "26.0"
   createIntermediateGroups: true
 settings:
   base:
@@ -95,6 +96,11 @@ targets:
       - target: GSDWidgets
         embed: true
         platformFilter: iOS
+      # The watch app rides in the iPhone app's Watch/ folder. iOS only, so the Catalyst build
+      # carries no watch content (spec 7).
+      - target: GSDWatch
+        embed: true
+        platformFilter: iOS
       # No platformFilter — the Share Extension is built for Mac Catalyst too, so GSD
       # appears in the macOS Share menu (Widgets stay iOS-only above).
       - target: GSDShareExtension
@@ -132,6 +138,61 @@ targets:
         GENERATE_INFOPLIST_FILE: "NO"
         CODE_SIGN_ENTITLEMENTS: Widgets/GSDWidgets.entitlements
         CODE_SIGN_STYLE: Automatic
+    dependencies:
+      - package: GSDKit
+        product: GSDModel
+      - package: GSDKit
+        product: GSDSnapshot
+  GSDWatch:
+    type: application
+    platform: watchOS
+    sources:
+      - Watch
+    info:
+      path: Watch/Info.plist
+      properties:
+        CFBundleDisplayName: GSD
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        WKApplication: true
+        WKCompanionAppBundleIdentifier: dev.vinny.gsd
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd.watchkitapp
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGN_ENTITLEMENTS: Watch/GSDWatch.entitlements
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: "YES"
+    # Only the model and the GRDB-free contract. GSDStore, GSDSync and GSDWire stay off the watch.
+    dependencies:
+      - package: GSDKit
+        product: GSDModel
+      - package: GSDKit
+        product: GSDSnapshot
+      - target: GSDWatchWidgets
+        embed: true
+  GSDWatchWidgets:
+    type: app-extension
+    platform: watchOS
+    sources:
+      - WatchWidgets
+    info:
+      path: WatchWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: GSD Widgets
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.vinny.gsd.watchkitapp.widgets
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: "NO"
+        CODE_SIGN_ENTITLEMENTS: WatchWidgets/GSDWatchWidgets.entitlements
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: "YES"
     dependencies:
       - package: GSDKit
         product: GSDModel
@@ -203,6 +264,13 @@ schemes:
       config: Debug
     archive:
       config: Release
+  # Watch simulator builds. GSD embeds GSDWatch, so the GSD scheme builds it for iPhone archives.
+  GSDWatch:
+    build:
+      targets:
+        GSDWatch: all
+    run:
+      config: Debug
   # Separate scheme so screenshot runs never touch the main GSD scheme/archive flow.
   GSDScreenshots:
     build:

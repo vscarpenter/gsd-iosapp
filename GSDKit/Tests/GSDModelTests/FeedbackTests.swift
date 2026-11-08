@@ -11,7 +11,7 @@ struct FeedbackTests {
         FeedbackDraft(sentiment: .up,
                       category: .idea,
                       message: "  Loving the matrix.  ",
-                      votes: ["calendar-sync", "apple-watch"])
+                      votes: ["calendar-sync", "focus-timer"])
     }
 
     private func build(_ draft: FeedbackDraft,
@@ -58,9 +58,9 @@ struct FeedbackTests {
 
     @Test func unknownAndDuplicateVoteSlugsAreDropped() throws {
         var draft = fullDraft()
-        draft.votes = ["calendar-sync", "calendar-sync", "not-a-slug", "apple-watch", "ios-widgets"]
+        draft.votes = ["calendar-sync", "calendar-sync", "not-a-slug", "focus-timer", "ios-widgets"]
         let payload = try build(draft)
-        #expect(payload.votes == ["calendar-sync", "apple-watch"])
+        #expect(payload.votes == ["calendar-sync", "focus-timer"])
     }
 
     @Test func aStoredVoteForWeeklyReviewIsntSent() throws {
@@ -71,10 +71,18 @@ struct FeedbackTests {
         #expect(payload.votes == ["calendar-sync"])
     }
 
+    @Test func aStoredVoteForAppleWatchIsntSent() throws {
+        // The slug is retired on iOS now the watch app ships: an older build's vote is dropped.
+        var draft = fullDraft()
+        draft.votes = ["apple-watch", "calendar-sync"]
+        let payload = try build(draft)
+        #expect(payload.votes == ["calendar-sync"])
+    }
+
     @Test func roadmapListMatchesTheCuratedSlugs() {
         #expect(Feedback.roadmapItems.map(\.slug) == [
             "natural-language-dates", "calendar-sync", "task-templates",
-            "focus-timer", "task-notes", "apple-watch", "shared-lists",
+            "focus-timer", "task-notes", "shared-lists",
         ])
     }
 

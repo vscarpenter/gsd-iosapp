@@ -45,8 +45,8 @@ public enum Feedback {
     public static let maxSubmissionIDLength = 64
     public static let maxAppVersionLength = 20
 
-    /// The web's list with `ios-widgets` replaced by `apple-watch` — iOS
-    /// already ships home-screen widgets. Slugs are shared with the web where
+    /// The web's list without `ios-widgets` (iOS already ships home-screen widgets) and without
+    /// `apple-watch` (the watch app now ships). Slugs are shared with the web where
     /// the item is shared, so votes aggregate across clients.
     public static let roadmapItems: [RoadmapItem] = [
         RoadmapItem(slug: "natural-language-dates",
@@ -64,9 +64,6 @@ public enum Feedback {
         RoadmapItem(slug: "task-notes",
                     label: String(localized: "Longer notes on a task"),
                     description: String(localized: "Room for context beyond a title — links, scratch thinking, and attachments.")),
-        RoadmapItem(slug: "apple-watch",
-                    label: String(localized: "Apple Watch app"),
-                    description: String(localized: "Glance at Do First and check tasks off from your wrist.")),
         RoadmapItem(slug: "shared-lists",
                     label: String(localized: "Share one list with one person"),
                     description: String(localized: "A single shared quadrant for a partner or teammate, still local-first.")),
