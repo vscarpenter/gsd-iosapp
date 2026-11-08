@@ -7,11 +7,14 @@ import GSDSnapshot
 /// `TopThree` decides everything; this view draws it. Carry-over and Tidy stay on the iPhone.
 struct TodayView: View {
     @Environment(WatchModel.self) private var model
+    /// Whether this page is the one on screen, so only it answers a tapped reminder.
+    let active: Bool
     @State private var capturing = false
 
     var body: some View {
         let today = model.today()
         NavigationStack {
+          ScrollViewReader { proxy in
             List {
                 if !model.hasSnapshot {
                     Text("Open GSD on your iPhone to load your tasks.")
@@ -40,15 +43,27 @@ struct TodayView: View {
                         }
                     }
                 }
+
+                Section { WatchFooter(pending: model.lists().pendingCount) }
             }
             .navigationTitle("Today")
+            .safeAreaInset(edge: .bottom) { WatchUndoBar() }
             .toolbar {
                 ToolbarItem(placement: .bottomBar) {
                     Button { capturing = true } label: { Label("Add task", systemImage: "plus") }
                 }
             }
             .sheet(isPresented: $capturing) { CaptureView() }
+            .onChange(of: model.openedTaskID, initial: true) { _, _ in openTask(proxy, today: today) }
+            .onChange(of: active) { _, _ in openTask(proxy, today: today) }
+          }
         }
+    }
+
+    private func openTask(_ proxy: ScrollViewProxy, today: WatchToday) {
+        guard active, let id = model.openedTaskID, today.picks.contains(where: { $0.id == id }) else { return }
+        proxy.scrollTo(id, anchor: .center)
+        model.consumeOpenedTask()
     }
 }
 
@@ -66,7 +81,7 @@ private struct PickRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(label)
+        .accessibilityLabel(task.dueDate.map { "\(label), due \($0.formatted(date: .abbreviated, time: .omitted))" } ?? label)
         .swipeActions(edge: .leading) {
             Button { model.complete(task) } label: { Label("Complete", systemImage: "checkmark") }
                 .tint(.green)

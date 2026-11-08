@@ -6,6 +6,8 @@ import GSDSnapshot
 /// One page below Today, which is the home screen now that top three is on Apple.
 struct DoFirstView: View {
     @Environment(WatchModel.self) private var model
+    /// Whether this page is the one on screen, so only it answers a tapped reminder.
+    let active: Bool
     @State private var capturing = false
     private let rowLimit = 20
 
@@ -45,7 +47,7 @@ struct DoFirstView: View {
                     }
                 }
 
-                Section { footer(pending: lists.pendingCount) }
+                Section { WatchFooter(pending: lists.pendingCount) }
             }
             .navigationTitle("GSD")
             .toolbar {
@@ -58,36 +60,19 @@ struct DoFirstView: View {
             .onChange(of: model.captureRequested, initial: true) { _, requested in
                 if requested { capturing = true; model.captureRequested = false }
             }
-            .safeAreaInset(edge: .bottom) { undoBar }
+            .safeAreaInset(edge: .bottom) { WatchUndoBar() }
             // A tapped reminder scrolls to the task's row (spec 4.4).
-            .onChange(of: model.openedTaskID, initial: true) { _, id in
-                // A task past the first 20 rows isn't in the list, so this does nothing for it.
-                guard let id else { return }
-                proxy.scrollTo(id, anchor: .center)
-                model.consumeOpenedTask()
-            }
+            .onChange(of: model.openedTaskID, initial: true) { _, _ in openTask(proxy) }
+            .onChange(of: active) { _, _ in openTask(proxy) }
           }
         }
     }
 
-    @ViewBuilder private func footer(pending: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if pending > 0 {
-                Text(pending == 1 ? "1 change waiting for iPhone" : "\(pending) changes waiting for iPhone")
-            }
-            if model.hasSnapshot {
-                Text("Updated \(model.snapshot.generatedAt.formatted(date: .omitted, time: .shortened))")
-            }
-        }
-        .font(.footnote).foregroundStyle(.secondary)
-    }
-
-    @ViewBuilder private var undoBar: some View {
-        if model.canUndo {
-            Button("Undo") { model.undo() }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Undo complete")
-        }
+    /// A task past the first 20 rows isn't in the list, so this does nothing for it.
+    private func openTask(_ proxy: ScrollViewProxy) {
+        guard active, let id = model.openedTaskID else { return }
+        proxy.scrollTo(id, anchor: .center)
+        model.consumeOpenedTask()
     }
 }
 
