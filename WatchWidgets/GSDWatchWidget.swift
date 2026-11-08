@@ -16,7 +16,13 @@ struct WatchWidgetProvider: TimelineProvider {
         WatchSnapshotStore(directoryURL: FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id))
     }
 
-    func placeholder(in context: Context) -> WatchWidgetEntry { WatchWidgetEntry(date: .now, snapshot: nil) }
+    /// A sample row, so the gallery shows what the widget looks like instead of the empty state.
+    func placeholder(in context: Context) -> WatchWidgetEntry {
+        let sample = WatchTask(id: "sample", title: "Call the dentist", urgent: true, important: true,
+                               createdAt: .now, updatedAt: .now, isRecurring: false)
+        return WatchWidgetEntry(date: .now, snapshot: WatchSnapshot(
+            generatedAt: .now, escalationWindowDays: nil, tasks: [sample], doFirstTotal: 1, appliedCommandIDs: []))
+    }
 
     func getSnapshot(in context: Context, completion: @escaping (WatchWidgetEntry) -> Void) {
         completion(WatchWidgetEntry(date: .now, snapshot: store.read()))
