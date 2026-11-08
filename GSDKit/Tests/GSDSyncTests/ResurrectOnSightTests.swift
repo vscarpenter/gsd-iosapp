@@ -12,8 +12,10 @@ import GSDStore
 actor AccountServer: RequestExecuting {
     private var records: [String: [String: Any]] = [:]   // task_id → record
     private(set) var deletedTaskIds: [String] = []
+    private(set) var writtenTaskIds: [String] = []
     private(set) var listings = 0
     private var sessionDead = false
+    private var anotherAccount = false
     private var incomplete = false
     private var listingFails = false
     private var onListing: (@Sendable () -> Void)?
@@ -26,7 +28,16 @@ actor AccountServer: RequestExecuting {
                            "client_updated_at": clientUpdatedAt, "updated": "2026-11-01 10:00:01.000Z", "device_id": "web"]
     }
 
+    /// A record this build can't read (a wrong-typed field) but can still identify: the ordinary pull
+    /// skips it, push and reconcile index it, and the step's complete listing throws on it.
+    func addUnreadable(_ taskId: String) {
+        add(taskId)
+        records[taskId]?["title"] = 42
+    }
+
     func killSession() { sessionDead = true }
+    /// `auth-refresh` confirms a different account than the token's owner.
+    func answerAsAnotherAccount() { anotherAccount = true }
     func listIncompletely() { incomplete = true }
     func failListings(_ fail: Bool) { listingFails = fail }
     func has(_ taskId: String) -> Bool { records[taskId] != nil }
@@ -37,9 +48,14 @@ actor AccountServer: RequestExecuting {
         let url = try #require(request.url)
         if url.path.hasSuffix("/auth-refresh") {
             if sessionDead { return (Data(#"{"message":"The request requires valid record authorization token."}"#.utf8), response(url, 401)) }
-            return (Data(#"{"token":"fresh","record":{"id":"u1","email":"u1@example.com"}}"#.utf8), response(url, 200))
+            let id = anotherAccount ? "u2" : "u1"
+            return (Data(#"{"token":"fresh","record":{"id":"\#(id)","email":"\#(id)@example.com"}}"#.utf8), response(url, 200))
         }
-        switch request.httpMethod ?? "GET" {
+        let method = request.httpMethod ?? "GET"
+        if sessionDead, method != "GET" {   // the server rejects every write from a dead token
+            return (Data(#"{"message":"The request requires valid record authorization token."}"#.utf8), response(url, 401))
+        }
+        switch method {
         case "GET": return try list(request, url: url)
         case "DELETE":
             if let taskId = records.first(where: { $0.value["id"] as? String == url.lastPathComponent })?.key {
@@ -53,6 +69,7 @@ actor AccountServer: RequestExecuting {
             var record = records[taskId] ?? ["id": "rec_\(taskId)", "updated": "2026-11-07 12:00:00.000Z"]
             record.merge(body.filter { $0.key != "id" }) { _, new in new }
             records[taskId] = record
+            writtenTaskIds.append(taskId)
             return (try JSONSerialization.data(withJSONObject: record), response(url, 200))
         }
     }
@@ -123,10 +140,10 @@ struct ResurrectOnSightTests {
             try await trash.trash(try await seedActive(id), at: ResurrectOnSightTests.now)
         }
 
-        func enqueueDelete(_ id: String, payload: Task? = nil) async throws {
+        func enqueueDelete(_ id: String, payload: Task? = nil, status: SyncQueueItem.Status = .pending) async throws {
             try await queue.enqueue(SyncQueueItem(id: UUID().uuidString, taskId: id, operation: .delete,
                                                   timestamp: Int(ResurrectOnSightTests.now.timeIntervalSince1970 * 1000),
-                                                  payload: payload))
+                                                  payload: payload, status: status))
         }
 
         func isActive(_ id: String) async throws -> Bool { try await repo.fetch(id: id) != nil }
@@ -240,6 +257,103 @@ struct ResurrectOnSightTests {
 
         #expect(stack.cursor.rememberedDeletes() == ["t1"])
         #expect(try await stack.isActive("t2"))
+    }
+
+    /// S-AND's A1: after a run that kept the id, the user restored the task and trashed it again. That
+    /// delete is the user's latest act and will push, so the step leaves the Trash row and keeps the id.
+    @Test("a remembered id with a pending delete stays in Trash and is kept")
+    func aRememberedIdWithAPendingDeleteStaysInTrash() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        try await stack.enqueueDelete("t1")
+
+        let brought = try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+
+        #expect(brought == 0)
+        #expect(try await stack.isTrashed("t1"))
+        #expect(!(try await stack.isActive("t1")))
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
+    }
+
+    /// A failed row is re-armed (`requeueFailed`), so a failed delete will still push too.
+    @Test("a remembered id with a failed delete stays in Trash and is kept")
+    func aRememberedIdWithAFailedDeleteStaysInTrash() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        try await stack.enqueueDelete("t1", status: .failed)
+
+        let brought = try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+
+        #expect(brought == 0)
+        #expect(try await stack.isTrashed("t1"))
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
+    }
+
+    /// S-AND's A2, the Lead's call: an unreadable server copy fails every complete listing. A step
+    /// that threw ended the run before its push, so the user's own edits never went up.
+    @Test("a step that fails forgets nothing and leaves the sync successful")
+    func aStepThatFailsForgetsNothingAndLeavesTheSyncSuccessful() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        await stack.server.add("t2")
+        await stack.server.addUnreadable("t9")
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        try await stack.store.toggleComplete(try await stack.seedActive("t2"))   // the user's own edit
+
+        let result = await stack.engine.sync(trigger: .manual)
+
+        #expect(result.error == nil)
+        #expect(result.pushed == 1)
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
+        #expect(try await stack.isTrashed("t1"))
+    }
+
+    /// The Lead's review of #97: a token the server confirms for another account is no failed step.
+    /// The run stops there, because the push has no identity check of its own (only the reconcile
+    /// does, and it runs after the push).
+    @Test("a step whose identity check fails stops the run before the push")
+    func aStepWhoseIdentityCheckFailsStopsTheRunBeforeThePush() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        await stack.server.add("t2")
+        await stack.server.answerAsAnotherAccount()
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        try await stack.store.toggleComplete(try await stack.seedActive("t2"))   // the user's own edit
+
+        let result = await stack.engine.sync(trigger: .manual)
+
+        #expect(result.error != nil)
+        #expect(result.pushed == 0)
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
+    }
+
+    /// S-AND's second review of #97 (F1): a rejected token lists as an empty account, so the step's
+    /// auth-refresh is the first to see it. The run stops there. Otherwise the push would send every
+    /// queued write to a dead session and spend a retry on each.
+    @Test("a dead session found by the step pushes nothing")
+    func aDeadSessionFoundByTheStepPushesNothing() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        await stack.server.add("t2")
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        try await stack.store.toggleComplete(try await stack.seedActive("t2"))   // the user's own edit
+        await stack.server.killSession()
+
+        let result = await stack.engine.sync(trigger: .manual)
+
+        #expect(result.error != nil)
+        #expect(result.pushed == 0)
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+        #expect(try await stack.queue.all().map(\.retryCount) == [0])
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
     }
 
     /// The Lead's decision on S-AND's review: the server copy merges into the Trash row, as web does,
@@ -455,6 +569,29 @@ struct ResurrectOnSightTests {
         #expect(!(try await stack.isActive("t3")))
         #expect(await stack.server.has("t3"))
         #expect(await stack.server.deletedTaskIds.isEmpty)
+    }
+
+    /// S-AND's A1 end to end. Before the fix, the step brought the task back, the push sent the delete,
+    /// and the reconcile then removed the active copy with no Trash copy left.
+    @Test("a task restored and trashed again while its id is remembered stays in Trash after the next sync")
+    func aTaskRestoredAndTrashedAgainStaysInTrash() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])                     // an earlier run failed, so it kept the id
+        try await stack.store.restoreFromTrash(id: "t1")
+        _ = await stack.engine.pushNow()                         // the restore's create goes up
+        try await stack.store.delete(try #require(try await stack.repo.fetch(id: "t1")))
+
+        let result = await stack.engine.sync(trigger: .manual)
+
+        #expect(result.error == nil)
+        #expect(try await stack.isTrashed("t1"))
+        #expect(!(try await stack.isActive("t1")))
+        #expect(await stack.server.deletedTaskIds == ["t1"])
+        _ = await stack.engine.sync(trigger: .manual)            // the account no longer lists it
+        #expect(stack.cursor.rememberedDeletes().isEmpty)
+        #expect(try await stack.isTrashed("t1"))
     }
 
     @Test("a delete made while signed in still deletes on the server")

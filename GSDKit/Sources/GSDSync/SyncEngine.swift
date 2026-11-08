@@ -1,4 +1,5 @@
 import Foundation
+import os
 import GSDWire
 import GSDModel
 import GSDStore
@@ -40,6 +41,7 @@ private struct NoTombstones: TombstoneRepository {
 /// (preserving the wire `client_updated_at`; never re-stamping; never enqueuing). `actor` for state
 /// safety; single-flight is an explicit `isSyncing` drop. The `sync()` orchestration is added in Group C.
 public actor SyncEngine {
+    private static let log = Logger(subsystem: "dev.vinny.gsd", category: "sync")
     private let client: PocketBaseClient
     private let tasks: any TaskRepository
     private let queue: any SyncQueueRepository
@@ -416,8 +418,15 @@ public actor SyncEngine {
                                                                  owner: owner)
             try fence(owner)
             if backfill { cursor.markBackfilled() }
-            // Tasks deleted while signed out come back before the push, so it never sees them.
-            result.pulled = pulled + (try await resurrectOnSight(token: token, owner: owner))
+            // Tasks deleted while signed out come back before the push, so it never sees them. A step
+            // that fails forgets nothing (rule 5), and it mustn't hold back the user's own edits, so
+            // it's logged and the run goes on to the push, as web does, unless it ends the run.
+            result.pulled = pulled
+            do {
+                result.pulled += try await resurrectOnSight(token: token, owner: owner)
+            } catch where !Self.endsTheRun(error) {
+                Self.log.error("Resurrect on sight failed, ids kept for the next run: \(String(describing: type(of: error)), privacy: .public) \(String(describing: error))")
+            }
             let (pushed, failed) = try await push(token: token, owner: owner)
             result.pushed = pushed; result.failed = failed
             result.deleted = try await reconcileDeletions(token: token, owner: owner)    // destructive — last
@@ -643,7 +652,7 @@ public actor SyncEngine {
 
     /// After the pull, before the push (rules 3 to 5): one complete listing with the owner
     /// confirmed, then each remembered task it lists comes back here. Every remembered id is then
-    /// forgotten except one the far-future hold-off skipped, whose record the push heals first.
+    /// forgotten except one still waiting on this device (`waitsForThisDevice`).
     /// A throw forgets nothing, so a dead session or an incomplete listing tries again next run.
     func resurrectOnSight(token: String, owner: String) async throws -> Int {
         let remembered = cursor.rememberedDeletes()
@@ -651,12 +660,12 @@ public actor SyncEngine {
         let listing = try await client.listEveryTask(token: token)
         // A rejected token lists as an empty account; only auth-refresh tells them apart.
         guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
-        var heldOff = Set<String>()
+        var waiting = Set<String>()
         var brought = 0
         for record in listing where remembered.contains(record.taskId) {
             guard let remoteUpdated = WireDate.parse(record.clientUpdatedAt) else { continue }
-            if try await hasQueuedWriteHoldingOff(record, remoteUpdated: remoteUpdated) {
-                heldOff.insert(record.taskId)
+            if try await waitsForThisDevice(record, remoteUpdated: remoteUpdated) {
+                waiting.insert(record.taskId)
                 continue
             }
             if try await bringBack(record, remoteUpdated: remoteUpdated, owner: owner) { brought += 1 }
@@ -664,8 +673,31 @@ public actor SyncEngine {
         try fence(owner)
         // Forget from the snapshot taken above, not the stored list: a sign-in during the awaits
         // may have remembered another id, and this run never looked for it.
-        cursor.forgetRememberedDeletes(remembered.subtracting(heldOff))
+        cursor.forgetRememberedDeletes(remembered.subtracting(waiting))
         return brought
+    }
+
+    /// A step error that must still stop the run before the push: an ended session, a token confirmed
+    /// for another account, or one the server rejects (401 or 403, read as `AccountDeleter` reads
+    /// them). The push has no identity check of its own, and a rejected token lists as an empty
+    /// account, so the step's auth-refresh is the first to see it. On a dead session the push would
+    /// spend a retry on every queued write.
+    private static func endsTheRun(_ error: Error) -> Bool {
+        switch error {
+        case is StaleSyncSession, is SyncIdentityMismatch: true
+        case PocketBaseError.http(let status, _), PocketBaseError.pocketBase(let status, _): status == 401 || status == 403
+        default: false
+        }
+    }
+
+    /// This device still has its own word on the task, so its id waits for a later run: a far-future
+    /// server copy held off for a queued write, which the push heals first, or a delete queued since
+    /// the id was remembered, which is the user's latest act and will still push (rule 3). A failed
+    /// delete counts, because `requeueFailed` re-arms it. So does a stale one, which the push drops:
+    /// its server copy is newer than the Trash row, so the pull brings that task back instead.
+    private func waitsForThisDevice(_ record: PocketBaseTaskRecord, remoteUpdated: Date) async throws -> Bool {
+        if try await hasQueuedWriteHoldingOff(record, remoteUpdated: remoteUpdated) { return true }
+        return try await queue.all().contains { $0.taskId == record.taskId && $0.operation == .delete }
     }
 
     /// One remembered task the account lists. A Trash row goes and the server copy becomes active.
