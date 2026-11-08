@@ -12,8 +12,10 @@ import GSDStore
 actor AccountServer: RequestExecuting {
     private var records: [String: [String: Any]] = [:]   // task_id → record
     private(set) var deletedTaskIds: [String] = []
+    private(set) var writtenTaskIds: [String] = []
     private(set) var listings = 0
     private var sessionDead = false
+    private var anotherAccount = false
     private var incomplete = false
     private var listingFails = false
     private var onListing: (@Sendable () -> Void)?
@@ -34,6 +36,8 @@ actor AccountServer: RequestExecuting {
     }
 
     func killSession() { sessionDead = true }
+    /// `auth-refresh` confirms a different account than the token's owner.
+    func answerAsAnotherAccount() { anotherAccount = true }
     func listIncompletely() { incomplete = true }
     func failListings(_ fail: Bool) { listingFails = fail }
     func has(_ taskId: String) -> Bool { records[taskId] != nil }
@@ -44,7 +48,8 @@ actor AccountServer: RequestExecuting {
         let url = try #require(request.url)
         if url.path.hasSuffix("/auth-refresh") {
             if sessionDead { return (Data(#"{"message":"The request requires valid record authorization token."}"#.utf8), response(url, 401)) }
-            return (Data(#"{"token":"fresh","record":{"id":"u1","email":"u1@example.com"}}"#.utf8), response(url, 200))
+            let id = anotherAccount ? "u2" : "u1"
+            return (Data(#"{"token":"fresh","record":{"id":"\#(id)","email":"\#(id)@example.com"}}"#.utf8), response(url, 200))
         }
         switch request.httpMethod ?? "GET" {
         case "GET": return try list(request, url: url)
@@ -60,6 +65,7 @@ actor AccountServer: RequestExecuting {
             var record = records[taskId] ?? ["id": "rec_\(taskId)", "updated": "2026-11-07 12:00:00.000Z"]
             record.merge(body.filter { $0.key != "id" }) { _, new in new }
             records[taskId] = record
+            writtenTaskIds.append(taskId)
             return (try JSONSerialization.data(withJSONObject: record), response(url, 200))
         }
     }
@@ -301,6 +307,27 @@ struct ResurrectOnSightTests {
         #expect(result.pushed == 1)
         #expect(stack.cursor.rememberedDeletes() == ["t1"])
         #expect(try await stack.isTrashed("t1"))
+    }
+
+    /// The Lead's review of #97: a token the server confirms for another account is no failed step.
+    /// The run stops there, because the push has no identity check of its own (only the reconcile
+    /// does, and it runs after the push).
+    @Test("a step whose identity check fails stops the run before the push")
+    func aStepWhoseIdentityCheckFailsStopsTheRunBeforeThePush() async throws {
+        let stack = try makeStack(.signedIn)
+        await stack.server.add("t1")
+        await stack.server.add("t2")
+        await stack.server.answerAsAnotherAccount()
+        try await stack.seedTrashed("t1")
+        stack.cursor.rememberDeletes(["t1"])
+        try await stack.store.toggleComplete(try await stack.seedActive("t2"))   // the user's own edit
+
+        let result = await stack.engine.sync(trigger: .manual)
+
+        #expect(result.error != nil)
+        #expect(result.pushed == 0)
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+        #expect(stack.cursor.rememberedDeletes() == ["t1"])
     }
 
     /// The Lead's decision on S-AND's review: the server copy merges into the Trash row, as web does,

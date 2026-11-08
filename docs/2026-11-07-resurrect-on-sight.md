@@ -86,3 +86,8 @@ decisions (2026-11-08) put them in one PR, each red first:
   (`os.Logger`, subsystem `dev.vinny.gsd`, category `sync`), it forgets nothing (rule 5), and the
   run goes on to the push and the reconcile, as web does. An ended session (`StaleSyncSession`)
   still stops the run. Test: `a step that fails forgets nothing and leaves the sync successful`.
+- **A token confirmed for another account still stops the run** (the Lead's review of #97). The
+  step's `SyncIdentityMismatch` stays fatal, because iOS pulls, runs the step, then pushes, and the
+  push has no identity check of its own. The reconcile has one, but it runs after the push and only
+  when something is missing from the server. Web pushes before its step, so it can skip the step
+  safely. Test: `a step whose identity check fails stops the run before the push`.

@@ -420,11 +420,12 @@ public actor SyncEngine {
             if backfill { cursor.markBackfilled() }
             // Tasks deleted while signed out come back before the push, so it never sees them. A step
             // that fails forgets nothing (rule 5), and it mustn't hold back the user's own edits, so
-            // it's logged and the run goes on to the push, as web does. An ended session still stops.
+            // it's logged and the run goes on to the push, as web does. An ended session still stops,
+            // and so does a token confirmed for another account: the push has no identity check.
             result.pulled = pulled
             do {
                 result.pulled += try await resurrectOnSight(token: token, owner: owner)
-            } catch where !(error is StaleSyncSession) {
+            } catch where !(error is StaleSyncSession || error is SyncIdentityMismatch) {
                 Self.log.error("Resurrect on sight failed, ids kept for the next run: \(String(describing: type(of: error)), privacy: .public) \(String(describing: error))")
             }
             let (pushed, failed) = try await push(token: token, owner: owner)
