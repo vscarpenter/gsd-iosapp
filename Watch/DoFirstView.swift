@@ -53,6 +53,9 @@ struct DoFirstView: View {
                 }
             }
             .sheet(isPresented: $capturing) { CaptureView() }
+            .onChange(of: model.captureRequested, initial: true) { _, requested in
+                if requested { capturing = true; model.captureRequested = false }
+            }
             .safeAreaInset(edge: .bottom) { undoBar }
             // A tapped reminder scrolls to the task's row (spec 4.4).
             .onChange(of: model.openedTaskID, initial: true) { _, id in

@@ -148,6 +148,7 @@ targets:
     platform: watchOS
     sources:
       - Watch
+      - WatchShared
     info:
       path: Watch/Info.plist
       properties:
@@ -178,6 +179,7 @@ targets:
     platform: watchOS
     sources:
       - WatchWidgets
+      - WatchShared
     info:
       path: WatchWidgets/Info.plist
       properties:
