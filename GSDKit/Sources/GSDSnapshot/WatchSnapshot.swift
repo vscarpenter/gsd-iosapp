@@ -46,7 +46,7 @@ public struct WatchTask: Codable, Sendable, Equatable, Identifiable {
     public var createdAt: Date
     public var updatedAt: Date
     public var isRecurring: Bool
-    /// Top three fields; `nil` until phase 4 ships on Apple.
+    /// Top three fields (spec 6.2 rule 3); `nil` when the task isn't picked.
     public var focusDate: String?
     public var focusRank: Int?
 
@@ -68,7 +68,8 @@ public struct WatchTask: Codable, Sendable, Equatable, Identifiable {
     public init(_ task: Task) {
         self.init(id: task.id, title: task.title, urgent: task.urgent, important: task.important,
                   dueDate: task.dueDate, createdAt: task.createdAt, updatedAt: task.updatedAt,
-                  isRecurring: task.recurrence != .none)
+                  isRecurring: task.recurrence != .none,
+                  focusDate: task.focusDate, focusRank: task.focusRank)
     }
 
     /// The model task the shared rules run on. Every field the row leaves out takes
@@ -76,6 +77,7 @@ public struct WatchTask: Codable, Sendable, Equatable, Identifiable {
     public var asTask: Task {
         Task(id: id, title: title, urgent: urgent, important: important,
              createdAt: createdAt, updatedAt: updatedAt, dueDate: dueDate,
-             recurrence: isRecurring ? .daily : .none)
+             recurrence: isRecurring ? .daily : .none,
+             focusDate: focusDate, focusRank: focusRank)
     }
 }

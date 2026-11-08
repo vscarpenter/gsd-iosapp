@@ -16,14 +16,14 @@ public enum WatchWidgetContent {
         case rows([String])
     }
 
-    /// `accessoryRectangular`: the first Do First rows. `nil` is no snapshot yet, which is not
-    /// the same as nothing to do. Today's picks join this family with W6, once the snapshot
-    /// carries them.
+    /// `accessoryRectangular`: today's picks in rank order, else the first Do First rows. `nil`
+    /// is no snapshot yet, which is not the same as nothing to do.
     public static func rectangular(_ snapshot: WatchSnapshot?, now: Date,
                                    calendar: Calendar, timeZone: TimeZone) -> Rectangular {
         guard let snapshot else { return .needsPhone }
+        let picks = WatchOverlay.today(snapshot, pending: [], now: now, timeZone: timeZone).picks
         let lists = WatchOverlay.apply(snapshot, pending: [], now: now, calendar: calendar, timeZone: timeZone)
-        let titles = lists.doFirst.prefix(rowLimit).map(\.title)
+        let titles = (picks.isEmpty ? lists.doFirst : picks).prefix(rowLimit).map(\.title)
         return titles.isEmpty ? .clear : .rows(titles)
     }
 

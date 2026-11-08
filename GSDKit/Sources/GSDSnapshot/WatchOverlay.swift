@@ -41,32 +41,8 @@ public enum WatchOverlay {
         _ snapshot: WatchSnapshot, pending: [WatchCommand], now: Date,
         calendar: Calendar, timeZone: TimeZone
     ) -> WatchLists {
-        let acknowledged = Set(snapshot.appliedCommandIDs)
-        let waiting = pending.filter { !acknowledged.contains($0.id) }
-            .sorted { $0.issuedAt < $1.issuedAt }
-
-        var rows = snapshot.tasks
-        var hidden: [String: WatchTask] = [:]    // completed by a pending command, restorable by a reopen
-
-        for command in waiting {
-            switch command.kind {
-            case .complete(let id):
-                if let i = rows.firstIndex(where: { $0.id == id }) { hidden[id] = rows.remove(at: i) }
-            case .reopen(let id):
-                if let row = hidden.removeValue(forKey: id) { rows.append(row) }
-            case .markUrgent(let id):
-                if let i = rows.firstIndex(where: { $0.id == id }), !rows[i].urgent { rows[i].urgent = true }
-            case .capture(let text, let quadrant):
-                let title = WatchCommandPlan.parseCapture(text).title
-                guard !title.isEmpty else { continue }
-                rows.append(WatchTask(id: "pending-\(command.id)", title: title,
-                                      urgent: quadrant.isUrgent, important: quadrant.isImportant,
-                                      createdAt: command.issuedAt, updatedAt: command.issuedAt,
-                                      isRecurring: false))
-            case .snooze, .addToToday, .removeFromToday:
-                break    // no list changes; top three joins the overlay with phase 4
-            }
-        }
+        let waiting = waitingCommands(snapshot, pending)
+        let rows = overlaidRows(snapshot, waiting: waiting, now: now, timeZone: timeZone)
 
         let byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let tasks = rows.map(\.asTask)
@@ -88,6 +64,59 @@ public enum WatchOverlay {
             : apply(snapshot, pending: [], now: now, calendar: calendar, timeZone: timeZone).doFirst.count
         return WatchLists(doFirst: doFirst, comingUp: comingUp, pendingCount: waiting.count,
                           doFirstDelta: doFirst.count - baseline)
+    }
+
+    private static func waitingCommands(_ snapshot: WatchSnapshot, _ pending: [WatchCommand]) -> [WatchCommand] {
+        let acknowledged = Set(snapshot.appliedCommandIDs)
+        return pending.filter { !acknowledged.contains($0.id) }.sorted { $0.issuedAt < $1.issuedAt }
+    }
+
+    private static func overlaidRows(_ snapshot: WatchSnapshot, waiting: [WatchCommand],
+                                     now: Date, timeZone: TimeZone) -> [WatchTask] {
+        var rows = snapshot.tasks
+        var hidden: [String: WatchTask] = [:]    // completed by a pending command, restorable by a reopen
+        for command in waiting {
+            switch command.kind {
+            case .complete(let id):
+                if let i = rows.firstIndex(where: { $0.id == id }) { hidden[id] = rows.remove(at: i) }
+            case .reopen(let id):
+                if let row = hidden.removeValue(forKey: id) { rows.append(row) }
+            case .markUrgent(let id):
+                if let i = rows.firstIndex(where: { $0.id == id }), !rows[i].urgent { rows[i].urgent = true }
+            case .capture(let text, let quadrant):
+                let title = WatchCommandPlan.parseCapture(text).title
+                guard !title.isEmpty else { continue }
+                rows.append(WatchTask(id: "pending-\(command.id)", title: title,
+                                      urgent: quadrant.isUrgent, important: quadrant.isImportant,
+                                      createdAt: command.issuedAt, updatedAt: command.issuedAt,
+                                      isRecurring: false))
+            case .addToToday(let id):
+                guard let i = rows.firstIndex(where: { $0.id == id }),
+                      let rank = TopThree.nextRank(rows.map(\.asTask), now: now, timeZone: timeZone) else { continue }
+                rows[i].focusDate = TopThree.localDate(now, timeZone: timeZone)
+                rows[i].focusRank = rank
+            case .removeFromToday(let id):
+                if let i = rows.firstIndex(where: { $0.id == id }) { rows[i].focusDate = nil; rows[i].focusRank = nil }
+            case .snooze:
+                break    // no list changes
+            }
+        }
+        return rows
+    }
+
+    /// The Today screen (spec 4.1): `TopThree`'s answers on the snapshot with pending commands
+    /// applied. No picks means the first three suggestions, each offered with "Add to today".
+    public static func today(_ snapshot: WatchSnapshot, pending: [WatchCommand], now: Date,
+                             timeZone: TimeZone) -> WatchToday {
+        let rows = overlaidRows(snapshot, waiting: waitingCommands(snapshot, pending), now: now, timeZone: timeZone)
+        let byID = Dictionary(rows.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let tasks = rows.map(\.asTask)
+        let picks = TopThree.todaysPicks(tasks, now: now, timeZone: timeZone).picks.compactMap { byID[$0] }
+        let suggestions = picks.isEmpty
+            ? TopThree.suggest(tasks, now: now, windowDays: snapshot.escalationWindowDays, timeZone: timeZone)
+                .prefix(TopThree.maxPicks).compactMap { byID[$0] }
+            : []
+        return WatchToday(picks: picks, suggestions: Array(suggestions), canAdd: picks.count < TopThree.maxPicks)
     }
 
     public enum UndoOutcome: Sendable, Equatable {
