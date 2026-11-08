@@ -21,6 +21,8 @@ final class WatchModel: NSObject {
     private(set) var undoOffer: UndoOffer?
     /// The task a tapped reminder asked to show (spec 4.4); the list scrolls to it.
     private(set) var openedTaskID: String?
+    /// Set when a widget tap or the Capture control asked for Capture; the home screen shows it.
+    var captureRequested = false
 
     /// One model for the app, its notification delegate, and the notification scene.
     static let shared = WatchModel()
@@ -79,6 +81,17 @@ final class WatchModel: NSObject {
 
     /// Called once the list has scrolled, so a second tap on the same task scrolls again.
     func consumeOpenedTask() { openedTaskID = nil }
+
+    /// The Capture control's intent leaves a flag in the App Group; take it when the app is up.
+    func consumeCaptureRequest() {
+        guard let defaults = UserDefaults(suiteName: AppGroup.id) else { return }
+        if WatchCaptureRequest.consume(from: defaults) { captureRequested = true }
+    }
+
+    /// A tapped widget opens the app with a `gsd://` URL.
+    func open(url: URL) {
+        if DeepLinkParser.route(from: url) == .capture { captureRequested = true }
+    }
 
     func markUrgent(_ task: WatchTask) { queue(.markUrgent(taskID: task.id)) }
 

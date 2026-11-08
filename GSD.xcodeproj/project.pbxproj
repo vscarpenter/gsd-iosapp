@@ -39,9 +39,11 @@
 		38C43AD20BE29AACB50F60F3 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = BF8FC602D80E3FC0BFC933BC /* GSDSnapshot */; };
 		38C72083C76B25292EA890C7 /* GSDWatchWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88B41B49612973A61282823D /* GSDWatchWidgetBundle.swift */; };
 		39884D1D125AFE9F9FA9F3C2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 2E61BF464A0EEA058FFBF78D /* PrivacyInfo.xcprivacy */; };
+		3ACC51203C4DD88693CE9A79 /* OpenCaptureIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3A7036E0CB1600FFB67884 /* OpenCaptureIntent.swift */; };
 		3AF1BC550994DC383C6D93E0 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3198C1DBF5E5DEB48729A558 /* OnboardingView.swift */; };
 		3C11F826D4D49CD581D5417D /* QuadrantCompletionRings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A24B9E5C99FB352649CFAF /* QuadrantCompletionRings.swift */; };
 		3CA0F82B70641EBE858F761D /* GSDWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1FA0D2F82C759037F6A2DD38 /* GSDWidgetBundle.swift */; };
+		3D1008604617D9637E3894E9 /* GSDWatchWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F7AE39574E8205EDF53B83C /* GSDWatchWidget.swift */; };
 		3D69E0E0F8BE9569BE845572 /* QuadrantCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58879367B58AD6DB9D3F3B6D /* QuadrantCell.swift */; };
 		40B99BEF6587B666E4181DB4 /* DemoLaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74518A608B88BA73A9C96C80 /* DemoLaunch.swift */; };
 		4132C3E4E3012462A71F5C24 /* CommandPaletteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF808B59480FABFBDDCE413D /* CommandPaletteView.swift */; };
@@ -114,6 +116,7 @@
 		CE679E1E1B908EA26EA9ADC6 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 98C26FEAF665B149C1D46E83 /* GSDSnapshot */; };
 		D0AFF2959538BB3C31A179B3 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761CD99A69FF72AB17AB5968 /* DashboardView.swift */; };
 		D1A08D8A25028DD6A0CF3B82 /* GSDSync in Frameworks */ = {isa = PBXBuildFile; productRef = 4D69B433643C83344AA85FF9 /* GSDSync */; };
+		D26573CF1819F6E418D4AADD /* CaptureControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80792CDC502B5A5BF54264FA /* CaptureControl.swift */; };
 		D60CB7324BAB1C0C08155644 /* GSDWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5EDBD5EA890785FDB28B334 /* GSDWatchApp.swift */; };
 		D6B9C09BDC9C8E560A15D8DB /* ReminderNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = C997150B1A6CB40674C2D6A7 /* ReminderNotifications.swift */; };
 		DAD1C4162E0C6658137A4C21 /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = A10EBE9AD3F19E9BF692E87E /* GSDModel */; };
@@ -136,6 +139,7 @@
 		F79BB4ACFBC3611C3437A5D8 /* GSDSnapshot in Frameworks */ = {isa = PBXBuildFile; productRef = 84A59E34F13D194670F006E4 /* GSDSnapshot */; };
 		F7D25C77173E1A0E9426A160 /* GSDWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 600E46409F14DC6B71CFFC32 /* GSDWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FC3ADA52CD5492DBDA90D3E3 /* QuadrantSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6929A33C9F2CE065B24A7B00 /* QuadrantSection.swift */; };
+		FD4E2D29413D26AB978F4705 /* OpenCaptureIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D3A7036E0CB1600FFB67884 /* OpenCaptureIntent.swift */; };
 		FE0F884C571B70DC1021DC4F /* TaskActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53A151034146B4714F731EE2 /* TaskActions.swift */; };
 		FF5DA971C1D7F0E459C85820 /* GSDAppIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A940BB6BB7707C5631927A0 /* GSDAppIntents.swift */; };
 /* End PBXBuildFile section */
@@ -287,6 +291,7 @@
 		79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkHandoff.swift; sourceTree = "<group>"; };
 		79DBE02C7478A306C40B7B29 /* GlassSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassSetting.swift; sourceTree = "<group>"; };
 		7C0F320A150281F72B39E5C5 /* SkeletonShimmer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonShimmer.swift; sourceTree = "<group>"; };
+		80792CDC502B5A5BF54264FA /* CaptureControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureControl.swift; sourceTree = "<group>"; };
 		834FF1E8BA076E31BA383962 /* GSDApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDApp.swift; sourceTree = "<group>"; };
 		84C4854FB1A6758DCF814DAA /* GSDScreenshotTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = GSDScreenshotTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8510779996EB9BE38884B352 /* CaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureView.swift; sourceTree = "<group>"; };
@@ -302,7 +307,9 @@
 		95AA630759C41A4CA80AF23E /* DoFirstView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DoFirstView.swift; sourceTree = "<group>"; };
 		960BE2263C3DBDA017E7EE2A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		9802B12A80312C88E9AAF74D /* SyncStatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncStatusChip.swift; sourceTree = "<group>"; };
+		9D3A7036E0CB1600FFB67884 /* OpenCaptureIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenCaptureIntent.swift; sourceTree = "<group>"; };
 		9E3EB1A411E2B366AD9083E4 /* FilteredTaskListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilteredTaskListView.swift; sourceTree = "<group>"; };
+		9F7AE39574E8205EDF53B83C /* GSDWatchWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWatchWidget.swift; sourceTree = "<group>"; };
 		A2C9EE64F35A42788D229B1E /* DemoSeed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSeed.swift; sourceTree = "<group>"; };
 		A39B990BF91EC1589069C726 /* GSDShareExtension-Catalyst.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "GSDShareExtension-Catalyst.entitlements"; sourceTree = "<group>"; };
 		A706546D6BC547A4D13660DC /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
@@ -533,6 +540,8 @@
 		57D4453528321EB8F831A0DA /* WatchWidgets */ = {
 			isa = PBXGroup;
 			children = (
+				80792CDC502B5A5BF54264FA /* CaptureControl.swift */,
+				9F7AE39574E8205EDF53B83C /* GSDWatchWidget.swift */,
 				88B41B49612973A61282823D /* GSDWatchWidgetBundle.swift */,
 				39B7105A3C1535121A23EF33 /* GSDWatchWidgets.entitlements */,
 				45BAB230ABC45A0A2358F312 /* Info.plist */,
@@ -556,6 +565,14 @@
 				7076CBC9B546004905BDBAAD /* SweepView.swift */,
 			);
 			path = Sweep;
+			sourceTree = "<group>";
+		};
+		768ECED25F45702267520064 /* WatchShared */ = {
+			isa = PBXGroup;
+			children = (
+				9D3A7036E0CB1600FFB67884 /* OpenCaptureIntent.swift */,
+			);
+			path = WatchShared;
 			sourceTree = "<group>";
 		};
 		7A441FD94D17954A83BEB281 /* ShareExtension */ = {
@@ -671,6 +688,7 @@
 				D91E23D34EABC2DCA97A941B /* ScreenshotTests */,
 				7A441FD94D17954A83BEB281 /* ShareExtension */,
 				81C7940217B9D50D672060DA /* Watch */,
+				768ECED25F45702267520064 /* WatchShared */,
 				57D4453528321EB8F831A0DA /* WatchWidgets */,
 				1EB3D99838DFC3431761508F /* Widgets */,
 				A8F4EE28B10703F63C52EDE9 /* Products */,
@@ -1099,6 +1117,7 @@
 				6A709923A4AD4461B7A7FAD4 /* CaptureView.swift in Sources */,
 				ABA530CA70A9B0457BB2AF94 /* DoFirstView.swift in Sources */,
 				D60CB7324BAB1C0C08155644 /* GSDWatchApp.swift in Sources */,
+				3ACC51203C4DD88693CE9A79 /* OpenCaptureIntent.swift in Sources */,
 				D6B9C09BDC9C8E560A15D8DB /* ReminderNotifications.swift in Sources */,
 				7D74A755CBA29CD26D66838F /* WatchModel.swift in Sources */,
 			);
@@ -1108,7 +1127,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D26573CF1819F6E418D4AADD /* CaptureControl.swift in Sources */,
+				3D1008604617D9637E3894E9 /* GSDWatchWidget.swift in Sources */,
 				38C72083C76B25292EA890C7 /* GSDWatchWidgetBundle.swift in Sources */,
+				FD4E2D29413D26AB978F4705 /* OpenCaptureIntent.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
