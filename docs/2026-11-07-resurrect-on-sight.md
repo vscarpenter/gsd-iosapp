@@ -63,3 +63,26 @@ S-AND's review and the Lead's decisions (2026-11-07) added three fixes, each red
 - **A resurrected task merges into its Trash row,** as web does, so its rich time entries and this
   device's reminder state survive (`a resurrected task keeps this device's reminder state and
   time-entry notes`). Android gets the same change in AND-RESURRECT-PARITY.
+
+## IOS-RESURRECT-2
+
+S-AND's review of web #701 found two gaps on Android (A1, A2), and iOS had both. The Lead's
+decisions (2026-11-08) put them in one PR, each red first:
+
+- **A delete queued since the id was remembered wins (A1).** A run that fails keeps its ids. If
+  the user then restores that task and trashes it again, the step brought it back, the push sent
+  the delete, and the reconcile removed the active copy with no Trash copy left. The step now
+  waits on any queued delete for the id, keeps the id, and leaves the Trash row
+  (`waitsForThisDevice`, mirroring web's guard). SPEC-3 rule 3 says "a queued delete that will
+  still push". A failed delete counts, because `requeueFailed` re-arms it, and Android counts
+  failed rows too; web counts pending only. A stale delete counts as well: the push drops it, and
+  its newer server copy brings the task back through the pull instead, so excluding it would change
+  nothing. Tests: `a remembered id with a pending delete stays in Trash and is kept`, `a remembered
+  id with a failed delete stays in Trash and is kept`, and the journey `a task restored and trashed
+  again while its id is remembered stays in Trash after the next sync`.
+- **A failing step doesn't stop the push (A2).** A throw from the step ended `sync()` before its
+  push, so a server copy this build can't read, which fails every complete listing, would have held
+  back the user's own edits for as long as an id stayed remembered. The step's error is now logged
+  (`os.Logger`, subsystem `dev.vinny.gsd`, category `sync`), it forgets nothing (rule 5), and the
+  run goes on to the push and the reconcile, as web does. An ended session (`StaleSyncSession`)
+  still stops the run. Test: `a step that fails forgets nothing and leaves the sync successful`.
