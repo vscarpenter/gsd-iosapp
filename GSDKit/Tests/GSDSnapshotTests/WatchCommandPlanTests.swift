@@ -107,7 +107,7 @@ struct WatchCommandPlanTests {
     // MARK: top three (spec 6.3, spec-top-three 3.2)
 
     @Test func addToTodayTakesTheNextFreeRank() {
-        #expect(decide(.addToToday(taskID: "t1"), task(), nextRank: 2) == .apply(.pickForToday(rank: 2)))
+        #expect(decide(.addToToday(taskID: "t1"), task(), nextRank: 2) == .apply(.pickForToday(date: "2027-01-15", rank: 2)))
     }
 
     @Test func addToTodaySkipsWhenNoRankIsFree() {
@@ -122,7 +122,13 @@ struct WatchCommandPlanTests {
 
     @Test func addToTodayMovesAPickLeftOverFromAnEarlierDay() {
         #expect(decide(.addToToday(taskID: "t1"), picked("2027-01-14", rank: 1), nextRank: 1)
-                == .apply(.pickForToday(rank: 1)))
+                == .apply(.pickForToday(date: "2027-01-15", rank: 1)))
+    }
+
+    @Test func theDateInThePickIsTheOneThatChoseTheRank() {
+        // Applier and plan must agree on the day, or a rank chosen for one day lands under the next.
+        #expect(decide(.addToToday(taskID: "t1"), task(), today: "2027-01-16", nextRank: 3)
+                == .apply(.pickForToday(date: "2027-01-16", rank: 3)))
     }
 
     @Test func removeFromTodayClearsAPick() {

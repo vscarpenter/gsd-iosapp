@@ -146,16 +146,10 @@ final class WatchSessionCoordinator: NSObject {
             if let task { try await store.snooze(task, by: .oneHour) }
         case .capture(let text, let quadrant):
             try await store.add(WatchCommandPlan.parseCapture(text), override: quadrant)
-        case .pickForToday(let rank):
-            guard var current = task else { return }
-            current.focusDate = TopThree.localDate(Date(), timeZone: .current)
-            current.focusRank = rank
-            try await store.save(current)
+        case .pickForToday(let date, let rank):
+            if let task { try await store.setFocus(id: task.id, date: date, rank: rank) }
         case .clearPick:
-            guard var current = task else { return }
-            current.focusDate = nil
-            current.focusRank = nil
-            try await store.save(current)
+            if let task { try await store.setFocus(id: task.id, date: nil, rank: nil) }
         }
     }
 }

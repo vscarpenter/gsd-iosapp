@@ -15,8 +15,9 @@ public enum WatchCommandPlan {
         /// The applier parses `text` with `CaptureParser`, so both devices read it the same way,
         /// then adds it with `quadrant` as the override.
         case capture(text: String, quadrant: Quadrant)
-        /// Today's date and this rank, as an ordinary edit (`TaskStore.save`).
-        case pickForToday(rank: Int)
+        /// This date and rank, as an ordinary edit (`TaskStore.save`). The date is the one the
+        /// rank was chosen for, so a command applied across midnight can't mix the two days.
+        case pickForToday(date: String, rank: Int)
         /// Clear both pick fields.
         case clearPick
     }
@@ -34,9 +35,10 @@ public enum WatchCommandPlan {
     }
 
     /// `today` is the iPhone's local date as `TopThree` writes it, and `nextRank` is
-    /// `TopThree.nextRank` for the current tasks. Both only matter to the two top three kinds.
+    /// `TopThree.nextRank` for the current tasks. Both are required: a caller that forgot them would
+    /// get a silent skip for `addToToday`, which the applier records as done.
     public static func decide(_ command: WatchCommand, task: Task?, alreadyApplied: Bool,
-                              today: String = "", nextRank: Int? = nil) -> Decision {
+                              today: String, nextRank: Int?) -> Decision {
         if alreadyApplied { return .skip(.duplicate) }
 
         // A task Saved since the watch's snapshot is out of reach: the builder never sends Saved
@@ -52,7 +54,7 @@ public enum WatchCommandPlan {
             if task.completed { return .skip(.alreadyCompleted) }
             if task.focusDate == today, task.focusRank != nil { return .skip(.alreadyPicked) }
             guard let nextRank else { return .skip(.noFreeRank) }
-            return .apply(.pickForToday(rank: nextRank))
+            return .apply(.pickForToday(date: today, rank: nextRank))
         case .removeFromToday:
             guard let task else { return .skip(.missingTask) }
             return task.focusDate == nil && task.focusRank == nil ? .skip(.notAPick) : .apply(.clearPick)

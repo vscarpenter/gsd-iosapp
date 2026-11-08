@@ -137,10 +137,7 @@ struct TaskActions {
     }
 
     private func setFocus(id: String, date: String?, rank: Int?) async throws {
-        guard var current = store.tasks.first(where: { $0.id == id }) else { return }
-        current.focusDate = date
-        current.focusRank = rank
-        try await store.save(current)
+        try await store.setFocus(id: id, date: date, rank: rank)
     }
 
     private func run(
