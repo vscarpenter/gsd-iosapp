@@ -1,5 +1,6 @@
 import UIKit
 import UserNotifications
+import GSDModel
 import GSDSnapshot
 import GSDStore
 
