@@ -223,4 +223,18 @@ struct TaskStoreReminderHooksTests {
         await store.refreshBadge()
         #expect(rec.calls.contains(.badge(2)))
     }
+    /// B-62: launch calls `refreshBadge()` before the observer's first snapshot, when `tasks` is
+    /// still empty. Counting that empty list set the badge to 0 until the next task change.
+    @Test func refreshBadgeBeforeTheFirstSnapshotCountsTheStoredTasks() async throws {
+        let rec = RecordingReminderScheduler()
+        let db = try AppDatabase.inMemory()
+        let store = try makeStore(rec, db: db)
+        let repo = GRDBTaskRepository(db)
+        try await repo.upsert(task("a", due: now.addingTimeInterval(-3600)))   // overdue
+        try await repo.upsert(task("b", due: now))                              // due today
+        try await repo.upsert(task("c", due: now.addingTimeInterval(7 * 86_400))) // future
+        #expect(!store.hasLoadedTasks)
+        await store.refreshBadge()
+        #expect(rec.calls == [.badge(2)])
+    }
 }

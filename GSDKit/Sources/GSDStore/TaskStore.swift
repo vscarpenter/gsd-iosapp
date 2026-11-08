@@ -819,7 +819,17 @@ public final class TaskStore {
     /// Uses the pure `ReminderMath.badgeCount` (the only scheduling math the store touches —
     /// it returns an `Int`, so `GSDStore` stays free of `UserNotifications`).
     public func refreshBadge() async {
-        let count = ReminderMath.badgeCount(tasks: tasks, now: clock(), calendar: calendar)
+        // Launch calls this before the observer's first snapshot, when `tasks` is still empty and
+        // would clear the badge (B-62). Read the rows until the snapshot arrives, as
+        // `resyncReminders` does; a failed read leaves the badge as it is.
+        let live: [Task]
+        if hasLoadedTasks {
+            live = tasks
+        } else {
+            guard let rows = try? await repository.fetchAll() else { return }
+            live = rows
+        }
+        let count = ReminderMath.badgeCount(tasks: live, now: clock(), calendar: calendar)
         await reminders.setBadge(count)
     }
 
