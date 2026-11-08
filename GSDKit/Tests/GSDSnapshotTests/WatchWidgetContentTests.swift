@@ -19,10 +19,9 @@ struct WatchWidgetContentTests {
                                               day: cal.component(.day, from: day), hour: hour, minute: minute))!
     }
 
-    private func row(_ id: String, urgent: Bool = true, important: Bool = true, due: Date? = nil,
-                     focusDate: String? = nil, focusRank: Int? = nil) -> WatchTask {
+    private func row(_ id: String, urgent: Bool = true, important: Bool = true, due: Date? = nil) -> WatchTask {
         WatchTask(id: id, title: id, urgent: urgent, important: important, dueDate: due,
-                  createdAt: now, updatedAt: now, isRecurring: false, focusDate: focusDate, focusRank: focusRank)
+                  createdAt: now, updatedAt: now, isRecurring: false)
     }
 
     private func snap(_ tasks: [WatchTask]) -> WatchSnapshot {
@@ -38,19 +37,6 @@ struct WatchWidgetContentTests {
 
     @Test func rectangularShowsUpToThreeDoFirstRows() {
         #expect(rows(snap([row("a"), row("b"), row("c"), row("d")])) == ["a", "b", "c"])
-    }
-
-    @Test func rectangularPrefersTodaysPicksInRankOrder() {
-        let today = TopThree.localDate(now, timeZone: utc)
-        let s = snap([row("x"), row("p2", urgent: false, focusDate: today, focusRank: 2),
-                      row("p1", urgent: false, focusDate: today, focusRank: 1)])
-        #expect(rows(s) == ["p1", "p2"])
-    }
-
-    @Test func aPickDatedYesterdayIsNeverShown() {
-        let yesterday = TopThree.localDate(at(9, dayOffset: -1), timeZone: utc)
-        let s = snap([row("old", urgent: false, focusDate: yesterday, focusRank: 1)])
-        #expect(rows(s).isEmpty)
     }
 
     @Test func rectangularIsEmptyWhenNothingMatches() {
@@ -70,6 +56,13 @@ struct WatchWidgetContentTests {
     @Test func inlineIsNilWhenNothingTimedRemains() {
         #expect(WatchWidgetContent.inline(snap([row("past", due: at(8)), row("allDay", due: at(0))]),
                                           now: now, calendar: cal) == nil)
+    }
+
+    @Test func inlineSkipsAnAllDayTaskEvenAtMidnightSharp() {
+        // An all-day task is due at 00:00, which only passes the "not yet past" check at 00:00.
+        let s = snap([row("allDay", due: at(0)), row("timed", due: at(8))])
+        let line = WatchWidgetContent.inline(s, now: at(0), calendar: cal)
+        #expect(line?.title == "timed")
     }
 
     // MARK: timeline
@@ -97,8 +90,8 @@ struct WatchWidgetContentTests {
 
     @Test func relevanceIsCappedSoItNeverFillsTheDay() {
         let many = (0..<12).map { row("t\($0)", due: at(10, $0 * 5)) }
-        #expect(WatchWidgetContent.relevanceIntervals(snap(many), now: now, calendar: cal).count
-                <= WatchWidgetContent.relevanceLimit)
+        #expect(WatchWidgetContent.relevanceLimit == 5)
+        #expect(WatchWidgetContent.relevanceIntervals(snap(many), now: now, calendar: cal).count == 5)
     }
 
     // MARK: capture request

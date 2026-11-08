@@ -9,15 +9,10 @@ public enum WatchWidgetContent {
     /// Smart Stack windows per day. Without a cap the widget would claim the stack all day.
     public static let relevanceLimit = 5
 
-    /// `accessoryRectangular`: today's picks in rank order when any are dated the local today,
-    /// else the first Do First rows. Empty means the widget says "Clear for now".
+    /// `accessoryRectangular`: the first Do First rows. Empty means the widget says "Clear for
+    /// now". Today's picks join this family with W6, once the snapshot carries them.
     public static func rectangularTitles(_ snapshot: WatchSnapshot, now: Date,
                                          calendar: Calendar, timeZone: TimeZone) -> [String] {
-        let today = TopThree.localDate(now, timeZone: timeZone)
-        let picks = snapshot.tasks
-            .filter { $0.focusDate == today && $0.focusRank != nil }
-            .sorted { ($0.focusRank ?? 0) < ($1.focusRank ?? 0) }
-        if !picks.isEmpty { return picks.prefix(rowLimit).map(\.title) }
         let lists = WatchOverlay.apply(snapshot, pending: [], now: now, calendar: calendar, timeZone: timeZone)
         return lists.doFirst.prefix(rowLimit).map(\.title)
     }
@@ -33,8 +28,8 @@ public enum WatchWidgetContent {
         remainingTimed(snapshot, now: now, calendar: calendar).first.map { InlineLine(time: $0.due, title: $0.title) }
     }
 
-    /// Entries: now, each due time left today, and the next local midnight, which is when a
-    /// pick dated today stops being today's.
+    /// Entries: now, each due time left today, and the next local midnight, when "later today"
+    /// rolls over for the inline line.
     public static func timelineDates(_ snapshot: WatchSnapshot, now: Date, calendar: Calendar) -> [Date] {
         let midnight = nextMidnight(after: now, calendar: calendar)
         let dues = remainingTimed(snapshot, now: now, calendar: calendar).map(\.due).filter { $0 < midnight }

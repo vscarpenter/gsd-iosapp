@@ -9,7 +9,7 @@ struct WatchWidgetEntry: TimelineEntry {
 }
 
 /// Reads the snapshot the watch app saved. Entries: now, each due time left today, and the next
-/// local midnight, then `.atEnd` (spec 4.5), so a pick dated yesterday never shows.
+/// local midnight, then `.atEnd` (spec 4.5), so the inline line never shows yesterday's task.
 struct WatchWidgetProvider: TimelineProvider {
     private var store: WatchSnapshotStore {
         WatchSnapshotStore(directoryURL: FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.id))
