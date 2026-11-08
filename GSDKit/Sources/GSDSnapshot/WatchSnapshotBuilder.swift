@@ -14,12 +14,23 @@ public enum WatchSnapshotBuilder {
         let startToday = calendar.startOfDay(for: now)
         let reachEnd = calendar.date(byAdding: .day, value: reachDays + 1, to: startToday)!
 
+        // Rule 3: a pick dated yesterday or later, so time-zone edges and the midnight rule still
+        // have the data. Dates compare as text (`TopThree`), the same way the rules do.
+        let yesterday = TopThree.localDate(calendar.date(byAdding: .day, value: -1, to: startToday)!,
+                                           timeZone: calendar.timeZone)
+        func isRecentPick(_ task: Task) -> Bool { task.focusDate.map { $0 >= yesterday } ?? false }
+
         let carried = active.filter { task in
+            if isRecentPick(task) { return true }
             if task.urgent && task.important { return true }
             guard !task.urgent, let due = task.dueDate else { return false }
             return due < reachEnd          // overdue, or within 7 calendar days ahead
         }
-        let ordered = carried.sorted(by: dueThenCreated).prefix(WatchSnapshot.taskCap)
+        // Over the cap, picks stay first, then due date, then `createdAt`.
+        let ordered = carried.sorted { a, b in
+            let (pickA, pickB) = (isRecentPick(a), isRecentPick(b))
+            return pickA != pickB ? pickA : dueThenCreated(a, b)
+        }.prefix(WatchSnapshot.taskCap)
 
         return WatchSnapshot(
             generatedAt: now,

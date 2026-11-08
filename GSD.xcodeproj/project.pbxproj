@@ -70,6 +70,7 @@
 		76545B52D43B79FA49C3523A /* EditorSaveShortcutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D986295B486E3122D21BC4C2 /* EditorSaveShortcutTests.swift */; };
 		7A957DC7F1948AE07FD27927 /* RelativeDate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94ED783FE5C2324C295B0273 /* RelativeDate.swift */; };
 		7D74A755CBA29CD26D66838F /* WatchModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1722C62916E4BD3A4B940F7C /* WatchModel.swift */; };
+		7DAED9870B20980572A9B2B5 /* TodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 227CEB2C93074F6A92CA19EF /* TodayView.swift */; };
 		7E113F8BF182A852A2D45A4E /* GSDModel in Frameworks */ = {isa = PBXBuildFile; productRef = A8BD92DAA028E519D4CBD241 /* GSDModel */; };
 		8004840C42749CB157F55F18 /* MatrixView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFCC04D1A10AC4C3073A8147 /* MatrixView.swift */; };
 		8036F79C226CB3A58EAD44E4 /* GSDWire in Frameworks */ = {isa = PBXBuildFile; productRef = E24393540B98A6395ECD91E2 /* GSDWire */; };
@@ -86,6 +87,7 @@
 		8D3E507485820DA79F4330BC /* EmptyStateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B7ABECA93D5E1F65DC3F8C /* EmptyStateView.swift */; };
 		8DF2570FD1FE80043BD1A894 /* GSDShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 085C79B0624FDEED34B4E129 /* GSDShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		91BA856CFA07EA07931A8A51 /* DeepLinkHandoff.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79AF2835774B7DBAABCD9A82 /* DeepLinkHandoff.swift */; };
+		936AF72CCABC287BB8AE66EA /* WatchChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E783EF3A5E7E3D0A54B2A9 /* WatchChrome.swift */; };
 		983DA110817AB2C20438BDA1 /* EscalationSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3552A0A16FD0BB873EEFE999 /* EscalationSupport.swift */; };
 		998EF4BF3910E777B236BE53 /* GSDWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 06F41EA36B890077D6F75320 /* GSDWatch.app */; platformFilter = ios; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9B02974953AD67A3BB67B26E /* DemoChoreography.swift in Sources */ = {isa = PBXBuildFile; fileRef = E859591AFA113674374C5700 /* DemoChoreography.swift */; };
@@ -239,6 +241,7 @@
 		1FA0D2F82C759037F6A2DD38 /* GSDWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GSDWidgetBundle.swift; sourceTree = "<group>"; };
 		201AED667DF059BD3CEA6C01 /* ReminderResyncer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderResyncer.swift; sourceTree = "<group>"; };
 		21BAB82DCAFB07F2465B97B9 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		227CEB2C93074F6A92CA19EF /* TodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayView.swift; sourceTree = "<group>"; };
 		2429471CF154E2FD234BA738 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		249F029B40FD9FDAA6A68A25 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		263862633905FD14A543830B /* EscalationFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EscalationFlowTests.swift; sourceTree = "<group>"; };
@@ -335,6 +338,7 @@
 		CDA09252BC2EC2C89F99BAE7 /* WhatsNewContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhatsNewContent.swift; sourceTree = "<group>"; };
 		D20E914ACF6FFFD780E61B77 /* ShareComposeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareComposeView.swift; sourceTree = "<group>"; };
 		D4AED0C7E688157BC1106906 /* DueTimeEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DueTimeEditorTests.swift; sourceTree = "<group>"; };
+		D4E783EF3A5E7E3D0A54B2A9 /* WatchChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchChrome.swift; sourceTree = "<group>"; };
 		D5C3752E464ACF9EDB1EE803 /* TaskRowMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TaskRowMenu.swift; sourceTree = "<group>"; };
 		D986295B486E3122D21BC4C2 /* EditorSaveShortcutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorSaveShortcutTests.swift; sourceTree = "<group>"; };
 		DE03DDCAC842A647E510557D /* KeychainTokenStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainTokenStore.swift; sourceTree = "<group>"; };
@@ -599,6 +603,8 @@
 				960BE2263C3DBDA017E7EE2A /* Info.plist */,
 				21BAB82DCAFB07F2465B97B9 /* PrivacyInfo.xcprivacy */,
 				C997150B1A6CB40674C2D6A7 /* ReminderNotifications.swift */,
+				227CEB2C93074F6A92CA19EF /* TodayView.swift */,
+				D4E783EF3A5E7E3D0A54B2A9 /* WatchChrome.swift */,
 				1722C62916E4BD3A4B940F7C /* WatchModel.swift */,
 			);
 			path = Watch;
@@ -1119,6 +1125,8 @@
 				D60CB7324BAB1C0C08155644 /* GSDWatchApp.swift in Sources */,
 				3ACC51203C4DD88693CE9A79 /* OpenCaptureIntent.swift in Sources */,
 				D6B9C09BDC9C8E560A15D8DB /* ReminderNotifications.swift in Sources */,
+				7DAED9870B20980572A9B2B5 /* TodayView.swift in Sources */,
+				936AF72CCABC287BB8AE66EA /* WatchChrome.swift in Sources */,
 				7D74A755CBA29CD26D66838F /* WatchModel.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -17,8 +17,14 @@ struct WatchCommandPlanTests {
         WatchCommand(id: id, issuedAt: at, kind: kind)
     }
 
-    private func decide(_ kind: WatchCommand.Kind, _ t: Task?, applied: Bool = false) -> WatchCommandPlan.Decision {
-        WatchCommandPlan.decide(cmd(kind), task: t, alreadyApplied: applied)
+    private func decide(_ kind: WatchCommand.Kind, _ t: Task?, applied: Bool = false,
+                        today: String = "2027-01-15", nextRank: Int? = 1) -> WatchCommandPlan.Decision {
+        WatchCommandPlan.decide(cmd(kind), task: t, alreadyApplied: applied, today: today, nextRank: nextRank)
+    }
+
+    private func picked(_ date: String?, rank: Int?) -> Task {
+        Task(id: "t1", title: "t1", urgent: false, important: true,
+             createdAt: at, updatedAt: at, focusDate: date, focusRank: rank)
     }
 
     // MARK: complete
@@ -98,11 +104,40 @@ struct WatchCommandPlanTests {
         #expect(decide(.capture(text: " \n ", quadrant: .notUrgentImportant), nil) == .skip(.emptyText))
     }
 
-    // MARK: top three kinds wait for phase 4
+    // MARK: top three (spec 6.3, spec-top-three 3.2)
 
-    @Test func topThreeKindsSkipUntilPhaseFourShips() {
-        #expect(decide(.addToToday(taskID: "t1"), task()) == .skip(.notAvailableYet))
-        #expect(decide(.removeFromToday(taskID: "t1"), task()) == .skip(.notAvailableYet))
+    @Test func addToTodayTakesTheNextFreeRank() {
+        #expect(decide(.addToToday(taskID: "t1"), task(), nextRank: 2) == .apply(.pickForToday(date: "2027-01-15", rank: 2)))
+    }
+
+    @Test func addToTodaySkipsWhenNoRankIsFree() {
+        #expect(decide(.addToToday(taskID: "t1"), task(), nextRank: nil) == .skip(.noFreeRank))
+    }
+
+    @Test func addToTodaySkipsMissingCompletedAndAlreadyPickedTasks() {
+        #expect(decide(.addToToday(taskID: "t1"), nil) == .skip(.missingTask))
+        #expect(decide(.addToToday(taskID: "t1"), task(completed: true)) == .skip(.alreadyCompleted))
+        #expect(decide(.addToToday(taskID: "t1"), picked("2027-01-15", rank: 1)) == .skip(.alreadyPicked))
+    }
+
+    @Test func addToTodayMovesAPickLeftOverFromAnEarlierDay() {
+        #expect(decide(.addToToday(taskID: "t1"), picked("2027-01-14", rank: 1), nextRank: 1)
+                == .apply(.pickForToday(date: "2027-01-15", rank: 1)))
+    }
+
+    @Test func theDateInThePickIsTheOneThatChoseTheRank() {
+        // Applier and plan must agree on the day, or a rank chosen for one day lands under the next.
+        #expect(decide(.addToToday(taskID: "t1"), task(), today: "2027-01-16", nextRank: 3)
+                == .apply(.pickForToday(date: "2027-01-16", rank: 3)))
+    }
+
+    @Test func removeFromTodayClearsAPick() {
+        #expect(decide(.removeFromToday(taskID: "t1"), picked("2027-01-15", rank: 2)) == .apply(.clearPick))
+    }
+
+    @Test func removeFromTodaySkipsATaskThatIsNotAPick() {
+        #expect(decide(.removeFromToday(taskID: "t1"), task()) == .skip(.notAPick))
+        #expect(decide(.removeFromToday(taskID: "t1"), nil) == .skip(.missingTask))
     }
 
     // MARK: idempotency
@@ -110,6 +145,7 @@ struct WatchCommandPlanTests {
     @Test func aRepeatedCommandIDSkipsEvenWhenTheTaskStillMatches() {
         for kind: WatchCommand.Kind in [.complete(taskID: "t1"), .markUrgent(taskID: "t1"),
                                         .snooze(taskID: "t1"),
+                                        .addToToday(taskID: "t1"), .removeFromToday(taskID: "t1"),
                                         .capture(text: "x", quadrant: .notUrgentNotImportant)] {
             #expect(decide(kind, task(), applied: true) == .skip(.duplicate))
         }

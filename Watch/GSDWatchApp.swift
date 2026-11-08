@@ -7,14 +7,28 @@ struct GSDWatchApp: App {
     @WKApplicationDelegateAdaptor(WatchAppDelegate.self) private var delegate
     @State private var model = WatchModel.shared
     @Environment(\.scenePhase) private var scenePhase
+    @State private var page = Page.today
+
+    private enum Page { case today, doFirst }
 
     var body: some Scene {
         WindowGroup {
-            DoFirstView()
-                .environment(model)
-                .task { model.start() }
-                .onOpenURL { model.open(url: $0) }
-                .onChange(of: scenePhase, initial: true) { _, phase in
+            // Today is the home page; Do First sits below it. Capture requests land on Do First.
+            TabView(selection: $page) {
+                TodayView(active: page == .today).tag(Page.today)
+                DoFirstView(active: page == .doFirst).tag(Page.doFirst)
+            }
+            .tabViewStyle(.verticalPage)
+            .environment(model)
+            // A reminder for one of today's picks lands on Today; any other task on Do First.
+            .onChange(of: model.openedTaskID, initial: true) { _, id in
+                guard let id else { return }
+                page = model.today().picks.contains { $0.id == id } ? .today : .doFirst
+            }
+            .onChange(of: model.captureRequested, initial: true) { _, requested in if requested { page = .doFirst } }
+            .task { model.start() }
+            .onOpenURL { model.open(url: $0) }
+            .onChange(of: scenePhase, initial: true) { _, phase in
                     if phase == .active { model.consumeCaptureRequest() }
                 }
         }

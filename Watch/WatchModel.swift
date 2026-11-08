@@ -62,6 +62,11 @@ final class WatchModel: NSObject {
                            calendar: .current, timeZone: .current)
     }
 
+    /// Today's picks, or the first suggestions when there are none, with pending commands applied.
+    func today(now: Date = .now) -> WatchToday {
+        WatchOverlay.today(snapshot, pending: outbox.commands, now: now, timeZone: .current)
+    }
+
     var hasSnapshot: Bool { snapshot.generatedAt != WatchSnapshot.empty.generatedAt }
 
     // MARK: Commands
@@ -92,6 +97,10 @@ final class WatchModel: NSObject {
     func open(url: URL) {
         if DeepLinkParser.route(from: url) == .capture { captureRequested = true }
     }
+
+    func addToToday(_ task: WatchTask) { queue(.addToToday(taskID: task.id)) }
+
+    func removeFromToday(_ task: WatchTask) { queue(.removeFromToday(taskID: task.id)) }
 
     func markUrgent(_ task: WatchTask) { queue(.markUrgent(taskID: task.id)) }
 

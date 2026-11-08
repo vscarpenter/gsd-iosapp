@@ -384,6 +384,15 @@ public final class TaskStore {
         await refreshReminder(t)
     }
 
+    /// Writes (or clears) a top three pick on the row as it is now, not on a copy the caller read
+    /// earlier, so an edit that landed in between survives. Does nothing for a row that is gone.
+    public func setFocus(id: String, date: String?, rank: Int?) async throws {
+        guard var current = try await repository.fetch(id: id) else { return }
+        current.focusDate = date
+        current.focusRank = rank
+        try await save(current)
+    }
+
     /// The editor's Save for an existing task (parity C10). Merges the fields the user changed onto
     /// the row as it is now, not the snapshot the editor opened with, so a completion, snooze, or
     /// pulled edit that landed while the sheet was open survives. `original` is the opened task as

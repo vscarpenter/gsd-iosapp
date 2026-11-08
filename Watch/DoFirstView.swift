@@ -2,15 +2,19 @@ import SwiftUI
 import GSDModel
 import GSDSnapshot
 
-/// The home screen until phase 4 ships top three on Apple (spec 4.1, decision 2): Do First, then
-/// "Coming up", the rows `Escalation.evaluate` marks as escalating.
+/// Do First, then "Coming up", the rows `Escalation.evaluate` marks as escalating (spec 4.2).
+/// One page below Today, which is the home screen now that top three is on Apple.
 struct DoFirstView: View {
     @Environment(WatchModel.self) private var model
+    /// Whether this page is the one on screen, so only it answers a tapped reminder.
+    let active: Bool
     @State private var capturing = false
     private let rowLimit = 20
 
     var body: some View {
         let lists = model.lists()
+        let today = model.today()
+        let pickIDs = Set(today.picks.map(\.id))
         NavigationStack {
           ScrollViewReader { proxy in
             List {
@@ -25,7 +29,7 @@ struct DoFirstView: View {
                 if !lists.doFirst.isEmpty {
                     Section("Do First") {
                         ForEach(lists.doFirst.prefix(rowLimit)) { task in
-                            TaskRow(task: task, escalation: nil)
+                            TaskRow(task: task, escalation: nil, canAddToToday: today.canAdd && !pickIDs.contains(task.id))
                         }
                         let more = lists.doFirstMore(rowLimit: rowLimit, doFirstTotal: model.snapshot.doFirstTotal)
                         if more > 0 {
@@ -38,12 +42,12 @@ struct DoFirstView: View {
                 if !lists.comingUp.isEmpty {
                     Section("Coming up") {
                         ForEach(lists.comingUp.prefix(rowLimit)) { row in
-                            TaskRow(task: row.task, escalation: row)
+                            TaskRow(task: row.task, escalation: row, canAddToToday: today.canAdd && !pickIDs.contains(row.task.id))
                         }
                     }
                 }
 
-                Section { footer(pending: lists.pendingCount) }
+                Section { WatchFooter(pending: lists.pendingCount) }
             }
             .navigationTitle("GSD")
             .toolbar {
@@ -56,36 +60,19 @@ struct DoFirstView: View {
             .onChange(of: model.captureRequested, initial: true) { _, requested in
                 if requested { capturing = true; model.captureRequested = false }
             }
-            .safeAreaInset(edge: .bottom) { undoBar }
+            .safeAreaInset(edge: .bottom) { WatchUndoBar() }
             // A tapped reminder scrolls to the task's row (spec 4.4).
-            .onChange(of: model.openedTaskID, initial: true) { _, id in
-                // A task past the first 20 rows isn't in the list, so this does nothing for it.
-                guard let id else { return }
-                proxy.scrollTo(id, anchor: .center)
-                model.consumeOpenedTask()
-            }
+            .onChange(of: model.openedTaskID, initial: true) { _, _ in openTask(proxy) }
+            .onChange(of: active) { _, _ in openTask(proxy) }
           }
         }
     }
 
-    @ViewBuilder private func footer(pending: Int) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if pending > 0 {
-                Text(pending == 1 ? "1 change waiting for iPhone" : "\(pending) changes waiting for iPhone")
-            }
-            if model.hasSnapshot {
-                Text("Updated \(model.snapshot.generatedAt.formatted(date: .omitted, time: .shortened))")
-            }
-        }
-        .font(.footnote).foregroundStyle(.secondary)
-    }
-
-    @ViewBuilder private var undoBar: some View {
-        if model.canUndo {
-            Button("Undo") { model.undo() }
-                .buttonStyle(.borderedProminent)
-                .accessibilityLabel("Undo complete")
-        }
+    /// A task past the first 20 rows isn't in the list, so this does nothing for it.
+    private func openTask(_ proxy: ScrollViewProxy) {
+        guard active, let id = model.openedTaskID else { return }
+        proxy.scrollTo(id, anchor: .center)
+        model.consumeOpenedTask()
     }
 }
 
@@ -93,6 +80,8 @@ private struct TaskRow: View {
     @Environment(WatchModel.self) private var model
     let task: WatchTask
     let escalation: WatchEscalatingRow?
+    /// False when three picks are in, or the row is already one: "Add to today" is hidden (spec 4.1).
+    let canAddToToday: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -108,6 +97,9 @@ private struct TaskRow: View {
                 .tint(.green)
         }
         .swipeActions(edge: .trailing) {
+            if canAddToToday {
+                Button { model.addToToday(task) } label: { Label("Add to today", systemImage: "sun.max") }
+            }
             if let target = escalation?.escalation.target {
                 Button { model.markUrgent(task) } label: { Label("Mark urgent", systemImage: "exclamationmark") }
                     .accessibilityHint(target.markUrgentHint)

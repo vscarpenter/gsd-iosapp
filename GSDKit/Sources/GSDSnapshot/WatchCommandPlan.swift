@@ -15,12 +15,18 @@ public enum WatchCommandPlan {
         /// The applier parses `text` with `CaptureParser`, so both devices read it the same way,
         /// then adds it with `quadrant` as the override.
         case capture(text: String, quadrant: Quadrant)
+        /// This date and rank, as an ordinary edit (`TaskStore.save`). The date is the one the
+        /// rank was chosen for, so a command applied across midnight can't mix the two days.
+        case pickForToday(date: String, rank: Int)
+        /// Clear both pick fields.
+        case clearPick
     }
 
     public enum SkipReason: Sendable, Equatable {
         case duplicate, missingTask, saved, alreadyCompleted, notCompleted, alreadyUrgent, emptyText
-        /// Top three commands wait for phase 4 on Apple.
-        case notAvailableYet
+        /// Three picks are already in (`TopThree.nextRank` is nil).
+        case noFreeRank
+        case alreadyPicked, notAPick
     }
 
     public enum Decision: Sendable, Equatable {
@@ -28,7 +34,11 @@ public enum WatchCommandPlan {
         case skip(SkipReason)
     }
 
-    public static func decide(_ command: WatchCommand, task: Task?, alreadyApplied: Bool) -> Decision {
+    /// `today` is the iPhone's local date as `TopThree` writes it, and `nextRank` is
+    /// `TopThree.nextRank` for the current tasks. Both are required: a caller that forgot them would
+    /// get a silent skip for `addToToday`, which the applier records as done.
+    public static func decide(_ command: WatchCommand, task: Task?, alreadyApplied: Bool,
+                              today: String, nextRank: Int?) -> Decision {
         if alreadyApplied { return .skip(.duplicate) }
 
         // A task Saved since the watch's snapshot is out of reach: the builder never sends Saved
@@ -39,8 +49,15 @@ public enum WatchCommandPlan {
         case .capture(let text, let quadrant):
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             return trimmed.isEmpty ? .skip(.emptyText) : .apply(.capture(text: trimmed, quadrant: quadrant))
-        case .addToToday, .removeFromToday:
-            return .skip(.notAvailableYet)
+        case .addToToday:
+            guard let task else { return .skip(.missingTask) }
+            if task.completed { return .skip(.alreadyCompleted) }
+            if task.focusDate == today, task.focusRank != nil { return .skip(.alreadyPicked) }
+            guard let nextRank else { return .skip(.noFreeRank) }
+            return .apply(.pickForToday(date: today, rank: nextRank))
+        case .removeFromToday:
+            guard let task else { return .skip(.missingTask) }
+            return task.focusDate == nil && task.focusRank == nil ? .skip(.notAPick) : .apply(.clearPick)
         case .complete:
             guard let task else { return .skip(.missingTask) }
             return task.completed ? .skip(.alreadyCompleted) : .apply(.toggleComplete)
