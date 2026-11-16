@@ -4,10 +4,10 @@ Branch `chore/release-4.0.1` here, and the same name in a gsd-taskmanager worktr
 
 ## Resuming From Here
 
-- **Done:** bumped to 4.0.1 (46). The web authority, `lib/whats-new/whats-new.json`, has an Apple 4.0.1 entry in web commit `0647099f`. The copy here is byte-identical (md5 `a93fdf6b4efd9bb3dc8fbf30df24516c`) and picks up the web 14.9.0 and 14.9.2 notes. The web gates pass in the worktree: 5,051 tests, typecheck, lint, and build. Here, `swift test` passes 1,220 tests, iPhone, iPad, and Mac Catalyst build clean, and the built app reports 4.0.1 (46). `whatsnew.txt` has the fix added to the owner's in-progress 4.0 text and stays uncommitted with their edits.
-- **Next (owner):** review the wording of the entry and the App Store text, then say when to push both branches and open the two PRs.
-- **Blocked:** the pushes and the PRs wait for the owner.
-- **Open:** the Android copy of `whats-new.json` is older and isn't part of this. No build was archived or uploaded, and nothing is tagged.
+- **Done:** bumped to 4.0.1 (46). The web authority, `lib/whats-new/whats-new.json`, has an Apple 4.0.1 entry in web commit `0647099f`. The copy here is byte-identical (md5 `a93fdf6b4efd9bb3dc8fbf30df24516c`) and picks up the web 14.9.0 and 14.9.2 notes. The web gates pass in the worktree: 5,051 tests, typecheck, lint, and build. Here, `swift test` passes 1,220 tests, iPhone, iPad, and Mac Catalyst build clean, and the built app reports 4.0.1 (46). `whatsnew.txt` has the fix added to the owner's in-progress 4.0 text and stays uncommitted with their edits. Both branches are pushed: PR #107 here and gsd-task-manager PR #748. The iOS build is uploaded from this branch with `scripts/release.sh --no-bump`. It printed "UPLOAD SUCCEEDED with no errors", Delivery UUID `4ba31226-bffd-4fa9-84ee-e939933498da`.
+- **Next (owner):** merge #748 and #107, then tag `v4.0.1` on the merged `main`. In App Store Connect, create the 4.0.1 version, attach build 46, paste `whatsnew.txt`, and submit for review.
+- **Blocked:** nothing.
+- **Open:** the Mac build isn't uploaded, because the owner asked for iOS only. The Android copy of `whats-new.json` is older and isn't part of this.
 - **Changed from the plan:** the bump's project regeneration overwrote the owner's uncommitted `GSDWatch.xcscheme` edit. It's restored byte for byte (blob `eb9829b`), and `tasks/lessons.md` has the rule.
 - **Assumption:** the 4.0.1 entry isn't notable, like 3.6.1 and 3.6.3, so no post-update line shows.
 
