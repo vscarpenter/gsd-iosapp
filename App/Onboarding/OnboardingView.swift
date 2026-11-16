@@ -237,9 +237,9 @@ private struct CaptureLegend: View {
                     .foregroundStyle(QuadrantStyle.accent(.urgentImportant))
                 Text("  ").foregroundStyle(Surface.ink)
                 Text("#family").font(.system(.footnote, design: .monospaced).weight(.semibold))
-                    .foregroundStyle(QuadrantStyle.accent(.urgentImportant))
+                    .foregroundStyle(Surface.ink2)   // the chip the app draws for a tag
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(QuadrantStyle.wash(.urgentImportant), in: Capsule())
+                    .background(Surface.sunken, in: Capsule())
                 Spacer(minLength: 0)
             }
             .font(.body)

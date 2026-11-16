@@ -18,11 +18,18 @@ struct QuadrantSection: View {
 
     var body: some View {
         Section {
+            // The heading is the card's first row, so its band is part of the card, as on the
+            // iPad pane (docs/2026-11-16-matrix-header-band.md). It was a section header on paper.
+            header
+                .listRowBackground(QuadrantStyle.wash(quadrant))
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 11, leading: 16, bottom: 11, trailing: 16))
+                .selectionDisabled()
             if items.isEmpty {
                 QuadrantEmptyPrompt(quadrant: quadrant, action: onAdd)
-                    .listRowBackground(Color.clear)
+                    .listRowBackground(Surface.surface)
                     .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
             } else {
                 ForEach(items) { task in
                     TaskListRow(
@@ -37,27 +44,28 @@ struct QuadrantSection: View {
                     .listRowSeparatorTint(Surface.hairline)
                 }
             }
-        } header: {
-            HStack(spacing: 8) {
-                Image(systemName: QuadrantStyle.symbol(quadrant))
-                    .accessibilityHidden(true)
-                    .imageScale(.medium)
-                    .frame(width: 26)   // one shared icon column so all four serif titles share a left edge
-                    .foregroundStyle(QuadrantStyle.accent(quadrant))
-                Text(quadrant.title)
-                    .font(.serif(.title3).weight(.semibold))
-                    .foregroundStyle(QuadrantStyle.accent(quadrant))
-                Spacer()
-                Text("\(activeCount)")
-                    .font(.callout).monospacedDigit()
-                    .contentTransition(.numericText())   // counts roll when tasks move between quadrants
-                    .foregroundStyle(Surface.ink2)       // header sits on paper, where ink3 is below AA
-                    .accessibilityLabel(String(localized: "\(activeCount) active"))
-            }
-            .textCase(nil) // keep the serif title cased, not the default uppercased label
-            .padding(.bottom, 2)
-            .id(quadrant)   // ScrollViewReader anchor for ⌘1–⌘4 quadrant focus
         }
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Image(systemName: QuadrantStyle.symbol(quadrant))
+                .accessibilityHidden(true)
+                .imageScale(.medium)
+                .frame(width: 26)   // one shared icon column so all four serif titles share a left edge
+                .foregroundStyle(QuadrantStyle.accent(quadrant))
+            Text(quadrant.title)
+                .font(.serif(.title3).weight(.semibold))
+                .foregroundStyle(QuadrantStyle.accent(quadrant))
+                .accessibilityAddTraits(.isHeader)   // the list header gave this for free
+            Spacer()
+            Text("\(activeCount)")
+                .font(.callout).monospacedDigit()
+                .contentTransition(.numericText())   // counts roll when tasks move between quadrants
+                .foregroundStyle(Surface.ink2)       // on the band, where ink3 is below AA
+                .accessibilityLabel(String(localized: "\(activeCount) active"))
+        }
+        .id(quadrant)   // ScrollViewReader anchor for ⌘1–⌘4 quadrant focus
     }
 }
 
@@ -78,7 +86,7 @@ struct QuadrantEmptyPrompt: View {
                 }
                 .frame(width: 26, height: 26)
 
-                Text("\(Text(headline).foregroundStyle(Surface.ink3))  \(Text(String(localized: "Add to \(quadrant.title)")).foregroundStyle(Surface.ink2))")
+                Text("\(Text(headline).foregroundStyle(Surface.ink3))  \(Text(String(localized: "Add to \(quadrant.title)")).foregroundStyle(Surface.tint))")
                     .font(.callout)
 
                 Spacer(minLength: 0)

@@ -50,7 +50,7 @@ What GSD must **not** look or feel like:
 
 Target **WCAG AAA where feasible, with AA as the firm floor.**
 
-- **Contrast:** quadrant accent colors meet at least AA against their card backgrounds in both light and dark; push body text toward AAA where it doesn't break the rationed palette. (Verified 2026-06-25 in `App/Theme/QuadrantStyle.swift`: all four accents pass AA as text — ochre tightest at 5.0:1, the `#tag` chip ~4.8:1 — and clear AAA-large as the serif quadrant headings. None reach AAA as small colored text; an accepted trade for the rationed palette.)
+- **Contrast:** quadrant accent colors meet at least AA against their card backgrounds in both light and dark; push body text toward AAA where it doesn't break the rationed palette. (Verified 2026-11-16 in `App/Theme/QuadrantStyle.swift`: all four accents pass AA as text on a card, with ochre tightest at 5.0:1. The serif quadrant headings sit on their tinted bands and pass AA for large text, with ochre tightest at 4.2:1. Rust, tide, and slate also clear AAA-large there, and ochre does not. Tag chips are graphite on the sunken fill at 4.5:1. None reach AAA as small colored text; an accepted trade for the rationed palette.)
 - **VoiceOver:** every interactive element labeled; the matrix, cards, and editor are navigable and announce state (completed, blocked, overdue).
 - **Dynamic Type:** layouts hold up to the accessibility (AX) sizes; headings use Dynamic-Type-aware text styles, never fixed point sizes.
 - **Reduce Motion:** confetti and non-essential animation are suppressed when Reduce Motion is on (mirrors the web's `prefers-reduced-motion` behavior).

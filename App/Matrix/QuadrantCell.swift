@@ -43,9 +43,11 @@ struct QuadrantCell: View {
                     .foregroundStyle(QuadrantStyle.accent(quadrant))
                 Spacer()
                 Text("\(activeCount)").font(.callout).monospacedDigit()
-                    .foregroundStyle(Surface.ink3)
+                    .foregroundStyle(Surface.ink2)   // on the band, where ink3 is below AA
                     .accessibilityLabel(String(localized: "\(activeCount) active"))
             }
+            .padding(.vertical, 11)
+            .background { headerBand }
             if pinnedHeight != nil {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) { rows }
@@ -59,7 +61,7 @@ struct QuadrantCell: View {
             }
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { contentWidth = $0 }
-        .padding(14)
+        .padding([.horizontal, .bottom], Self.inset)   // the header carries the top inset itself
         .frame(maxWidth: .infinity, minHeight: 220, alignment: .topLeading)
         .frame(height: pinnedHeight)
         .background(isTargeted ? QuadrantStyle.wash(quadrant) : Surface.surface,
@@ -75,6 +77,19 @@ struct QuadrantCell: View {
             actions.move(task, to: quadrant)
             return true
         } isTargeted: { isTargeted = $0 }
+    }
+
+    /// The pane's inset. The header band reaches across it to the pane's edges.
+    private static let inset: CGFloat = 14
+
+    /// The quadrant's tint across the top of the pane, rounded to the pane's top corners. This is
+    /// where the quadrant states its color; cards keep only their spine
+    /// (docs/2026-11-16-matrix-header-band.md). The header's own layout stays inside the inset,
+    /// so the width the column rule measures does not change.
+    private var headerBand: some View {
+        UnevenRoundedRectangle(topLeadingRadius: Radius.card, topTrailingRadius: Radius.card, style: .continuous)
+            .fill(QuadrantStyle.wash(quadrant))
+            .padding(.horizontal, -Self.inset)
     }
 
     /// The empty prompt or the cards in `columnCount` columns, with a hairline above every card

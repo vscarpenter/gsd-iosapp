@@ -94,7 +94,7 @@ struct TopThreeSection: View {
         Button { withAnimation { showingSuggestions.toggle() } } label: {
             Text("Pick up to three for today")
                 .font(.callout)
-                .foregroundStyle(Surface.ink2)
+                .foregroundStyle(Surface.tint)   // a button, so it takes the action color
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)
                 .background(

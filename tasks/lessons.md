@@ -336,3 +336,20 @@ simulator: rotate to landscape before launch, tap the sidebar's `ToggleSidebar` 
 `gsd://quadrant/urgent-important` rebuilds the matrix without showing the sidebar again. Mark the
 class `@MainActor`, keep the file out of every commit, and run `xcodegen generate` after removing
 it so the project file goes back to its committed state.
+
+## Re-measure text contrast when a color moves onto a tint (2026-11-16)
+
+A quadrant pigment that passes on white can fail on its own tint. Ochre reads 5.0:1 on a white
+card and 4.17:1 on the Delegate tint. The old tinted tag chips had that problem at footnote size,
+and the 2026-06-25 check had measured only the rust chip. Before putting accent text on a wash,
+compute every quadrant's pair in both themes. `ink3` drops to about 4.0:1 on any wash, so
+body-size text on a tint takes `ink` or `ink2`.
+
+## Render design options and hidden states from one throwaway build (2026-11-16)
+
+A simulator app can read a host path. A throwaway `static let` that reads a variant name from a
+file in the scratchpad let one test build render three color options through the capture walk.
+Write the file with the variant, run `testCaptureEveryScreen`, and repeat. Save the edit as a
+patch and reverse it with `git apply -R` before asking the owner to choose. A quadrant's empty
+prompt shows only inside a populated matrix, and the demo seed fills all four quadrants. To see
+it, force one quadrant's `items` empty in a throwaway build, then launch with `--demo-seed`.

@@ -145,9 +145,9 @@ struct TaskCardView: View {
             ForEach(task.tags, id: \.self) { tag in
                 Text("#\(tag)")
                     .font(.footnote)
-                    .foregroundStyle(QuadrantStyle.accent(task.quadrant))
+                    .foregroundStyle(Surface.ink2)   // tags are metadata: never the task's quadrant color
                     .padding(.horizontal, 8).padding(.vertical, 3)
-                    .background(QuadrantStyle.wash(task.quadrant), in: Capsule())
+                    .background(Surface.sunken, in: Capsule())
             }
         }
     }
@@ -266,7 +266,7 @@ struct TaskCardView: View {
     private func dueColor(for dueDate: Date) -> Color {
         switch RelativeDate.state(for: dueDate, reference: now) {
         case .overdue:  return Surface.alert
-        case .today:    return QuadrantStyle.accent(.notUrgentImportant) // tide
+        case .today:    return Surface.ink   // weight carries it; tide means "you can act here"
         case .upcoming: return Surface.ink3
         }
     }

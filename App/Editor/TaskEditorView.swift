@@ -301,9 +301,9 @@ struct TaskEditorView: View {
         }
     }
 
-    /// An editable tag chip: the app's canonical wash capsule (matching `TaskCardView.tagRow`
-    /// and `CaptureBar`, tinted by the editor's current `quadrant`) plus a distinct, comfortably-
-    /// tappable remove control — replacing the old sub-44pt inline "✕" glyph glued to the label.
+    /// An editable tag chip: the app's one tag capsule (graphite on the sunken fill, as in
+    /// `TaskCardView.tagRow` and `CaptureBar`) plus a distinct, comfortably tappable remove
+    /// control. Tags are metadata, so the chip never takes the quadrant's color.
     private func tagChip(_ tag: String) -> some View {
         HStack(spacing: 4) {
             Text("#\(tag)").font(.footnote)
@@ -318,9 +318,9 @@ struct TaskEditorView: View {
             .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "Remove tag \(tag)"))
         }
-        .foregroundStyle(QuadrantStyle.accent(quadrant))
+        .foregroundStyle(Surface.ink2)
         .padding(.leading, 10).padding(.trailing, 2)
-        .background(QuadrantStyle.wash(quadrant), in: Capsule())
+        .background(Surface.sunken, in: Capsule())
     }
 
     /// Read-only, tappable links detected in the description (design-spec 2026-06-24).
