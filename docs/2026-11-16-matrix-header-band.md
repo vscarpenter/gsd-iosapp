@@ -1,6 +1,6 @@
 # The matrix: a header band for each quadrant
 
-Date: 2026-11-16. Branch: `feat/matrix-header-band`, stacked on `chore/release-4.0.1`.
+Date: 2026-11-16. Branch: `feat/matrix-header-band`, PR #108.
 
 ## Why
 

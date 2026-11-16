@@ -1,6 +1,6 @@
 # Matrix color pass: header bands and neutral tags (2026-11-16)
 
-Branch `feat/matrix-header-band`, stacked on `chore/release-4.0.1` (PR #107). Local only: not pushed, no PR. Standard tier: seven view files and docs. No model, persistence, sync, or wire change. Record: `docs/2026-11-16-matrix-header-band.md`.
+Branch `feat/matrix-header-band`, on `main` after the 4.0.1 release (#107) merged. Open as PR #108. Standard tier: seven view files and docs. No model, persistence, sync, or wire change. Record: `docs/2026-11-16-matrix-header-band.md`.
 
 The owner ran `/impeccable colorize` with no target. The audit found the palette sound and its placement off. From three options rendered in the simulator, the owner chose the header band with neutral tags, plus two small fixes.
 
@@ -18,8 +18,8 @@ The owner ran `/impeccable colorize` with no target. The audit found the palette
 
 ## Resuming From Here
 
-- **Done:** all nine steps, committed as `9253bcf`. `swift test` passes 1,220 tests. The iOS simulator and Mac Catalyst builds succeed. The iPad Air 13-inch and iPhone 17 Pro simulators (iOS 26.5) render the band, the neutral chips, the tide prompts, and the ink "Due today" correctly in light and dark. The capture walk passes all 14 screens on iPhone. On iPad, `EscalationFlowTests`, `SavedFlowTests`, and `EditorSaveShortcutTests` pass. One Saved test failed in the class run and passed twice alone, which matches the known launch flake.
-- **Next (owner):** look at it on a real iPhone, an iPad, and the Mac. Answer the open question. Say whether to push and open a PR. After #107 merges, move this branch with `git rebase --onto main chore/release-4.0.1 feat/matrix-header-band`.
+- **Done:** all nine steps, in PR #108. `swift test` passes 1,220 tests. The iOS simulator and Mac Catalyst builds succeed. The iPad Air 13-inch and iPhone 17 Pro simulators (iOS 26.5) render the band, the neutral chips, the tide prompts, and the ink "Due today" correctly in light and dark. The capture walk passes all 14 screens on iPhone. On iPad, `EscalationFlowTests`, `SavedFlowTests`, and `EditorSaveShortcutTests` pass. One Saved test failed in the class run and passed twice alone, which matches the known launch flake.
+- **Next (owner):** look at it on a real iPhone, an iPad, and the Mac. Answer the open question. Review and merge #108.
 - **Blocked:** nothing.
 - **Open question:** the Delegate heading is ochre on its band at 4.17:1 in light. It passes AA as large text and no longer clears AAA-large. The web uses a darker ochre, `#74591C`, for this pairing. Should the band's title take it? The default applied is the raw ochre, because the owner declined darker ochre headings in August.
 - **Open:** seven UI tests fail on the new iPhone 17 Pro simulator, on the unchanged code too, and the cause isn't diagnosed. One editor test is flaky there. Not rendered: the onboarding sample chip, the iPhone matrix in Edit mode, Mac Catalyst on screen, and anything on iOS 27, whose runtime was unavailable on this Mac. The web still draws "Due today" as a tide chip. The change has no What's New entry or version, and the App Store screenshots show the old matrix.
@@ -33,7 +33,7 @@ Branch `chore/release-4.0.1` here, and the same name in a gsd-taskmanager worktr
 ## Resuming From Here
 
 - **Done:** bumped to 4.0.1 (46). The web authority, `lib/whats-new/whats-new.json`, has an Apple 4.0.1 entry in web commit `0647099f`. The copy here is byte-identical (md5 `a93fdf6b4efd9bb3dc8fbf30df24516c`) and picks up the web 14.9.0 and 14.9.2 notes. The web gates pass in the worktree: 5,051 tests, typecheck, lint, and build. Here, `swift test` passes 1,220 tests, iPhone, iPad, and Mac Catalyst build clean, and the built app reports 4.0.1 (46). `whatsnew.txt` has the fix added to the owner's in-progress 4.0 text and stays uncommitted with their edits. Both branches are pushed: PR #107 here and gsd-task-manager PR #748. The iOS build is uploaded from this branch with `scripts/release.sh --no-bump`. It printed "UPLOAD SUCCEEDED with no errors", Delivery UUID `4ba31226-bffd-4fa9-84ee-e939933498da`.
-- **Next (owner):** merge #748 and #107, then tag `v4.0.1` on the merged `main`. In App Store Connect, create the 4.0.1 version, attach build 46, paste `whatsnew.txt`, and submit for review.
+- **Next (owner):** tag `v4.0.1` on the merged `main` (`d75e788`). Both PRs merged on 2026-11-16: #748 and #107. In App Store Connect, create the 4.0.1 version, attach build 46, paste `whatsnew.txt`, and submit for review.
 - **Blocked:** nothing.
 - **Open:** the Mac build isn't uploaded, because the owner asked for iOS only. The Android copy of `whats-new.json` is older and isn't part of this.
 - **Changed from the plan:** the bump's project regeneration overwrote the owner's uncommitted `GSDWatch.xcscheme` edit. It's restored byte for byte (blob `eb9829b`), and `tasks/lessons.md` has the rule.
