@@ -28,12 +28,16 @@ struct SwipeRevealRow<Menu: View, Content: View>: View {
     @State private var offset: CGFloat = 0
     @State private var rowSize: CGSize = .zero
 
-    private let buttonWidth: CGFloat = 84
+    private let buttonWidth: CGFloat = SwipeRevealMetrics.buttonWidth
     private var leadingReveal: CGFloat { buttonWidth }        // one button
     private var markUrgentTarget: Escalation.Target? { task.escalation(window: escalationWindow).target }
     // Snooze + Delete, plus Mark urgent while the task is escalating.
-    private var trailingReveal: CGFloat { buttonWidth * (markUrgentTarget == nil ? 2 : 3) }
-    private let fullSwipeFraction: CGFloat = 0.5              // of the row width
+    private var trailingButtons: Int { markUrgentTarget == nil ? 2 : 3 }
+    /// Narrower than `buttonWidth` on a card in columns that three buttons would cover.
+    private var trailingButtonWidth: CGFloat {
+        SwipeRevealMetrics.trailingButtonWidth(rowWidth: rowSize.width, buttons: trailingButtons)
+    }
+    private var trailingReveal: CGFloat { trailingButtonWidth * CGFloat(trailingButtons) }
 
     var body: some View {
         // Buttons pin to whichever edge is open; alignment flips at offset 0 (where no
@@ -64,17 +68,17 @@ struct SwipeRevealRow<Menu: View, Content: View>: View {
                         revealButton("arrow.up", String(localized: "Mark urgent"), target.accent) {
                             actions.markUrgent(task, target: target); close()
                         }
-                        .frame(width: buttonWidth)
+                        .frame(width: trailingButtonWidth)
                     }
                     revealButton("moon.zzz", String(localized: "Snooze"),
                                  QuadrantStyle.accent(.notUrgentNotImportant)) {   // slate
                         actions.snooze(task, by: .oneHour); close()
                     }
-                    .frame(width: buttonWidth)
+                    .frame(width: trailingButtonWidth)
                     revealButton("trash", String(localized: "Delete"), Surface.alert, role: .destructive) {
                         actions.delete(task)
                     }
-                    .frame(width: buttonWidth)
+                    .frame(width: trailingButtonWidth)
                 }
                 .frame(width: trailingReveal)
             }
@@ -115,7 +119,7 @@ struct SwipeRevealRow<Menu: View, Content: View>: View {
             }
             .onEnded { v in
                 let t = v.translation.width
-                let fullSwipe = rowSize.width > 0 ? rowSize.width * fullSwipeFraction : leadingReveal * 2.5
+                let fullSwipe = SwipeRevealMetrics.fullSwipeDistance(rowWidth: rowSize.width)
                 withAnimation(.snappy) {
                     if t > fullSwipe {                        // full-swipe → complete immediately
                         offset = 0
