@@ -1,6 +1,19 @@
+# Release prep: GSD 4.0.1 (46) (2026-11-15)
+
+Branch `chore/release-4.0.1` here, and the same name in a gsd-taskmanager worktree at `../wt/gsd-taskmanager-apple-4.0.1`. The owner asked for the bump and the What's New update after PR #106 merged, and chose 4.0.1 over a new 4.0.0 build.
+
+## Resuming From Here
+
+- **Done:** bumped to 4.0.1 (46). The web authority, `lib/whats-new/whats-new.json`, has an Apple 4.0.1 entry in web commit `0647099f`. The copy here is byte-identical (md5 `a93fdf6b4efd9bb3dc8fbf30df24516c`) and picks up the web 14.9.0 and 14.9.2 notes. The web gates pass in the worktree: 5,051 tests, typecheck, lint, and build. Here, `swift test` passes 1,220 tests, iPhone, iPad, and Mac Catalyst build clean, and the built app reports 4.0.1 (46). `whatsnew.txt` has the fix added to the owner's in-progress 4.0 text and stays uncommitted with their edits.
+- **Next (owner):** review the wording of the entry and the App Store text, then say when to push both branches and open the two PRs.
+- **Blocked:** the pushes and the PRs wait for the owner.
+- **Open:** the Android copy of `whats-new.json` is older and isn't part of this. No build was archived or uploaded, and nothing is tagged.
+- **Changed from the plan:** the bump's project regeneration overwrote the owner's uncommitted `GSDWatch.xcscheme` edit. It's restored byte for byte (blob `eb9829b`), and `tasks/lessons.md` has the rule.
+- **Assumption:** the 4.0.1 entry isn't notable, like 3.6.1 and 3.6.3, so no post-update line shows.
+
 # iPad matrix: narrower columns (bug report, 2026-11-15)
 
-Branch `fix/ipad-matrix-columns` off `main` (`fb7d034`). Standard tier: one model rule, two matrix views, tests, and docs. No persistence, sync, or wire change. Record: `docs/2026-11-15-ipad-narrower-columns.md`.
+Merged 2026-11-16 as `5d35b2b` (PR #106, squash). Built on `fix/ipad-matrix-columns` off `fb7d034`. Standard tier: one model rule, two matrix views, tests, and docs. No persistence, sync, or wire change. Record: `docs/2026-11-15-ipad-narrower-columns.md`.
 
 The owner reported that Columns works on the Mac and does nothing on the iPad. A 13-inch iPad in landscape with the sidebar open gives each quadrant 480 points, and a second column needed 576. The owner approved narrower iPad columns on 2026-11-15.
 
@@ -16,8 +29,8 @@ The owner reported that Columns works on the Mac and does nothing on the iPad. A
 
 ## Resuming From Here
 
-- **Done:** `MatrixLayout` takes a per-platform minimum, 227 points on iPad and 280 on the Mac. `QuadrantCell` hides the `⋯` button on a card under 280 points and keeps the card a button for VoiceOver. `MatrixGridView` dims the Columns toggle when one column is all that fits. `SwipeRevealMetrics` keeps the iOS 26 swipe row usable on a narrow card. `swift test` passes 1,220 tests. iPhone, iPad, and Mac Catalyst build clean. On the iOS 27 iPad Pro 13-inch simulator in landscape with the sidebar open, each quadrant shows two columns and the capture walk passes. `EscalationFlowTests` passes on iOS 26.5 and iOS 27, and `SavedFlowTests` on iOS 26.5. The work is in four commits on the branch, pushed as PR #106.
-- **Next (owner):** check a real iPad and the Mac, answer the two open questions, and review PR #106.
+- **Done:** `MatrixLayout` takes a per-platform minimum, 227 points on iPad and 280 on the Mac. `QuadrantCell` hides the `⋯` button on a card under 280 points and keeps the card a button for VoiceOver. `MatrixGridView` dims the Columns toggle when one column is all that fits. `SwipeRevealMetrics` keeps the iOS 26 swipe row usable on a narrow card. `swift test` passes 1,220 tests. iPhone, iPad, and Mac Catalyst build clean. On the iOS 27 iPad Pro 13-inch simulator in landscape with the sidebar open, each quadrant shows two columns and the capture walk passes. `EscalationFlowTests` passes on iOS 26.5 and iOS 27, and `SavedFlowTests` on iOS 26.5. The owner merged it as PR #106, and `swift test` on the merged `main` passes 1,220 tests.
+- **Next (owner):** check a real iPad and the Mac, and answer the two open questions. The fix isn't in 4.0.0 (45), so it ships in the next release.
 - **Blocked:** nothing.
 - **Open questions:** should a 13-inch iPad in portrait get two columns (a 224-point minimum would do it)? Should the card's metadata row run under the completion disc, so due labels stop truncating on a narrow card?
 - **Open:** about half of fresh installs on the iPad simulators launch with the matrix cards deaf to taps, on `main` too (4 of 8 there). The capture walk stops at the sidebar's Archive row on iOS 26.5, and that step wasn't run against `main`. Web parity is still open. The next App Store iPad screenshots will show two columns.

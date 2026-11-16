@@ -1,5 +1,18 @@
 # Lessons
 
+## Copy uncommitted files under `GSD.xcodeproj` before a version bump (2026-11-15)
+
+`scripts/bump-version.sh` runs `xcodegen generate`, which rewrites every scheme. The owner had an
+uncommitted edit to `GSDWatch.xcscheme`, and the bump replaced it with the generated file. I had
+reasoned that the edit was generator output and would come back unchanged. It wasn't.
+
+The session had printed that file's diff earlier, with the blob hash of the edited version. I
+rebuilt the file with `git apply` and checked that `git hash-object` gave the same hash.
+
+**Rule:** before `bump-version.sh`, `release.sh`, or `xcodegen generate`, run `git status` and
+copy every uncommitted file under `GSD.xcodeproj`, plus `App/Info.plist`, somewhere safe. Restore
+them after the run, and compare `git hash-object` before and after.
+
 ## A width threshold needs a measured width on every supported OS (2026-11-15)
 
 The Columns toggle did nothing on a 13-inch iPad because a quadrant was 480 points and a second
