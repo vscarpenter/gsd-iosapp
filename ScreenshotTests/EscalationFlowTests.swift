@@ -44,6 +44,12 @@ final class EscalationFlowTests: XCTestCase {
         app.descendants(matching: .any).matching(identifier: taskID).firstMatch
     }
 
+    /// iOS 27 reads a menu item's subtitle and a swipe action's icon into the label ("Mark urgent,
+    /// Moves to Do First", "Mark urgent, Mark urgent"), so match how the label starts.
+    private func markUrgentButton(_ app: XCUIApplication) -> XCUIElement {
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Mark urgent'")).firstMatch
+    }
+
     /// After the move the card can sit outside the viewport (iPhone: the list has scrolled, and a
     /// card below or above the fold is not in the accessibility tree). Look at the top first,
     /// then work down in small steps; a default swipe flings straight past it.
@@ -66,8 +72,8 @@ final class EscalationFlowTests: XCTestCase {
         XCTAssertTrue(card.label.contains("Escalating: due in 7 days, not marked urgent."), card.label)
         XCTAssertTrue(card.label.contains("Schedule"), card.label)
 
-        card.buttons["More actions"].firstMatch.tap()
-        let markUrgent = app.buttons["Mark urgent"].firstMatch
+        card.openCardMenu()
+        let markUrgent = markUrgentButton(app)
         XCTAssertTrue(markUrgent.waitForExistence(timeout: 5))
         markUrgent.tap()
 
@@ -93,7 +99,7 @@ final class EscalationFlowTests: XCTestCase {
         let card = card(app)
         XCTAssertTrue(card.waitForExistence(timeout: 35))
         card.swipeLeft()
-        let markUrgent = app.buttons["Mark urgent"].firstMatch
+        let markUrgent = markUrgentButton(app)
         XCTAssertTrue(markUrgent.waitForExistence(timeout: 5), "no Mark urgent swipe action")
         markUrgent.tap()
         XCTAssertTrue(app.buttons["Undo"].firstMatch.waitForExistence(timeout: 8))
@@ -106,9 +112,9 @@ final class EscalationFlowTests: XCTestCase {
         let card = card(app)
         XCTAssertTrue(card.waitForExistence(timeout: 35))
         XCTAssertFalse(card.label.contains("Escalating"), card.label)
-        card.buttons["More actions"].firstMatch.tap()
+        card.openCardMenu()
         XCTAssertTrue(app.buttons["Duplicate"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["Mark urgent"].firstMatch.exists)
+        XCTAssertFalse(markUrgentButton(app).exists)
     }
 
     /// On iPad the first tap on a card sometimes lands while the card is still re-rendering and opens

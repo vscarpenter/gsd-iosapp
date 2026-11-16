@@ -18,7 +18,7 @@ final class SavedFlowTests: XCTestCase {
         app.launch()
         let card = element(app, "task-card-demo-investor")
         XCTAssertTrue(card.waitForExistence(timeout: 35))
-        card.buttons["More actions"].firstMatch.tap()
+        card.openCardMenu()
         app.buttons["Move to Saved"].firstMatch.tap()
         XCTAssertTrue(card.waitForNonExistence(timeout: 8))
         openSaved(app)
@@ -76,7 +76,7 @@ final class SavedFlowTests: XCTestCase {
         app.launch()
         let card = element(app, "task-card-demo-investor")
         XCTAssertTrue(card.waitForExistence(timeout: 35))
-        card.buttons["More actions"].firstMatch.tap()
+        card.openCardMenu()
         app.buttons["Move to Saved"].firstMatch.tap()
         XCTAssertTrue(card.waitForNonExistence(timeout: 8))
         openSaved(app)
@@ -119,12 +119,12 @@ final class SavedFlowTests: XCTestCase {
         app.launch()
         let card = element(app, "task-card-demo-investor")
         XCTAssertTrue(card.waitForExistence(timeout: 35))
-        card.buttons["More actions"].firstMatch.tap()
+        card.openCardMenu()
         app.buttons["Move to Saved"].firstMatch.tap()
         let undo = app.buttons["Undo"].firstMatch
         XCTAssertTrue(undo.waitForExistence(timeout: 3)); undo.tap()
         XCTAssertTrue(card.waitForExistence(timeout: 8))
-        card.buttons["More actions"].firstMatch.tap()
+        card.openCardMenu()
         app.buttons["Move to Saved"].firstMatch.tap()
         openSaved(app)
         let notes = element(app, "saved-notes-demo-investor")
@@ -163,5 +163,14 @@ final class SavedFlowTests: XCTestCase {
             let prefix = ProcessInfo.processInfo.environment["SCREENSHOT_PREFIX"] ?? ""
             try screenshot.pngRepresentation.write(to: URL(fileURLWithPath: directory).appendingPathComponent("\(prefix)saved-\(name).png"))
         }
+    }
+}
+
+extension XCUIElement {
+    /// Opens a task card's menu: the `⋯` button, or a long press where a card under 280 points
+    /// hides the button (docs/2026-11-15-ipad-narrower-columns.md).
+    func openCardMenu() {
+        let more = buttons["More actions"].firstMatch
+        if more.exists { more.tap() } else { press(forDuration: 1.0) }
     }
 }

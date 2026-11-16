@@ -116,6 +116,8 @@ final class RefreshBaseline: XCTestCase {
         XCTAssertTrue(app.textFields["capture-field"].waitForExistence(timeout: 25), "matrix never appeared")
         XCTAssertTrue(card(app, "demo-investor").waitForExistence(timeout: 45), "seeded cards never appeared")   // a cold first launch seeds slowly
         pause(1.5)
+        // A card in columns hides its menu button, which used to be what made the card a button.
+        XCTAssertEqual(card(app, "demo-investor").elementType, .button, "a matrix card should stay a button for VoiceOver")
         save(app, "01-matrix")
 
         #if !targetEnvironment(macCatalyst)
@@ -151,7 +153,15 @@ final class RefreshBaseline: XCTestCase {
     private func swipeReveal(_ app: XCUIApplication) {
         let investor = card(app, "demo-investor")
         guard tap(investor, "investor card", tapping: false) else { return }
-        investor.swipeRight(); pause(1.0)
+        if investor.frame.width < 280 {
+            // A default swipe travels far enough to complete the task on a card in columns,
+            // where iOS 26 completes at 140 points. Drag a measured 100 instead.
+            let start = investor.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.5))
+            start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 100, dy: 0)))
+        } else {
+            investor.swipeRight()
+        }
+        pause(1.0)
         save(app, "03-swipe-reveal")
         // Tapping the open row closes it on both platforms without opening anything.
         investor.tap(); pause(1.0)
