@@ -13,6 +13,9 @@ struct QuadrantCell: View {
     @Binding var selection: Set<String>
     let isSelecting: Bool
     let layout: MatrixLayout
+    /// The cell's width inside its padding, which sets how many columns of cards fit. The grid
+    /// owns it: the four cells are equal columns, and the Columns toggle reads the same number.
+    @Binding var contentWidth: CGFloat
     /// The grid's row height: the cell takes exactly this height and scrolls its own list.
     /// Nil only before the grid's first layout, when the cell is content-sized.
     var pinnedHeight: CGFloat? = nil
@@ -22,11 +25,8 @@ struct QuadrantCell: View {
     @State private var isTargeted = false
     /// iOS 26 fallback only: which `SwipeRevealRow` is open, so opening one closes the others.
     @State private var openTaskID: String?
-    /// The cell's width inside its padding, which sets how many columns of cards fit.
-    @State private var contentWidth: CGFloat = 0
-    private var columnCount: Int {
-        layout.columnCount(forWidth: contentWidth, accessibilityTextSize: typeSize.isAccessibilitySize)
-    }
+    private var columnCount: Int { layout.columnCount(forWidth: contentWidth, typeSize: typeSize) }
+    private var showsCardMenu: Bool { MatrixLayout.cardShowsMenu(forWidth: contentWidth, columns: columnCount) }
     private var items: [Task] { store.tasks(in: quadrant, showCompleted: showCompleted) }
     private var activeCount: Int { store.tasks(in: quadrant, showCompleted: false).count }
     /// Computed once per render from the full task snapshot; dependencies cross quadrants.
@@ -150,7 +150,7 @@ struct QuadrantCell: View {
                 blockedByCount: graph.uncompletedBlockers(of: task.id).count,
                 blockingCount: graph.blockedTasks(of: task.id).count,
                 onToggle: { actions.toggle(task) },
-                menu: { AnyView(TaskRowMenu(task: task, actions: actions, onEdit: onEdit)) }
+                menu: cardMenu(task)
             )
         }
         .background(Surface.surface)   // opaque, so the sliding card covers the revealed actions
@@ -180,6 +180,7 @@ struct QuadrantCell: View {
             .tint(Surface.alert) // rust
         }
         .accessibilityActions { cardActions(task) }
+        .accessibilityAddTraits(.isButton)   // tap opens the editor; the trait used to come from the `⋯` child
     }
 
     /// The iOS 26 floor: the hand-rolled reveal, with the same verbs and VoiceOver actions.
@@ -198,12 +199,20 @@ struct QuadrantCell: View {
                         blockedByCount: graph.uncompletedBlockers(of: task.id).count,
                         blockingCount: graph.blockedTasks(of: task.id).count,
                         onToggle: { actions.toggle(task) },
-                        menu: { AnyView(TaskRowMenu(task: task, actions: actions, onEdit: onEdit)) }
+                        menu: cardMenu(task)
                     )
                 }
             }
         )
         .accessibilityActions { cardActions(task) }
+        .accessibilityAddTraits(.isButton)   // tap opens the editor; the trait used to come from the `⋯` child
+    }
+
+    /// The card's `⋯` menu, or nil when the card is too narrow to fit the button beside its
+    /// title. The same menu stays on long-press and right-click, and VoiceOver keeps its actions.
+    private func cardMenu(_ task: Task) -> (() -> AnyView)? {
+        guard showsCardMenu else { return nil }
+        return { AnyView(TaskRowMenu(task: task, actions: actions, onEdit: onEdit)) }
     }
 
     /// VoiceOver custom actions shared by both row variants.
@@ -226,5 +235,19 @@ struct QuadrantCell: View {
     private func toggleSelection(_ id: String) {
         if selection.contains(id) { selection.remove(id) }
         else { selection.insert(id) }
+    }
+}
+
+extension MatrixLayout {
+    /// Columns for a quadrant on this platform at this text size. The iPad fits narrower cards
+    /// than the Mac (docs/2026-11-15-ipad-narrower-columns.md).
+    func columnCount(forWidth width: CGFloat, typeSize: DynamicTypeSize) -> Int {
+        #if targetEnvironment(macCatalyst)
+        let minimum = Self.minimumCardWidth(onMac: true)
+        #else
+        let minimum = Self.minimumCardWidth(onMac: false)
+        #endif
+        return columnCount(forWidth: width, minimumCardWidth: minimum,
+                           accessibilityTextSize: typeSize.isAccessibilitySize)
     }
 }

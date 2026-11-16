@@ -29,11 +29,20 @@ private struct MatrixGridContent: View {
     @State private var actionFailure: TaskActionFailure?
     @State private var showSweep = false
     @State private var selection = Set<String>()
+    /// One quadrant's width inside its padding, measured by the cells. Zero before first layout.
+    @State private var quadrantContentWidth: CGFloat = 0
     @Environment(\.editMode) private var editMode
+    @Environment(\.dynamicTypeSize) private var typeSize
     var onCompleted: () -> Void
 
     private let columns = [GridItem(.flexible(), spacing: gridSpacing), GridItem(.flexible(), spacing: gridSpacing)]
     private var isSelecting: Bool { editMode?.wrappedValue.isEditing == true }
+    /// Whether Columns can draw a second column at this width and text size. An unmeasured
+    /// width counts as room, so the toggle doesn't flash dim on the first frame.
+    private var columnsHaveRoom: Bool {
+        quadrantContentWidth == 0
+            || MatrixLayout.columns.columnCount(forWidth: quadrantContentWidth, typeSize: typeSize) > 1
+    }
 
     /// Equal 16-point panel rhythm, horizontal and vertical, inside a 12-point inset.
     private static let gridSpacing: CGFloat = 16
@@ -84,6 +93,7 @@ private struct MatrixGridContent: View {
                                     selection: $selection,
                                     isSelecting: isSelecting,
                                     layout: matrixLayout,
+                                    contentWidth: $quadrantContentWidth,
                                     pinnedHeight: pinnedHeight,
                                     onEdit: { palette.editor = .edit($0) },
                                     onAdd: { palette.editor = .new(q, prefill: nil) }
@@ -123,8 +133,8 @@ private struct MatrixGridContent: View {
         }
     }
 
-    /// Switches every quadrant between the list and adaptive columns. It stays enabled when only
-    /// one column fits: hiding it on every resize would confuse more than a no-op tap.
+    /// Switches every quadrant between the list and adaptive columns. It dims when one column is
+    /// all that fits. Left enabled there, a tap changed nothing and the toggle read as broken.
     @ToolbarContentBuilder private var columnsToggle: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Toggle(isOn: Binding(get: { matrixLayout == .columns },
@@ -132,6 +142,7 @@ private struct MatrixGridContent: View {
                 Label("Columns", systemImage: "rectangle.split.3x1")
             }
             .toggleStyle(.button)
+            .disabled(!columnsHaveRoom)
             .help("Shows tasks in columns when there's room")
             .accessibilityHint(String(localized: "Shows tasks in columns when there's room"))
         }
