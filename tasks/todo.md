@@ -1,3 +1,31 @@
+# Matrix color pass: header bands and neutral tags (2026-11-16)
+
+Branch `feat/matrix-header-band`, stacked on `chore/release-4.0.1` (PR #107). Local only: not pushed, no PR. Standard tier: seven view files and docs. No model, persistence, sync, or wire change. Record: `docs/2026-11-16-matrix-header-band.md`.
+
+The owner ran `/impeccable colorize` with no target. The audit found the palette sound and its placement off. From three options rendered in the simulator, the owner chose the header band with neutral tags, plus two small fixes.
+
+## Plan
+
+1. Audit the tokens, the web contract, the July critique, and current screens in both themes.
+2. Check contrast for each candidate pairing.
+3. Render the options from one throwaway build and ask the owner.
+4. iPad and Mac pane: the heading on a band in the quadrant's tint.
+5. iPhone: the heading moves into the card as a band row.
+6. Tag chips neutral on cards, in the editor, and in the onboarding sample.
+7. Tide on the two gray prompts, and "Due today" in ink.
+8. `swift test`, the iOS and Mac Catalyst builds, renders on iPad and iPhone in both themes, UI tests.
+9. The record in `docs/`, the contrast notes, and this file.
+
+## Resuming From Here
+
+- **Done:** all nine steps, committed as `9253bcf`. `swift test` passes 1,220 tests. The iOS simulator and Mac Catalyst builds succeed. The iPad Air 13-inch and iPhone 17 Pro simulators (iOS 26.5) render the band, the neutral chips, the tide prompts, and the ink "Due today" correctly in light and dark. The capture walk passes all 14 screens on iPhone. On iPad, `EscalationFlowTests`, `SavedFlowTests`, and `EditorSaveShortcutTests` pass. One Saved test failed in the class run and passed twice alone, which matches the known launch flake.
+- **Next (owner):** look at it on a real iPhone, an iPad, and the Mac. Answer the open question. Say whether to push and open a PR. After #107 merges, move this branch with `git rebase --onto main chore/release-4.0.1 feat/matrix-header-band`.
+- **Blocked:** nothing.
+- **Open question:** the Delegate heading is ochre on its band at 4.17:1 in light. It passes AA as large text and no longer clears AAA-large. The web uses a darker ochre, `#74591C`, for this pairing. Should the band's title take it? The default applied is the raw ochre, because the owner declined darker ochre headings in August.
+- **Open:** seven UI tests fail on the new iPhone 17 Pro simulator, on the unchanged code too, and the cause isn't diagnosed. One editor test is flaky there. Not rendered: the onboarding sample chip, the iPhone matrix in Edit mode, Mac Catalyst on screen, and anything on iOS 27, whose runtime was unavailable on this Mac. The web still draws "Due today" as a tide chip. The change has no What's New entry or version, and the App Store screenshots show the old matrix.
+- **Changed from the plan:** a full-pane wash was the first idea and failed on contrast, so the band replaced it. The iPad capture walk still stops at the sidebar's Archive row, as it did before.
+- **Assumptions:** "neutral tags" covers the editor chip and the onboarding sample, not only cards. The plus glyph in the empty prompt stays gray. The pane gets no pigment rule on its top edge.
+
 # Release prep: GSD 4.0.1 (46) (2026-11-15)
 
 Branch `chore/release-4.0.1` here, and the same name in a gsd-taskmanager worktree at `../wt/gsd-taskmanager-apple-4.0.1`. The owner asked for the bump and the What's New update after PR #106 merged, and chose 4.0.1 over a new 4.0.0 build.

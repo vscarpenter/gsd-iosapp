@@ -85,6 +85,21 @@ Rendered on the iPad Air 13-inch and iPhone 17 Pro simulators on iOS 26.5, in li
 - The capture walk passes all 14 screens on iPhone in both themes. On iPad it stops at the
   sidebar's Archive row on the Dashboard screen. The same run on unchanged code stops there too.
 
+`swift test` passes 1,220 tests. The iOS simulator build and the Mac Catalyst build succeed.
+
+UI tests on iOS 26.5:
+
+- **iPad Air 13-inch.** `EscalationFlowTests` passes 5 of 5 and `SavedFlowTests` 3 of 3.
+  `EditorSaveShortcutTests` passes 7 of 7, with one test that runs on Mac Catalyst only. One Saved
+  test failed in the class run and passed twice alone. That matches the launch flake recorded
+  for this simulator on 2026-11-15.
+- **iPhone 17 Pro.** `SavedFlowTests` passes 3 of 3. `EscalationFlowTests` fails 5 of 5 and two
+  editor tests fail, and the unchanged code fails the same seven. This simulator was created on
+  2026-11-16, so these were its first runs, and the cause is not diagnosed.
+- **One flaky test on iPhone.** `testDoesNothingBehindTheDependencyPicker` failed 2 of 4 runs
+  with the change and passed its one run without it. It runs on an empty store, where none of
+  the changed views draw, and its log shows the tap landing right after a scroll.
+
 Not rendered: the onboarding sample chip, the iPhone matrix in Edit mode, and Mac Catalyst, which
 was built only. The iOS 27.0 simulator runtime was unavailable on this Mac on 2026-11-16, so
 nothing ran on iOS 27.
