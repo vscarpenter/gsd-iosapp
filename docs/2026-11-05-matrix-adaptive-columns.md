@@ -3,6 +3,10 @@
 Date: 2026-11-05. Branch: `feat/matrix-adaptive-columns`. Mockup:
 https://claude.ai/artifact/7f79Qky2qJAeKmXFAmeKPc (private to the owner).
 
+Updated 2026-11-15: the iPad minimum is now 227 points, narrow cards drop their menu button, and
+the toggle dims when one column is all that fits. `docs/2026-11-15-ipad-narrower-columns.md` has
+the reasons and replaces the iPad numbers below.
+
 ## Why
 
 A feedback submission asked to "size tasks in the matrix at 1/3 width and 1/2 height." On iPad and

@@ -1,5 +1,47 @@
 # Lessons
 
+## A width threshold needs a measured width on every supported OS (2026-11-15)
+
+The Columns toggle did nothing on a 13-inch iPad because a quadrant was 480 points and a second
+column needed 576. I picked the new minimum, 228, from one screenshot and arithmetic that assumed
+a 320-point sidebar. The iOS 26.5 simulator's sidebar is 330 points, so its quadrant is 470 and
+228 missed by 2. The first simulator run showed it: the failed test's "App UI hierarchy"
+attachment listed 470-point cards and the toggle as `Selected, Disabled`.
+
+Narrower cards also changed every number tied to the card's width. The iOS 26 swipe row
+completed a task at half the row, which fell from 235 points to 114. Its three trailing buttons,
+252 points, outgrew the card. Six UI test steps tapped the `⋯` button a narrow card hides. The
+card lost its button trait, which had come from that button.
+
+**Rule:** before choosing a layout threshold, read the container's real width from an XCUITest
+hierarchy on every OS the app supports. `xcrun xcresulttool export attachments --path <xcresult>
+--output-path <dir>` gives the hierarchy, with frames, for any failed test. When a view can get
+narrower, grep for what its width feeds. That means gesture distances, fixed-width siblings,
+traits a hidden child supplied, and UI tests that tap that child.
+
+## Compare a UI test failure against main before calling it a regression (2026-11-15)
+
+About half of fresh installs on the iPad Air 13-inch (M4) simulator, iOS 26.5, launch with the
+matrix cards deaf to taps for the whole test. The sidebar still works. One test,
+`EscalationFlowTests/testEditorHasNoHintWhenOff`, run once per `xcodebuild` invocation, failed 4
+of 8 times on `main`'s code and 5 of 13 on the branch. The iOS 27 simulator showed it too. The
+cause isn't diagnosed, and it hasn't been checked on a real iPad.
+
+The first baseline was worthless. Stashing four tracked files left a new untracked file that no
+longer compiled, so the build failed. `test-without-building` then ran the previous build without
+saying so.
+
+**Rule:** rerun a failed UI test alone before reading it, then run the same count against
+`main`. To swap in `main`'s code, stash the new untracked files with the tracked ones
+(`git stash push --include-untracked -- <paths>`), stop if `build-for-testing` fails, and pop
+the stash from a `trap`.
+
+Other facts from the same session. The simulator's test runner couldn't create a folder under
+`~/Projects` and could under `/private/tmp`. iOS 27.0 simulators boot again under Xcode 27.2. A
+long-press context menu costs a UI test 60 seconds, because XCTest waits for an "animations
+complete" notice that never comes while the menu is open. iOS 27 appends a menu item's subtitle
+and a swipe action's icon name to the button's label, so match how a label starts.
+
 ## A backfill has to repair what push reads (2026-11-07)
 
 The October backfill fixed the row, and the push still cleared `saved_at`, because push sent the
