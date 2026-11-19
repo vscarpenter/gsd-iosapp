@@ -257,6 +257,7 @@ public actor SyncEngine {
             if remote == nil, !identityConfirmed {
                 try await confirmIdentity(token: token, owner: owner)
                 identityConfirmed = true
+                try fence(owner)   // the identity request suspended; the session may have ended during it
             }
             // The listed record and its version string, exactly as the server holds it. The check above
             // means a listed record always has one, so this is nil only when the task isn't listed.

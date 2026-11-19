@@ -30,6 +30,7 @@ struct SyncEngineSessionFenceTests {
         var items: [String] = []
         var onList: (Int) -> Void = { _ in }
         var onWrite: (String) -> Void = { _ in }
+        var onRefresh: () -> Void = {}
         private(set) var lists = 0
         private(set) var writes: [String] = []
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -37,7 +38,10 @@ struct SyncEngineSessionFenceTests {
             func response(_ body: String) -> (Data, HTTPURLResponse) {
                 (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
             }
-            if request.url!.path.hasSuffix("/auth-refresh") { return response(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#) }
+            if request.url!.path.hasSuffix("/auth-refresh") {
+                onRefresh()
+                return response(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#)
+            }
             if method == "GET" {
                 lists += 1
                 onList(lists)
@@ -190,6 +194,32 @@ struct SyncEngineSessionFenceTests {
         let result = await engine(db, exec, session).pushNow()
         #expect(result.notSignedIn && result.error == nil)
         #expect(exec.writes.isEmpty)
+    }
+
+    // The push's identity request is a network suspension, so the session can end during it. The
+    // item's write must not follow: not a dequeue, not a POST.
+    @Test(arguments: [nil, Self.userTwo] as [String?])
+    func aSessionEndedDuringTheIdentityCheckKeepsAnUnlistedDelete(endedWith: String?) async throws {
+        let db = try AppDatabase.inMemory(); let session = Session(); let exec = Executor(); let queue = GRDBSyncQueueRepository(db)
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1))
+        exec.onRefresh = { session.token = endedWith }
+        let result = await engine(db, exec, session).pushNow()
+        let rows = try await queue.all()
+        #expect(rows.map(\.id) == ["q1"] && rows[0].retryCount == 0 && rows[0].status == .pending)
+        #expect(exec.writes.isEmpty)
+        #expect(result.notSignedIn)
+    }
+
+    @Test func aSessionEndedDuringTheIdentityCheckSendsNoCreate() async throws {
+        let db = try AppDatabase.inMemory(); let session = Session(); let exec = Executor(); let queue = GRDBSyncQueueRepository(db)
+        var payload = task(); payload.notifyBefore = 15   // set, so resolveNotifyBefore's own fence can't be what stops the write
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: payload))
+        exec.onRefresh = { session.token = nil }
+        let result = await engine(db, exec, session).pushNow()
+        let rows = try await queue.all()
+        #expect(exec.writes.isEmpty)
+        #expect(rows.map(\.id) == ["q1"] && rows[0].retryCount == 0)
+        #expect(result.notSignedIn)
     }
 
     // MARK: Reconcile
