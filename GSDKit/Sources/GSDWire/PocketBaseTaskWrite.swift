@@ -70,7 +70,7 @@ extension PocketBaseClient {
     package func deleteTask(recordId: String, token: String) async throws {
         try await sendNoContent(authedRequest(path: "/api/collections/tasks/records/\(recordId)", method: "DELETE", token: token))
     }
-    /// Version-checked update through the server's task route (ADR 0021). 204 with no body on success;
+    /// Version-checked update through the server's task route (web ADR 0021). 204 with no body on success;
     /// 412 when `expectedVersion` no longer matches, 404 when the record is gone or not ours.
     /// `id` is dropped because the route's allow-list rejects it.
     package func updateTaskGuarded(recordId: String, expectedVersion: String,
@@ -83,7 +83,7 @@ extension PocketBaseClient {
         let body = try JSONSerialization.data(withJSONObject: ["expected_version": expectedVersion, "data": data])
         try await sendNoContent(authedRequest(path: Self.guardedTaskPath(recordId), method: "PATCH", token: token, body: body))
     }
-    /// Version-checked delete through the server's task route (ADR 0021). 204 with no body.
+    /// Version-checked delete through the server's task route (web ADR 0021). 204 with no body.
     package func deleteTaskGuarded(recordId: String, expectedVersion: String, token: String) async throws {
         let body = try JSONEncoder().encode(["expected_version": expectedVersion])
         try await sendNoContent(authedRequest(path: Self.guardedTaskPath(recordId), method: "DELETE", token: token, body: body))

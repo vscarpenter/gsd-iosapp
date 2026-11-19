@@ -224,8 +224,12 @@ public actor SyncEngine {
     }
 
     /// Drain the pending queue → remote (§7.5). Payload-LWW-guard (skip+drop a stale upsert iff remote
-    /// `client_updated_at` > the payload's `updatedAt`); stale-delete guard (`isStaleDelete`);
-    /// create(no recordId)/update(by recordId)/delete;
+    /// `client_updated_at` > the payload's `updatedAt`); stale-delete guard (`isStaleDelete`).
+    /// A task missing from the listing proves nothing until the account is confirmed, so the push asks
+    /// auth-refresh once, before it first acts on an absence. A create POSTs to the collection; an
+    /// update or delete of a listed record goes through the guarded route with the listed version as
+    /// `expected_version`. A 412 means another device wrote after the listing: the row stays queued,
+    /// uncharged, and the push moves to the next row. A 401 or 403 ends the push, also uncharged.
     /// ~throttle; 429 aborts the loop; across-sync retry (5/10/30/60/300 s) → `failed` after 5 (kept).
     func push(token: String, owner: String) async throws -> (pushed: Int, failed: Int) {
         var index = try await client.remoteIndex(token: token)
@@ -237,8 +241,8 @@ public actor SyncEngine {
             let remote = index[item.taskId]
             // Parity S11 (Android `MalformedRemoteVersion`): a remote copy whose version is missing or
             // unparseable can't be shown to be older, so a write must not overwrite it. Skip it and
-            // spend a retry, like any failed attempt. The guarded route needs that version too, even
-            // for a delete (ADR 0021).
+            // spend a retry, like any failed attempt. The staleness guards below can't run without a
+            // parseable stamp, and a delete is refused the same way (web does the same).
             if let remote, remote.clientUpdatedAt == nil {
                 try await recordFailedAttempt(item, reason: "Remote task version is missing or malformed", nowMs: nowMs)
                 failed += 1; continue
@@ -298,7 +302,7 @@ public actor SyncEngine {
                 if case .http(429, _) = e { break }                    // 429 → abort
                 if case .pocketBase(429, _) = e { break }
                 // 412: another device wrote after the listing. Not a failure and not charged; the row
-                // stays queued, and the next push lists again so last-write-wins decides (D2).
+                // stays queued, and the next push lists again so last-write-wins decides. Reported quietly, not as an error.
                 if case .http(412, _) = e { continue }
                 if case .pocketBase(412, _) = e { continue }
                 if Self.endsTheRun(e) { throw e }                      // 401/403: the session is the problem, not this row
@@ -332,8 +336,8 @@ public actor SyncEngine {
     /// A delete is stale when the remote changed after it was queued (B-42). An archive's delete also
     /// carries the task as archived, and is stale when the remote is newer than that version (B-47):
     /// archiving a stale copy must not delete the newer task. Web `isStaleDelete`, Android
-    /// `remoteEditedAfterQueued` and `remoteEditedAfterArchive`. A remote with no usable version
-    /// keeps the plain delete, which is today's behavior while owner decision D-9 is open.
+    /// `remoteEditedAfterQueued` and `remoteEditedAfterArchive`. A remote with no usable version never
+    /// reaches this check: the push charges that row first, because staleness can't be judged.
     private func isStaleDelete(_ item: SyncQueueItem, remoteUpdated: Date?) -> Bool {
         guard let remoteUpdated else { return false }
         let queuedAt = Date(timeIntervalSince1970: Double(item.timestamp) / 1000)
@@ -711,9 +715,8 @@ public actor SyncEngine {
 
     /// A step error that must still stop the run before the push: an ended session, a token confirmed
     /// for another account, or one the server rejects (401 or 403, read as `AccountDeleter` reads
-    /// them). The push has no identity check of its own, and a rejected token lists as an empty
-    /// account, so the step's auth-refresh is the first to see it. On a dead session the push would
-    /// spend a retry on every queued write.
+    /// them). A rejected token lists as an empty account, so the step's auth-refresh is the first to
+    /// see it, and the push's own identity check would see it again.
     private static func endsTheRun(_ error: Error) -> Bool {
         switch error {
         case is StaleSyncSession, is SyncIdentityMismatch: true

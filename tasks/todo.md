@@ -1,3 +1,18 @@
+# Native sync ports: confirm before absence, guarded task writes (2026-11-19)
+
+Two phases, stacked. Phase A is `fix/confirm-before-absence` (`3b67bb5`). Phase B is `fix/guarded-task-writes`, on top of it, from `269910f` through the final fix wave. Spec and plan: `plans/2026-11-19-native-sync-ports.md` in the workspace root. The Android and web halves have their own worktrees. Real-server results for Phase A (both clients, failure on main and pass on the Phase A commits): `plans/2026-11-19-native-sync-ports-real-server.md`.
+
+## Resuming From Here
+
+- **Done:** the push confirms the account once per push before it acts on a task missing from the listing, and re-checks the session after that call. Updates and deletes of listed records go through `/api/gsd/tasks/{id}` with `expected_version` set to the listing's raw string. A 412 stays queued and uncharged, and the push moves on. A listed delete with no usable version is charged and not sent. Commits: `3b67bb5` (A), `269910f`, `625d26e`, `23d0ee1` (B), then `090cfbe`, `1cf5fb3`, `044f74e` and the docs commit (final fix wave).
+- **Next (owner):** review both branches, decide the questions below, merge.
+- **Blocked:** nothing.
+- **Follow-ups for the owner:**
+  - An equal-stamp push leaves the device 1 ms behind the server until the next pull, so an archive in that window never reaches the server (D5; decision pending).
+  - Erase Everywhere under a refused token reads the guest's empty listing as "nothing to erase" and reports success while the server keeps every task.
+  - A 401 from the push's identity check keeps the token, so there is no sign-in prompt.
+  - A 403 on a single write ends every push.
+
 # Matrix color pass: header bands and neutral tags (2026-11-16)
 
 Branch `feat/matrix-header-band`, on `main` after the 4.0.1 release (#107) merged. Open as PR #108. Standard tier: seven view files and docs. No model, persistence, sync, or wire change. Record: `docs/2026-11-16-matrix-header-band.md`.
