@@ -50,7 +50,7 @@ actor GuardedServer: RequestExecuting {
 
     /// After the next PATCH lands, another device rewrites the record.
     func changeAfterNextPatch(recordId: String, version: String, deviceId: String) { afterPatch = (recordId, version, deviceId) }
-    /// The next PATCH is applied, but its response never reaches the client.
+    /// The next PATCH is applied, but the client sees a 502 instead of the 204.
     func loseResponseOfNextPatch() { loseNextPatchResponse = true }
 
     func version(of recordId: String) -> String? { records[recordId]?["client_updated_at"] as? String }
@@ -100,7 +100,7 @@ actor GuardedServer: RequestExecuting {
             records[change.recordId]?["device_id"] = change.deviceId
             afterPatch = nil
         }
-        if loseNextPatchResponse { loseNextPatchResponse = false; throw URLError(.networkConnectionLost) }
+        if loseNextPatchResponse { loseNextPatchResponse = false; return answer(request, 502) }   // a gateway fault after the write applied
         return answer(request, 204)
     }
 
@@ -289,6 +289,7 @@ struct SyncEngineGuardedWriteTests {
     func updateAfterCreateExpectsTheCreatedVersion() async throws {
         let server = GuardedServer()
         let rig = try rig(server)
+        try await rig.tasks.upsert(edit("second", at: "2026-11-19T17:40:00.000Z"))
         try await enqueue(rig, "q1", .create, at: "2026-11-19T17:20:00.000Z", payload: edit("first", at: "2026-11-19T17:20:00.000Z"))
         try await enqueue(rig, "q2", .update, at: "2026-11-19T17:40:00.000Z", payload: edit("second", at: "2026-11-19T17:40:00.000Z"))
         let result = try await rig.engine.push(token: "TOK", owner: "u1")
@@ -451,6 +452,7 @@ struct SyncEngineGuardedWriteTests {
     func createThenArchiveDelete() async throws {
         let server = GuardedServer()
         let rig = try rig(server)
+        try await rig.tasks.upsert(edit("first", at: "2026-11-19T17:20:00.000Z"))
         try await enqueue(rig, "q1", .create, at: "2026-11-19T17:20:00.000Z", payload: edit("first", at: "2026-11-19T17:20:00.000Z"))
         try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:40:00.000Z", payload: edit("first", at: "2026-11-19T17:00:00.000Z"))
         let result = try await rig.engine.push(token: "TOK", owner: "u1")
@@ -490,5 +492,75 @@ struct SyncEngineGuardedWriteTests {
         _ = try await rig.engine.push(token: "TOK", owner: "u1")
         #expect(await server.deletes.map(\.expectedVersion) == [bumpedStamp])
         #expect(await server.holds("rec1") == false)
+    }
+
+    // MARK: F4, never re-create a task this device no longer holds
+
+    private final class Clock: @unchecked Sendable { var date: Date; init(_ date: Date) { self.date = date } }
+
+    /// An engine and a real `TaskStore` over one database, with a clock the test can move.
+    @MainActor private func storeRig(_ server: GuardedServer, clock: Clock) throws -> (store: TaskStore, tasks: GRDBTaskRepository, queue: GRDBSyncQueueRepository, engine: SyncEngine) {
+        let db = try AppDatabase.inMemory()
+        let queue = GRDBSyncQueueRepository(db)
+        let tasks = GRDBTaskRepository(db)
+        let store = TaskStore(repository: tasks, smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db), trashRepository: GRDBTrashRepository(db),
+                              defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!,
+                              clock: { WireDate.parse("2026-11-19T17:45:00.000Z")! }, syncQueue: queue)
+        let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://guarded.test", executor: server),
+                                tasks: tasks, queue: queue,
+                                cursor: SyncCursor(defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!),
+                                deviceId: "ios", tokenProvider: { "TOK" }, now: { clock.date }, throttleMs: 0)
+        return (store, tasks, queue, engine)
+    }
+
+    /// A charged update row (lost 204), then `leave` takes the task out of the live table, the delete
+    /// lands in the next push, and the update row comes due once its backoff passes.
+    @MainActor private func chargedUpdateThenLeave(_ leave: (TaskStore, Task) async throws -> Void) async throws -> (server: GuardedServer, queue: GRDBSyncQueueRepository) {
+        let server = await seededServer()
+        await server.loseResponseOfNextPatch()
+        let clock = Clock(Self.now)
+        let rig = try storeRig(server, clock: clock)
+        let row = edit("edited", at: Self.listed)
+        try await rig.tasks.upsert(row)
+        try await rig.queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update,
+            timestamp: Int(row.updatedAt.timeIntervalSince1970 * 1000), payload: row))
+        _ = try? await rig.engine.push(token: "TOK", owner: "u1")
+        let charged = try #require(try await rig.queue.pending().first)
+        #expect(charged.id == "q1" && charged.retryCount == 1)
+        try await leave(rig.store, row)
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")   // the update row is in backoff; the delete lands
+        #expect(await server.holds("rec1") == false)
+        clock.date = Self.now.addingTimeInterval(600)
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")   // the update row is due, and the task is unlisted
+        return (server, rig.queue)
+    }
+
+    @Test("AC13: a charged update never re-creates a task archived afterwards")
+    @MainActor func chargedUpdateAfterArchive() async throws {
+        let (server, queue) = try await chargedUpdateThenLeave { store, row in try await store.archive(row) }
+        #expect(await server.collectionWrites.isEmpty)
+        #expect(await server.holds("rec_new") == false)
+        #expect(try await queue.pending().isEmpty)
+    }
+
+    @Test("AC13: a charged update never re-creates a task moved to Trash afterwards")
+    @MainActor func chargedUpdateAfterTrash() async throws {
+        let (server, queue) = try await chargedUpdateThenLeave { store, row in try await store.delete(row) }
+        #expect(await server.collectionWrites.isEmpty)
+        #expect(await server.holds("rec_new") == false)
+        #expect(try await queue.pending().isEmpty)
+    }
+
+    @Test("an update for a live task the server doesn't list still creates it")
+    func liveUnlistedUpdateCreates() async throws {
+        let server = GuardedServer()
+        let rig = try rig(server)
+        try await rig.tasks.upsert(edit("edited", at: "2026-11-19T17:30:00.000Z"))
+        try await enqueue(rig, "q1", .update, at: "2026-11-19T17:30:00.000Z", payload: edit("edited", at: "2026-11-19T17:30:00.000Z"))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 0)
+        #expect(await server.collectionWrites == ["POST /api/collections/tasks/records"])
+        #expect(await server.holds("rec_new"))
     }
 }

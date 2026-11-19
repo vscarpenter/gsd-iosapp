@@ -303,6 +303,10 @@ public actor SyncEngine {
                             _ = try await tasks.restampIfUnchanged(id: payload.id, from: payload.updatedAt, to: sent)
                         }
                     } else {
+                        // F4: a task that isn't live on this device (archived, in Trash, or deleted for
+                        // good) must not be POSTed back from a stale snapshot. The identity check above
+                        // already ran, so this absence is real. Dropped, neither pushed nor failed.
+                        if current == nil { try await queue.remove(id: item.id); continue }
                         // Record the new recordId in the live index so a later same-drain DELETE for the
                         // same task_id finds it (else the create leaks an orphan remote record).
                         let newRecordId = try await client.createTask(wire, token: token)

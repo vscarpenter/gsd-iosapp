@@ -54,7 +54,8 @@ struct NotifyBeforeWireTests {
             return (Data(reply.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
         func sentOffset() throws -> Int? {
-            let json = try JSONSerialization.jsonObject(with: #require(bodies.last)) as? [String: Any]
+            guard let last = bodies.last else { return nil }   // nothing was sent
+            let json = try JSONSerialization.jsonObject(with: last) as? [String: Any]
             return json?["notify_before"] as? Int
         }
     }
@@ -90,10 +91,11 @@ struct NotifyBeforeWireTests {
         #expect(r.row?.notifyBefore == 45)
     }
 
-    @Test func aQueuedNullPayloadForAGoneRowPushesTheDefault() async throws {
+    @Test func aQueuedNullPayloadForAGoneRowIsDroppedNotCreated() async throws {   // F4: the task isn't live here
         let r = try await drain(payloadOffset: nil, rowOffset: nil, rowExists: false)
-        #expect(r.sent == 20)
+        #expect(r.sent == nil)
         #expect(r.row == nil)
+        #expect(r.queued == 0)
     }
 
     @Test func aQueuedNumberIsPushedAsIs() async throws {

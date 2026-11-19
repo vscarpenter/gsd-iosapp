@@ -83,6 +83,7 @@ struct SyncEnginePushTests {
         let exec = CRUDExecutor()   // empty remote index
         let t = Task(id: "a", title: "new local", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await tasks.upsert(t)   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
         let (pushed, _) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u1")
         #expect(pushed == 1)
@@ -94,9 +95,12 @@ struct SyncEnginePushTests {
     private static let jwt = "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6InUxIiwiZXhwIjo5OTk5OTk5OTk5fQ.x"
     private func makeSyncEngine(tasks: GRDBTaskRepository, queue: GRDBSyncQueueRepository,
                                 exec: RequestExecuting) -> SyncEngine {
-        SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
+        // A synced device: the first-sync seed would queue a second row for the live task these tests hold.
+        let cursor = SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
+        cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000)); cursor.markBackfilled()
+        return SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),
                    tasks: tasks, queue: queue,
-                   cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
+                   cursor: cursor,
                    deviceId: "dev-A", tokenProvider: { Self.jwt },
                    now: { Date(timeIntervalSince1970: 2_000_000_000) }, throttleMs: 0)
     }
@@ -105,6 +109,7 @@ struct SyncEnginePushTests {
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         let t = Task(id: "a", title: "x", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await tasks.upsert(t)   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
                                               retryCount: 5, payload: t, status: .failed,
                                               lastAttemptAt: 1, failedAt: 1))
@@ -132,6 +137,7 @@ struct SyncEnginePushTests {
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         let t = Task(id: "a", title: "shared from Safari", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await tasks.upsert(t)   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
         let exec = CRUDExecutor()
         let engine = makeSyncEngine(tasks: tasks, queue: queue, exec: exec)
@@ -159,6 +165,7 @@ struct SyncEnginePushTests {
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         let t = Task(id: "a", title: "x", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await tasks.upsert(t)   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
                                               retryCount: 5, payload: t, status: .failed,
                                               lastAttemptAt: 1, failedAt: 1))
@@ -172,6 +179,7 @@ struct SyncEnginePushTests {
         let db = try AppDatabase.inMemory(); let tasks = GRDBTaskRepository(db); let queue = GRDBSyncQueueRepository(db)
         let t = Task(id: "a", title: "x", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await tasks.upsert(t)   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1,
                                               retryCount: 5, payload: t, status: .failed,
                                               lastAttemptAt: 1, failedAt: 1))
@@ -190,6 +198,7 @@ struct SyncEnginePushTests {
         exec.missingRecords = true
         let t = Task(id: "a", title: "restored", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 1_900_000_000), updatedAt: Date(timeIntervalSince1970: 1_900_000_000))
+        try await tasks.upsert(t)   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1_900_000_000_000, payload: nil))
         try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 1_900_000_000_001, payload: t))
         let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
@@ -221,6 +230,7 @@ struct SyncEnginePushTests {
         let exec = CRUDExecutor(); exec.writeStatus = 500   // server error
         let t = Task(id: "a", title: "x", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await tasks.upsert(t)   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
         let (pushed, failed) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u1")
         #expect(pushed == 0 && failed == 1)

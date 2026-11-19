@@ -36,6 +36,7 @@ struct SyncEnginePushNowTests {
         // a pending create to push
         let toPush = Task(id: "a", title: "push me", urgent: false, important: false,
                           createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
+        try await tasks.upsert(toPush)
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: toPush))
         let exec = IndexExecutor()
         // A device on this build's contract; one that still owes a backfill syncs fully instead.
