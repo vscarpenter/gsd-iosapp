@@ -85,6 +85,7 @@ struct TaskStoreWriteOrderTests {
             if failEnqueue { throw Boom() }
             log.events.append("enqueue"); items.append(item)
         }
+        func enqueueClearingWrites(_ item: SyncQueueItem) async throws { try await enqueue(item) }
         func pending() async throws -> [SyncQueueItem] { items }
         func update(_ item: SyncQueueItem) async throws {}
         func remove(id: String) async throws { log.events.append("remove"); items.removeAll { $0.id == id } }

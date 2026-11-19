@@ -10,6 +10,7 @@ struct ReminderActionHandlerTests {
     final class RecordingQueue: SyncQueueRepository, @unchecked Sendable {
         var ops: [(taskId: String, op: SyncQueueItem.Operation)] = []
         func enqueue(_ item: SyncQueueItem) async throws { ops.append((item.taskId, item.operation)) }
+        func enqueueClearingWrites(_ item: SyncQueueItem) async throws { try await enqueue(item) }
         func pending() async throws -> [SyncQueueItem] { [] }
         func update(_ item: SyncQueueItem) async throws {}
         func remove(id: String) async throws {}
@@ -121,6 +122,7 @@ struct ReminderActionHandlerTests {
             log.events.append("write")
             if log.foregroundOnWrite { log.backgrounded = false }
         }
+        func enqueueClearingWrites(_ item: SyncQueueItem) async throws { try await enqueue(item) }
         func pending() async throws -> [SyncQueueItem] { [] }
         func update(_ item: SyncQueueItem) async throws {}
         func remove(id: String) async throws {}

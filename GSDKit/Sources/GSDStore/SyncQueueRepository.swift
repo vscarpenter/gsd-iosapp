@@ -13,20 +13,10 @@ public protocol SyncQueueRepository: Sendable {
     func update(_ item: SyncQueueItem) async throws
     func remove(id: String) async throws
     /// Queues a task's delete and removes that task's create and update rows in one write, so a failure
-    /// leaves neither half behind.
+    /// leaves neither half behind. Every conformer implements it; none may fall back to two writes.
     func enqueueClearingWrites(_ item: SyncQueueItem) async throws
     func allTaskIds() async throws -> Set<String>      // pending + failed
     func all() async throws -> [SyncQueueItem]          // every item (pending + failed), timestamp asc — health checks (5d)
-}
-
-extension SyncQueueRepository {
-    /// Two writes for a repository with no transaction to offer.
-    public func enqueueClearingWrites(_ item: SyncQueueItem) async throws {
-        try await enqueue(item)
-        for other in try await all() where other.taskId == item.taskId && other.operation != .delete {
-            try await remove(id: other.id)
-        }
-    }
 }
 
 public final class GRDBSyncQueueRepository: SyncQueueRepository {
@@ -91,6 +81,7 @@ public struct NoopSyncQueueRepository: SyncQueueRepository {
     public func enqueue(_ item: SyncQueueItem) async throws {}
     public func pending() async throws -> [SyncQueueItem] { [] }
     public func update(_ item: SyncQueueItem) async throws {}
+    public func enqueueClearingWrites(_ item: SyncQueueItem) async throws {}
     public func remove(id: String) async throws {}
     public func allTaskIds() async throws -> Set<String> { [] }
     public func all() async throws -> [SyncQueueItem] { [] }
