@@ -75,7 +75,7 @@ struct SyncQueueRepositoryTests {
         try await repo.enqueue(SyncQueueItem(id: "q1", taskId: "t1", operation: .create, timestamp: 1))
         var failed = SyncQueueItem(id: "q2", taskId: "t2", operation: .update, timestamp: 2)
         failed.status = .failed
-        try await repo.update(failed)   // upsert as failed
+        try await repo.enqueue(failed)
         #expect(try await repo.allTaskIds() == ["t1", "t2"])   // both states protect from reconcile
     }
 
@@ -91,7 +91,7 @@ struct SyncQueueRepositoryTests {
         try await repo.enqueue(SyncQueueItem(id: "p", taskId: "t1", operation: .update, timestamp: 1))
         var failed = SyncQueueItem(id: "f", taskId: "t2", operation: .update, timestamp: 2)
         failed.status = .failed
-        try await repo.update(failed)
+        try await repo.enqueue(failed)
         let all = try await repo.all()
         #expect(Set(all.map(\.id)) == ["p", "f"])
     }

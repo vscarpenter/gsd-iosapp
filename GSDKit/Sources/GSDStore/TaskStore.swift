@@ -461,8 +461,8 @@ public final class TaskStore {
             try? await syncQueue.remove(id: queueItemId)
             throw error
         }
+        await reminders.cancel(taskID: task.id)   // before the removal, so a failed removal leaves nothing armed
         try await dropQueuedWrites(for: task.id)
-        await reminders.cancel(taskID: task.id)
     }
 
     // MARK: Trash (soft delete, 30-day retention — see TrashRetention)
@@ -617,12 +617,15 @@ public final class TaskStore {
     /// a queue failure must not fail the user's mutation (the next sync's seed/reconcile
     /// self-heals). Returns the queue-item id so a failed companion write can remove the orphan.
     @discardableResult
-    private func enqueue(_ taskId: String, _ op: SyncQueueItem.Operation, payload: Task?, at stamp: Date? = nil) async -> String? {
+    private func enqueue(_ taskId: String, _ op: SyncQueueItem.Operation, payload: Task?, at stamp: Date? = nil,
+                         clearingWrites: Bool = false) async -> String? {
         let item = SyncQueueItem(id: IDGenerator.generate(size: IDGenerator.Size.task),
                                  taskId: taskId, operation: op,
                                  timestamp: Int((stamp ?? clock()).timeIntervalSince1970 * 1000),
                                  payload: payload)
-        do { try await syncQueue.enqueue(item) } catch { return nil }
+        do {
+            if clearingWrites { try await syncQueue.enqueueClearingWrites(item) } else { try await syncQueue.enqueue(item) }
+        } catch { return nil }
         onMutation?()
         return item.id
     }
@@ -754,11 +757,11 @@ public final class TaskStore {
         let archivedAt = clock()
         try await archiveRepository.archive(task, at: archivedAt)
         // The delete carries the task as archived, so push can skip it if the server copy moved on (B-47).
-        guard await enqueue(task.id, .delete, payload: task, at: archivedAt) != nil else {
+        // The delete and the removal of the task's queued writes are one write: a failure restores the task.
+        guard await enqueue(task.id, .delete, payload: task, at: archivedAt, clearingWrites: true) != nil else {
             try? await archiveRepository.restore(id: task.id)
             throw TaskStoreError.archiveNotRecorded
         }
-        try await dropQueuedWrites(for: task.id)
         await reminders.cancel(taskID: task.id)   // an archived task must not fire a reminder
     }
 
