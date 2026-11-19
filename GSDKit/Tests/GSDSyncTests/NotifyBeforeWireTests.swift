@@ -40,6 +40,10 @@ struct NotifyBeforeWireTests {
     final class BodyExecutor: RequestExecuting, @unchecked Sendable {
         private(set) var bodies: [Data] = []
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            if request.url!.path.hasSuffix("/auth-refresh") {   // the push confirms the account before acting on an unlisted task
+                return (Data(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#.utf8),
+                        HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
             let method = request.httpMethod ?? "GET"
             if method == "GET" {
                 let empty = #"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#
@@ -68,7 +72,7 @@ struct NotifyBeforeWireTests {
                                 cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
                                 deviceId: "dev-A", tokenProvider: { "TOK" }, throttleMs: 0,
                                 defaultReminder: { defaultReminder })
-        _ = try await engine.push(token: "TOK", owner: "u")
+        _ = try await engine.push(token: "TOK", owner: "u1")
         return (try exec.sentOffset(), try await tasks.fetch(id: "a"), try await queue.pending().count)
     }
 
@@ -141,7 +145,7 @@ struct NotifyBeforeDrainRaceTests {
                                 cursor: SyncCursor(defaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!),
                                 deviceId: "dev-A", tokenProvider: { "TOK" }, throttleMs: 0,
                                 defaultReminder: { 20 })
-        _ = try await engine.push(token: "TOK", owner: "u")
+        _ = try await engine.push(token: "TOK", owner: "u1")
         let row = try #require(try await base.fetch(id: "a"))
         #expect(row.completed)                    // the toggle was not reverted
         #expect(row.updatedAt == stamp.addingTimeInterval(60))

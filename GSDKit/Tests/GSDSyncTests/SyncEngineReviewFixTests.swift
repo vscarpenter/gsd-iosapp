@@ -27,6 +27,10 @@ struct SyncEngineReviewFixTests {
     final class CreateDeleteExecutor: RequestExecuting, @unchecked Sendable {
         private(set) var writes: [(method: String, path: String)] = []
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            if request.url!.path.hasSuffix("/auth-refresh") {   // the push confirms the account before acting on an unlisted task
+                return (Data(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#.utf8),
+                        HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
             let m = request.httpMethod ?? "GET"
             if m == "GET" {   // empty remote index
                 return (Data(#"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#.utf8),

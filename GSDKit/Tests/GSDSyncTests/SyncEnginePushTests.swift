@@ -8,7 +8,11 @@ import GSDStore
 struct SyncEnginePushTests {
     final class StubExecutor: RequestExecuting, @unchecked Sendable {
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-            (Data(#"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#.utf8),
+            if request.url!.path.hasSuffix("/auth-refresh") {   // the push confirms the account before acting on an unlisted task
+                return (Data(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#.utf8),
+                        HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
+            return (Data(#"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#.utf8),
              HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
         }
     }
@@ -41,6 +45,10 @@ struct SyncEnginePushTests {
         var missingRecords = false
         private(set) var writes: [(method: String, path: String)] = []
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            if request.url!.path.hasSuffix("/auth-refresh") {   // the push confirms the account before acting on an unlisted task
+                return (Data(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#.utf8),
+                        HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
             let m = request.httpMethod ?? "GET"
             if m == "GET" {   // listTasks (remoteIndex)
                 return (Data(indexJSON.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
@@ -63,7 +71,7 @@ struct SyncEnginePushTests {
                          createdAt: Date(timeIntervalSince1970: 1_000_000), updatedAt: Date(timeIntervalSince1970: 1_000_000))  // day 1
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update, timestamp: 9_999_999_999, payload: stale))
         let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
-        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
+        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u1")
         #expect(pushed == 0 && failed == 0)
         #expect(!exec.writes.contains { $0.method == "PATCH" })       // remote(day2) > payload(day1) → NO clobber
         #expect(try await queue.pending().isEmpty)                    // stale item dropped; next pull delivers remote
@@ -75,7 +83,7 @@ struct SyncEnginePushTests {
         let t = Task(id: "a", title: "new local", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
-        let (pushed, _) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u")
+        let (pushed, _) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u1")
         #expect(pushed == 1)
         #expect(exec.writes.contains { $0.method == "POST" })
         #expect(try await queue.pending().isEmpty)
@@ -184,7 +192,7 @@ struct SyncEnginePushTests {
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1_900_000_000_000, payload: nil))
         try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 1_900_000_000_001, payload: t))
         let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
-        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
+        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u1")
         #expect(exec.writes.map { $0.method } == ["DELETE", "POST"])
         #expect(pushed == 2 && failed == 0)
         #expect(try await queue.all().isEmpty)
@@ -202,7 +210,7 @@ struct SyncEnginePushTests {
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1_900_000_000_000, payload: nil))
         try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .create, timestamp: 1_900_000_000_001, payload: t))
         let engine = makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!)
-        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u")
+        let (pushed, failed) = try await engine.push(token: "TOK", owner: "u1")
         #expect(exec.writes.map { $0.method } == ["DELETE", "PATCH"])
         #expect(pushed == 1 && failed == 1)
     }
@@ -213,7 +221,7 @@ struct SyncEnginePushTests {
         let t = Task(id: "a", title: "x", urgent: false, important: false,
                      createdAt: Date(timeIntervalSince1970: 5_000_000), updatedAt: Date(timeIntervalSince1970: 5_000_000))
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: t))
-        let (pushed, failed) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u")
+        let (pushed, failed) = try await makeEngine(tasks: tasks, queue: queue, exec: exec, cursorDefaults: UserDefaults(suiteName: "t.\(UUID().uuidString)")!).push(token: "TOK", owner: "u1")
         #expect(pushed == 0 && failed == 1)
         let pending = try await queue.pending()
         #expect(pending.count == 1 && pending[0].retryCount == 1)   // kept, retryCount bumped (across-sync retry)

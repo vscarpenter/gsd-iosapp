@@ -591,6 +591,7 @@ Push algorithm:
 3. Otherwise upsert (create if no `recordId`, else update by `recordId`) or delete. A queued delete is **stale**, and dropped without a retry, when the remote `client_updated_at` is newer than when it was queued or, for an archive's delete, newer than the payload's `updatedAt`. A remote stamp more than 5 minutes in the future is never newer.
 4. **Throttle ~100 ms between requests.** On HTTP **429**, abort the push loop immediately (back off; don't hammer).
 5. **Retry policy:** exponential backoff at **5s, 10s, 30s, 60s, 300s**; after **5** failed attempts, mark the item `failed` (kept in the queue, surfaced for manual retry — not silently dropped).
+6. **Identity before absence.** A push confirms the account with auth-refresh once, before it first acts on a task missing from the listing. A 401 or 403 anywhere in the push ends it and charges no row.
 
 ### 7.6 Realtime (SSE) + periodic safety net
 

@@ -231,6 +231,7 @@ public actor SyncEngine {
         var index = try await client.remoteIndex(token: token)
         let nowMs = Int(now().timeIntervalSince1970 * 1000)
         var pushed = 0, failed = 0
+        var identityConfirmed = false
         for item in try await queue.pending() where isDue(item, nowMs: nowMs) {
             try fence(owner)   // outside the item's `do`: a session that ended must not spend this item's retries
             let remote = index[item.taskId]
@@ -249,6 +250,12 @@ public actor SyncEngine {
             // Resolved, not retried: the newer remote edit stays, and the next pull delivers it.
             if item.operation == .delete, isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt) {
                 try await queue.remove(id: item.id); continue
+            }
+            // A rejected token lists as an empty account, so a task missing from the listing proves
+            // nothing until the account is confirmed. Once per push, before this item's error handling.
+            if remote == nil, !identityConfirmed {
+                try await confirmIdentity(token: token, owner: owner)
+                identityConfirmed = true
             }
             do {
                 switch item.operation {
@@ -277,10 +284,18 @@ public actor SyncEngine {
             } catch let e as PocketBaseError {
                 if case .http(429, _) = e { break }                    // 429 → abort
                 if case .pocketBase(429, _) = e { break }
+                if Self.endsTheRun(e) { throw e }                      // 401/403: the session is the problem, not this row
                 try await recordFailedAttempt(item, reason: "\(e)", nowMs: nowMs); failed += 1
             }
         }
         return (pushed, failed)
+    }
+
+    /// Asks the server who the token belongs to. Throws `SyncIdentityMismatch` for another account and
+    /// passes a 401 or 403 through, so the caller never reads a guest's empty listing as an absence.
+    /// The fresh token it returns is not kept. Android `confirmIdentity`.
+    private func confirmIdentity(token: String, owner: String) async throws {
+        guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
     }
 
     /// D-10 rule 2: a queued payload from before the upgrade can carry a null offset. Push
@@ -337,7 +352,7 @@ public actor SyncEngine {
         // The list rule filters rows, so a token the server rejects lists as 200 with zero items, just
         // like an empty account. Only auth-refresh tells them apart. Any failure throws before a delete.
         // The fresh token it returns is not kept. Android `confirmIdentity`.
-        guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
+        try await confirmIdentity(token: token, owner: owner)
         var deleted = 0
         for task in unprotected {
             try fence(owner)
@@ -659,7 +674,7 @@ public actor SyncEngine {
         guard !remembered.isEmpty else { return 0 }
         let listing = try await client.listEveryTask(token: token)
         // A rejected token lists as an empty account; only auth-refresh tells them apart.
-        guard try await client.authRefresh(token: token).record.id == owner else { throw SyncIdentityMismatch() }
+        try await confirmIdentity(token: token, owner: owner)
         var waiting = Set<String>()
         var brought = 0
         for record in listing where remembered.contains(record.taskId) {

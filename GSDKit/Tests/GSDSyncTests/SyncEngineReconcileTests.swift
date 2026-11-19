@@ -52,6 +52,10 @@ struct SyncEngineReconcileTests {
         private var counter = 0
         private(set) var posts = 0
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+            if request.url!.path.hasSuffix("/auth-refresh") {   // the push confirms the account before acting on an unlisted task
+                return (Data(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#.utf8),
+                        HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            }
             let url = request.url!
             func resp(_ s: String, _ code: Int = 200) -> (Data, HTTPURLResponse) {
                 (Data(s.utf8), HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: nil)!)
