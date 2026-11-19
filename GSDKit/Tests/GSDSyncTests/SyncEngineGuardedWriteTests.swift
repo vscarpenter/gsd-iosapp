@@ -27,6 +27,7 @@ actor GuardedServer: RequestExecuting {
     private(set) var deletes: [Delete] = []
     private(set) var statuses: [Int] = []                 // every guarded answer, in order
     private(set) var collectionWrites: [String] = []      // writes that bypassed the guarded route
+    private(set) var postedVersions: [String] = []        // `client_updated_at` of every create
 
     /// `version: nil` lists the record with no `client_updated_at` at all.
     func put(recordId: String, taskId: String, version: String?, title: String = "remote") {
@@ -62,6 +63,7 @@ actor GuardedServer: RequestExecuting {
             collectionWrites.append("\(method) \(path)")
             if method == "POST", let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any] {
                 var record = body; record["id"] = "rec_new"
+                if let sent = body["client_updated_at"] as? String { postedVersions.append(sent) }
                 records["rec_new"] = record
                 return reply(request, 200, String(decoding: try JSONSerialization.data(withJSONObject: record), as: UTF8.self))
             }
@@ -242,5 +244,37 @@ struct SyncEngineGuardedWriteTests {
         #expect(await server.holds("rec1"))
         let row = try #require(try await rig.queue.pending().first)
         #expect(row.retryCount == 0 && row.lastAttemptAt == nil)
+    }
+
+    @Test("a 412 on one row leaves the next row to land")
+    func staleRowDoesNotStarveTheNext() async throws {
+        let server = await seededServer()
+        await server.put(recordId: "rec2", taskId: "b", version: Self.listed)
+        await server.changeAfterListing(recordId: "rec1", version: "2026-11-19T17:10:00.000Z")
+        let rig = try rig(server)
+        try await enqueue(rig, "q1", .update, at: "2026-11-19T17:30:00.000Z", payload: edit("edited a", at: "2026-11-19T17:30:00.000Z"))
+        let other = Task(id: "b", title: "edited b", urgent: false, important: false,
+                         createdAt: WireDate.parse("2026-11-01T00:00:00.000Z")!, updatedAt: WireDate.parse("2026-11-19T17:31:00.000Z")!)
+        try await rig.queue.enqueue(SyncQueueItem(id: "q2", taskId: "b", operation: .update,
+            timestamp: Int(other.updatedAt.timeIntervalSince1970 * 1000), payload: other))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 0)
+        #expect(await server.statuses == [412, 204])
+        #expect(try await rig.queue.pending().map(\.id) == ["q1"])
+        #expect(await server.title(of: "rec2") == "edited b")
+    }
+
+    @Test("an update after a create in one push expects the version the create stored")
+    func updateAfterCreateExpectsTheCreatedVersion() async throws {
+        let server = GuardedServer()
+        let rig = try rig(server)
+        try await enqueue(rig, "q1", .create, at: "2026-11-19T17:20:00.000Z", payload: edit("first", at: "2026-11-19T17:20:00.000Z"))
+        try await enqueue(rig, "q2", .update, at: "2026-11-19T17:40:00.000Z", payload: edit("second", at: "2026-11-19T17:40:00.000Z"))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 2 && result.failed == 0)
+        let posted = try #require(await server.postedVersions.first)
+        #expect(await server.patches.map(\.expectedVersion) == [posted])
+        #expect(await server.statuses == [204])
+        #expect(await server.title(of: "rec_new") == "second")
     }
 }

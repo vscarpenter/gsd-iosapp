@@ -14,9 +14,10 @@ struct PocketBaseTaskWriteTests {
             return (Data(response.utf8), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)
         }
     }
-    private func record(_ id: String, recordId: String = "") -> PocketBaseTaskRecord {
+    private func record(_ id: String, recordId: String = "", estimatedMinutes: Int? = nil) -> PocketBaseTaskRecord {
         TaskWireMapper.toWire(Task(id: id, title: "t", urgent: false, important: false,
-                                   createdAt: Date(timeIntervalSince1970: 0), updatedAt: Date(timeIntervalSince1970: 0)),
+                                   createdAt: Date(timeIntervalSince1970: 0), updatedAt: Date(timeIntervalSince1970: 0),
+                                   estimatedMinutes: estimatedMinutes),
                               owner: "u", deviceId: "d", recordId: recordId, defaultReminder: 15)
     }
 
@@ -60,13 +61,13 @@ struct PocketBaseTaskWriteTests {
         let exec = CapturingExecutor(); exec.status = 204; exec.response = ""
         let client = PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec)
         try await client.updateTaskGuarded(recordId: "rec1", expectedVersion: "v1",
-                                           record: record("a", recordId: "rec1"), token: "TOK")
+                                           record: record("a", recordId: "rec1", estimatedMinutes: 30), token: "TOK")
         #expect(exec.lastMethod == "PATCH" && exec.lastPath == "/api/gsd/tasks/rec1")
         let raw = try #require(exec.lastBody)
         let body = try #require(try JSONSerialization.jsonObject(with: raw) as? [String: Any])
         #expect(body["expected_version"] as? String == "v1")
         let data = try #require(body["data"] as? [String: Any])
-        #expect(Set(data.keys).isSubset(of: Self.allowedKeys))
+        #expect(Set(data.keys) == Self.allowedKeys)   // exact: a set estimate puts every optional key on the wire
         #expect(data["id"] == nil)
     }
 
