@@ -22,6 +22,7 @@ struct TaskStoreWriteOrderTests {
         func fetchAll() async throws -> [Task] { [] }
         func fetch(id: String) async throws -> Task? { nil }
         func setNotifyBeforeIfNull(id: String, value: Int) async throws {}
+        func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { false }
         func delete(id: String) async throws { log.events.append("delete") }
         func replaceAll(_ tasks: [Task]) async throws { log.events.append("replaceAll") }
         func observeAll() -> AsyncThrowingStream<[Task], Error> {

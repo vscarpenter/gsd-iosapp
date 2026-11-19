@@ -168,6 +168,7 @@ struct SyncEngineRemoteAbsenceTests {
         func upsert(_ task: Task) async throws { try await base.upsert(task) }
         func fetch(id: String) async throws -> Task? { try await base.fetch(id: id) }
         func setNotifyBeforeIfNull(id: String, value: Int) async throws { try await base.setNotifyBeforeIfNull(id: id, value: value) }
+        func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { try await base.restampIfUnchanged(id: id, from: from, to: to) }
         func delete(id: String) async throws { try await base.delete(id: id) }
         func replaceAll(_ tasks: [Task]) async throws { try await base.replaceAll(tasks) }
         func observeAll() -> AsyncThrowingStream<[Task], Error> { base.observeAll() }

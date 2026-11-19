@@ -20,6 +20,10 @@ public protocol TaskRepository: Sendable {
     /// drain settles a legacy null this way, so a local write that lands in between is never
     /// reverted by a whole-row save. Touches no other column, not even `updatedAt`.
     func setNotifyBeforeIfNull(id: String, value: Int) async throws
+    /// One write that sets only `updatedAt` to `to`, and only where the row's stamp still equals `from`
+    /// to the millisecond. Push uses it to record the stamp a bumped write sent, so a local edit made
+    /// since is never reverted. Returns whether it wrote. Touches no other column.
+    func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool
     func delete(id: String) async throws
     /// Replace the entire task table in a single transaction: delete all rows, then insert
     /// `tasks`. Used by Replace-mode import. No dependency-scrub is needed (a full clear
@@ -62,6 +66,17 @@ public final class GRDBTaskRepository: TaskRepository {
                            arguments: [value, id])
         }
     }
+
+    public func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool {
+        try await dbWriter.write { db in
+            guard let record = try TaskRecord.fetchOne(db, key: id),
+                  Self.ms(record.updatedAt) == Self.ms(from) else { return false }
+            try db.execute(sql: "UPDATE tasks SET updatedAt = ? WHERE id = ?", arguments: [to, id])
+            return true
+        }
+    }
+
+    private static func ms(_ date: Date) -> Int { Int((date.timeIntervalSince1970 * 1000).rounded()) }
 
     public func delete(id: String) async throws {
         let scrubTimestamp = now()

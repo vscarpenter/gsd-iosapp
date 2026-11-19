@@ -236,6 +236,7 @@ public actor SyncEngine {
         let nowMs = Int(now().timeIntervalSince1970 * 1000)
         var pushed = 0, failed = 0
         var identityConfirmed = false
+        var writtenThisPush: [String: String] = [:]   // taskId -> the version this push stored (F2)
         for item in try await queue.pending() where isDue(item, nowMs: nowMs) {
             try fence(owner)   // outside the item's `do`: a session that ended must not spend this item's retries
             let remote = index[item.taskId]
@@ -253,7 +254,9 @@ public actor SyncEngine {
                 try await queue.remove(id: item.id); continue
             }
             // Resolved, not retried: the newer remote edit stays, and the next pull delivers it.
-            if item.operation == .delete, isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt) {
+            // A version this push wrote is its own write, not another device's edit (F2).
+            if item.operation == .delete, writtenThisPush[item.taskId] != remote?.version,
+               isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt) {
                 try await queue.remove(id: item.id); continue
             }
             // A rejected token lists as an empty account, so a task missing from the listing proves
@@ -289,11 +292,20 @@ public actor SyncEngine {
                                                            record: guarded, token: token)
                         // A second write to this task in the same push expects the version this one stored.
                         index[item.taskId] = RemoteIndexEntry(recordId: listed.recordId, version: guarded.clientUpdatedAt)
+                        writtenThisPush[item.taskId] = guarded.clientUpdatedAt
+                        // F1: the server holds the bumped stamp, so the local row takes it too, or a later
+                        // archive would carry the old one and read the server's copy as a newer edit.
+                        if guarded.clientUpdatedAt != WireDate.format(payload.updatedAt),
+                           let sent = WireDate.parse(guarded.clientUpdatedAt) {
+                            try fence(owner)
+                            _ = try await tasks.restampIfUnchanged(id: payload.id, from: payload.updatedAt, to: sent)
+                        }
                     } else {
                         // Record the new recordId in the live index so a later same-drain DELETE for the
                         // same task_id finds it (else the create leaks an orphan remote record).
                         let newRecordId = try await client.createTask(wire, token: token)
                         index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: wire.clientUpdatedAt)
+                        writtenThisPush[item.taskId] = wire.clientUpdatedAt
                     }
                 }
                 try await queue.remove(id: item.id); pushed += 1

@@ -10,6 +10,7 @@ private struct UnreadableTaskRepository: TaskRepository {
     func fetchAll() async throws -> [Task] { throw ReadFailed() }
     func fetch(id: String) async throws -> Task? { throw ReadFailed() }
     func setNotifyBeforeIfNull(id: String, value: Int) async throws {}
+    func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { false }
     func delete(id: String) async throws {}
     func replaceAll(_ tasks: [Task]) async throws {}
     func observeAll() -> AsyncThrowingStream<[Task], Error> { AsyncThrowingStream { $0.finish() } }

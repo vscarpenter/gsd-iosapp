@@ -28,6 +28,7 @@ actor GuardedServer: RequestExecuting {
     private(set) var statuses: [Int] = []                 // every guarded answer, in order
     private(set) var collectionWrites: [String] = []      // writes that bypassed the guarded route
     private(set) var postedVersions: [String] = []        // `client_updated_at` of every create
+    private var duringPatch: (@Sendable () -> Void)?
 
     /// `version: nil` lists the record with no `client_updated_at` at all.
     func put(recordId: String, taskId: String, version: String?, title: String = "remote") {
@@ -40,6 +41,9 @@ actor GuardedServer: RequestExecuting {
     func changeAfterListing(recordId: String, version: String) { pendingChange = (recordId, version) }
     /// After the next listing is served, remove the record.
     func dropAfterListing(recordId: String) { pendingDrop = recordId }
+
+    /// Runs as each guarded PATCH arrives, as a sign-out that lands during the request would.
+    func onPatch(_ action: @escaping @Sendable () -> Void) { duringPatch = action }
 
     func version(of recordId: String) -> String? { records[recordId]?["client_updated_at"] as? String }
     func title(of recordId: String) -> String? { records[recordId]?["title"] as? String }
@@ -73,6 +77,7 @@ actor GuardedServer: RequestExecuting {
         let body = try #require(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
         let expected = body["expected_version"] as? String ?? ""
         let data = body["data"] as? [String: Any]
+        if method == "PATCH" { duringPatch?() }
         if method == "PATCH" { patches.append(Patch(recordId: recordId, expectedVersion: expected,
                                                      clientUpdatedAt: data?["client_updated_at"] as? String)) }
         else { deletes.append(Delete(recordId: recordId, expectedVersion: expected)) }
@@ -101,16 +106,18 @@ struct SyncEngineGuardedWriteTests {
     private struct Rig {
         let server: GuardedServer
         let queue: GRDBSyncQueueRepository
+        let tasks: GRDBTaskRepository
         let engine: SyncEngine
     }
     private func rig(_ server: GuardedServer) throws -> Rig {
         let db = try AppDatabase.inMemory()
         let queue = GRDBSyncQueueRepository(db)
+        let tasks = GRDBTaskRepository(db)
         let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://guarded.test", executor: server),
-                                tasks: GRDBTaskRepository(db), queue: queue,
+                                tasks: tasks, queue: queue,
                                 cursor: SyncCursor(defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!),
                                 deviceId: "ios", tokenProvider: { "TOK" }, now: { Self.now }, throttleMs: 0)
-        return Rig(server: server, queue: queue, engine: engine)
+        return Rig(server: server, queue: queue, tasks: tasks, engine: engine)
     }
     private func edit(_ title: String, at stamp: String) -> Task {
         Task(id: "a", title: title, urgent: false, important: false,
@@ -276,5 +283,108 @@ struct SyncEngineGuardedWriteTests {
         #expect(await server.patches.map(\.expectedVersion) == [posted])
         #expect(await server.statuses == [204])
         #expect(await server.title(of: "rec_new") == "second")
+    }
+
+    // MARK: Restamp after a bumped write
+
+    private static let bumped = "2026-11-19T17:00:00.001Z"
+
+    private func rowStamp(_ rig: Rig) async throws -> String? {
+        try await rig.tasks.fetch(id: "a").map { WireDate.format($0.updatedAt) }
+    }
+    /// Seeds the local row and queues an update whose stamp equals the listed one, so the push bumps it.
+    private func seedBumpedUpdate(_ rig: Rig) async throws {
+        try await rig.tasks.upsert(edit("edited", at: Self.listed))
+        try await enqueue(rig, "q1", .update, at: Self.listed, payload: edit("edited", at: Self.listed))
+    }
+
+    @Test("AC1: a bumped write leaves the local row at the sent stamp and queues nothing")
+    func bumpedWriteRestampsTheRow() async throws {
+        let rig = try rig(await seededServer())
+        try await seedBumpedUpdate(rig)
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(try await rowStamp(rig) == Self.bumped)
+        #expect(try await rig.queue.pending().isEmpty)
+        #expect(try await rig.tasks.fetch(id: "a")?.title == "edited")
+    }
+
+    @Test("AC2: an archive queued after a bumped push deletes the task")
+    func archiveAfterBumpedPush() async throws {
+        let rig = try rig(await seededServer())
+        try await seedBumpedUpdate(rig)
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        let archived = try #require(try await rig.tasks.fetch(id: "a"))   // TaskStore.archive queues the row it fetches
+        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:45:00.000Z", payload: archived)
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 0)
+        #expect(await rig.server.deletes.map(\.expectedVersion) == [Self.bumped])
+        #expect(await rig.server.holds("rec1") == false)
+    }
+
+    @Test("AC3: a bumped update and an archive delete in one push both land")
+    func bumpedUpdateThenArchiveDelete() async throws {
+        let rig = try rig(await seededServer())
+        try await seedBumpedUpdate(rig)
+        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:45:00.000Z", payload: edit("edited", at: Self.listed))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 2 && result.failed == 0)
+        #expect(await rig.server.statuses == [204, 204])
+        #expect(await rig.server.deletes.map(\.expectedVersion) == [Self.bumped])
+        #expect(await rig.server.holds("rec1") == false)
+    }
+
+    @Test("AC4: a local edit made after the update was queued is not overwritten")
+    func newerLocalEditSurvives() async throws {
+        let rig = try rig(await seededServer())
+        try await rig.tasks.upsert(edit("newer local edit", at: "2026-11-19T17:45:00.000Z"))
+        try await enqueue(rig, "q1", .update, at: Self.listed, payload: edit("edited", at: Self.listed))
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(await rig.server.patches.first?.clientUpdatedAt == Self.bumped)
+        #expect(try await rowStamp(rig) == "2026-11-19T17:45:00.000Z")
+        #expect(try await rig.tasks.fetch(id: "a")?.title == "newer local edit")
+    }
+
+    @Test("AC5: a session that ends during the PATCH leaves the local row untouched")
+    func sessionEndsDuringThePatch() async throws {
+        func jwt(_ id: String) -> String {
+            let payload = Data(#"{"id":"\#(id)","exp":9999999999}"#.utf8).base64EncodedString()
+                .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+            return "h.\(payload).s"
+        }
+        final class Session: @unchecked Sendable { var token: String? }
+        let session = Session(); session.token = jwt("u1")
+        let server = await seededServer()
+        await server.onPatch { session.token = nil }
+        let db = try AppDatabase.inMemory()
+        let tasks = GRDBTaskRepository(db)
+        let queue = GRDBSyncQueueRepository(db)
+        let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://guarded.test", executor: server),
+                                tasks: tasks, queue: queue, tombstones: GRDBTombstoneRepository(db),
+                                cursor: SyncCursor(defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!),
+                                deviceId: "ios", tokenProvider: { "TOK" }, rawToken: { session.token },
+                                now: { Self.now }, throttleMs: 0)
+        try await tasks.upsert(edit("edited", at: Self.listed))
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update,
+            timestamp: Int(WireDate.parse(Self.listed)!.timeIntervalSince1970 * 1000), payload: edit("edited", at: Self.listed)))
+        await #expect(throws: StaleSyncSession.self) { try await engine.push(token: "TOK", owner: "u1") }
+        #expect(try await tasks.fetch(id: "a").map { WireDate.format($0.updatedAt) } == Self.listed)
+    }
+
+    @Test("AC6: a write that was not bumped leaves the local row's stamp alone")
+    func unbumpedWriteLeavesTheStamp() async throws {
+        let rig = try rig(await seededServer())
+        try await rig.tasks.upsert(edit("edited", at: "2026-11-19T17:30:00.000Z"))
+        try await enqueue(rig, "q1", .update, at: "2026-11-19T17:30:00.000Z", payload: edit("edited", at: "2026-11-19T17:30:00.000Z"))
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(try await rowStamp(rig) == "2026-11-19T17:30:00.000Z")
+    }
+
+    @Test("AC7: the next pull after a bumped write applies nothing and reports no conflict")
+    func nextPullIsQuiet() async throws {
+        let rig = try rig(await seededServer())
+        try await seedBumpedUpdate(rig)
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        let pulled = try await rig.engine.pull(token: "TOK", since: "1970-01-01 00:00:00.000Z")
+        #expect(pulled.applied == 0 && pulled.conflicts == 0)
     }
 }
