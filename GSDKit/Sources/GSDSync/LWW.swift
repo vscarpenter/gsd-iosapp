@@ -1,4 +1,5 @@
 import Foundation
+import GSDWire
 
 /// Last-write-wins resolution keyed on `client_updated_at` (milliseconds) — product spec §7.3.
 /// Guards both push and pull. Compares millisecond integers to match the web app exactly, so a
@@ -35,6 +36,15 @@ enum LWW {
     /// here would resurrect tombstones and block the local edit that heals the record.
     static func isRemoteNewer(_ remote: Date, than local: Date, now: Date) -> Bool {
         !isPastCeiling(remote, now: now) && ms(remote) > ms(local)
+    }
+
+    /// The `client_updated_at` a guarded write sends. The server rejects a write whose stamp equals the
+    /// stored one (400), so an equal stamp goes out one millisecond later. Equality is the server's
+    /// string comparison; a listed stamp in another spelling already differs. `expected` is parseable
+    /// here because push only writes over a remote whose version parsed.
+    static func guardedVersion(outgoing: String, expected: String) -> String {
+        guard outgoing == expected, let stamp = WireDate.parse(expected) else { return outgoing }
+        return WireDate.format(stamp.addingTimeInterval(0.001))
     }
 
     private static func ceilingMs(_ now: Date) -> Int { ms(now) + maxClockSkewMs }

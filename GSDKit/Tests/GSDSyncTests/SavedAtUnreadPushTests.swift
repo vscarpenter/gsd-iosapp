@@ -48,12 +48,15 @@ actor UnreadServer: RequestExecuting {
             let page: [String: Any] = ["page": 1, "perPage": 200, "totalItems": items.count, "totalPages": 1, "items": items]
             return (try JSONSerialization.data(withJSONObject: page), response(request, status: 200))
         }
-        let body = try #require(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+        var body = try #require(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+        let guarded = request.url?.path.hasPrefix("/api/gsd/tasks/") == true   // the guarded route wraps the record in `data`
+        if guarded { body = body["data"] as? [String: Any] ?? [:] }
         writes.append(Write(sentSavedAt: body["saved_at"] != nil, savedAt: body["saved_at"] as? String,
                             sentFocus: body["focus_date"] != nil || body["focus_rank"] != nil,
                             focusDate: body["focus_date"] as? String,
                             focusRank: (body["focus_rank"] as? NSNumber)?.doubleValue))
         record.merge(body) { _, new in new }
+        if guarded { return (Data(), response(request, status: 204)) }
         return (try JSONSerialization.data(withJSONObject: record), response(request, status: 200))
     }
 

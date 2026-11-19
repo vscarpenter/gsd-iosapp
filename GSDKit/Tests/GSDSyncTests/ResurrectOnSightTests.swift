@@ -64,12 +64,15 @@ actor AccountServer: RequestExecuting {
             }
             return (Data(), response(url, 204))
         default:   // POST creates, PATCH merges
-            let body = try #require(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+            var body = try #require(JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any])
+            let guarded = url.path.hasPrefix("/api/gsd/tasks/")   // the guarded route wraps the record in `data`
+            if guarded { body = try #require(body["data"] as? [String: Any]) }
             let taskId = try #require(body["task_id"] as? String)
             var record = records[taskId] ?? ["id": "rec_\(taskId)", "updated": "2026-11-07 12:00:00.000Z"]
             record.merge(body.filter { $0.key != "id" }) { _, new in new }
             records[taskId] = record
             writtenTaskIds.append(taskId)
+            if guarded { return (Data(), response(url, 204)) }
             return (try JSONSerialization.data(withJSONObject: record), response(url, 200))
         }
     }

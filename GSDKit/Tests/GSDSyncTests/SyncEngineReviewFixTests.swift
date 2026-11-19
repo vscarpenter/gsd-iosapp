@@ -36,7 +36,8 @@ struct SyncEngineReviewFixTests {
                 return (Data(#"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#.utf8),
                         HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
             }
-            writes.append((m, request.url!.path))
+            let guarded = request.url!.path.hasPrefix("/api/gsd/tasks/")   // only the guarded route may PATCH or DELETE
+            writes.append((m == "POST" || guarded ? m : "unguarded \(m)", request.url!.path))
             return (Data(#"{"id":"recNEW","task_id":"x","title":"t","urgent":false,"important":false}"#.utf8),
                     HTTPURLResponse(url: request.url!, statusCode: m == "DELETE" ? 204 : 200, httpVersion: nil, headerFields: nil)!)
         }

@@ -28,13 +28,6 @@ struct PocketBaseTaskWriteTests {
         #expect(exec.lastMethod == "POST" && exec.lastPath == "/api/collections/tasks/records")
     }
 
-    @Test func updatePatchesByRecordId() async throws {
-        let exec = CapturingExecutor()
-        let client = PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec)
-        try await client.updateTask(recordId: "rec_1", record: record("a", recordId: "rec_1"), token: "TOK")
-        #expect(exec.lastMethod == "PATCH" && exec.lastPath == "/api/collections/tasks/records/rec_1")
-    }
-
     @Test func deleteSendsDelete() async throws {
         let exec = CapturingExecutor(); exec.status = 204; exec.response = ""
         let client = PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec)

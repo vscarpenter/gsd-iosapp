@@ -133,7 +133,8 @@ struct SyncEngineClockSkewTests {
             let record = #"{"id":"rec_a","task_id":"a","owner":"u1","title":"\#(title)","urgent":false,"important":false,"client_updated_at":"\#(stamp)","device_id":"dev-B","updated":"2033-05-18T03:00:00.000Z"}"#
             guard method != "GET" else { return response(#"{"page":1,"perPage":200,"totalItems":1,"totalPages":1,"items":[\#(record)]}"#) }
             writes.append(method)
-            let body = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any]
+            let sent = try JSONSerialization.jsonObject(with: request.httpBody ?? Data()) as? [String: Any]
+            let body = sent?["data"] as? [String: Any] ?? sent   // the guarded route wraps the record in `data`
             title = body?["title"] as? String ?? title
             stamp = body?["client_updated_at"] as? String ?? stamp
             return response(#"{"id":"rec_a","task_id":"a","title":"\#(title)","urgent":false,"important":false}"#)

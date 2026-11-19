@@ -59,4 +59,15 @@ struct LWWTests {
         #expect(!LWW.isRemoteNewer(t0, than: t1, now: now))
         #expect(!LWW.isRemoteNewer(t0, than: t0, now: now))
     }
+
+    @Test("guardedVersion bumps only an equal stamp")
+    func guardedVersionBumpsEqualStamp() {
+        #expect(LWW.guardedVersion(outgoing: "2026-11-19T17:00:00.000Z", expected: "2026-11-19T17:00:00.000Z")
+                == "2026-11-19T17:00:00.001Z")
+        #expect(LWW.guardedVersion(outgoing: "2026-11-19T17:30:00.000Z", expected: "2026-11-19T17:00:00.000Z")
+                == "2026-11-19T17:30:00.000Z")
+        // A listed stamp in another spelling is not byte-equal, so the server accepts the outgoing one.
+        #expect(LWW.guardedVersion(outgoing: "2026-11-19T17:00:00.000Z", expected: "2026-11-19 17:00:00Z")
+                == "2026-11-19T17:00:00.000Z")
+    }
 }

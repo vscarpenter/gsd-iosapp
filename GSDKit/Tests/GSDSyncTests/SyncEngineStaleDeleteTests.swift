@@ -11,6 +11,8 @@ import GSDStore
 /// queued-delete exemption: a delete that push will drop can't hold back a newer remote copy.
 struct SyncEngineStaleDeleteTests {
     final class Executor: RequestExecuting, @unchecked Sendable {
+        // Only the guarded route is a valid write; a PATCH or DELETE to the collection records as "unguarded".
+        static func guarded(_ request: URLRequest) -> Bool { request.url!.path.hasPrefix("/api/gsd/tasks/") }
         var listJSON = #"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#
         private(set) var writes: [String] = []
         func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
@@ -20,7 +22,7 @@ struct SyncEngineStaleDeleteTests {
             }
             if request.url!.path.hasSuffix("/auth-refresh") { return response(#"{"token":"fresh","record":{"id":"u1","email":"e@x"}}"#) }
             if method == "GET" { return response(listJSON) }
-            writes.append(method)
+            writes.append(Self.guarded(request) ? method : "unguarded \(method)")
             return response("", 204)
         }
     }

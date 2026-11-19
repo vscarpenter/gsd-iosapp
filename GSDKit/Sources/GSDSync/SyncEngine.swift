@@ -236,9 +236,10 @@ public actor SyncEngine {
             try fence(owner)   // outside the item's `do`: a session that ended must not spend this item's retries
             let remote = index[item.taskId]
             // Parity S11 (Android `MalformedRemoteVersion`): a remote copy whose version is missing or
-            // unparseable can't be shown to be older, so an upsert must not overwrite it. Skip it and
-            // spend a retry, like any failed attempt. A delete carries no version to compare.
-            if item.operation != .delete, let remote, remote.clientUpdatedAt == nil {
+            // unparseable can't be shown to be older, so a write must not overwrite it. Skip it and
+            // spend a retry, like any failed attempt. The guarded route needs that version too, even
+            // for a delete (ADR 0021).
+            if let remote, remote.clientUpdatedAt == nil {
                 try await recordFailedAttempt(item, reason: "Remote task version is missing or malformed", nowMs: nowMs)
                 failed += 1; continue
             }
@@ -257,10 +258,15 @@ public actor SyncEngine {
                 try await confirmIdentity(token: token, owner: owner)
                 identityConfirmed = true
             }
+            // The listed record and its version string, exactly as the server holds it. The check above
+            // means a listed record always has one, so this is nil only when the task isn't listed.
+            let listed = remote.flatMap { entry in entry.version.map { (recordId: entry.recordId, version: $0) } }
             do {
                 switch item.operation {
                 case .delete:
-                    if let recordId = remote?.recordId { try await client.deleteTask(recordId: recordId, token: token) }
+                    if let listed {
+                        try await client.deleteTaskGuarded(recordId: listed.recordId, expectedVersion: listed.version, token: token)
+                    }
                     // The record is gone, so a later same-drain create for this task must POST, not
                     // PATCH the deleted record. A delete that threw never reaches this line.
                     index.removeValue(forKey: item.taskId)
@@ -271,12 +277,20 @@ public actor SyncEngine {
                     let wire = TaskWireMapper.toWire(payload, current: current, owner: owner, deviceId: deviceId,
                                                      recordId: remote?.recordId ?? "",
                                                      defaultReminder: defaultReminder())
-                    if let recordId = remote?.recordId { try await client.updateTask(recordId: recordId, record: wire, token: token) }
-                    else {
+                    if let listed {
+                        var guarded = wire
+                        guarded.clientUpdatedAt = LWW.guardedVersion(outgoing: wire.clientUpdatedAt, expected: listed.version)
+                        try await client.updateTaskGuarded(recordId: listed.recordId, expectedVersion: listed.version,
+                                                           record: guarded, token: token)
+                        // A second write to this task in the same push expects the version this one stored.
+                        index[item.taskId] = RemoteIndexEntry(recordId: listed.recordId, version: guarded.clientUpdatedAt,
+                                                              clientUpdatedAt: WireDate.parse(guarded.clientUpdatedAt))
+                    } else {
                         // Record the new recordId in the live index so a later same-drain DELETE for the
                         // same task_id finds it (else the create leaks an orphan remote record).
                         let newRecordId = try await client.createTask(wire, token: token)
-                        index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: nil, clientUpdatedAt: payload.updatedAt)
+                        index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: wire.clientUpdatedAt,
+                                                              clientUpdatedAt: WireDate.parse(wire.clientUpdatedAt))
                     }
                 }
                 try await queue.remove(id: item.id); pushed += 1
@@ -284,6 +298,10 @@ public actor SyncEngine {
             } catch let e as PocketBaseError {
                 if case .http(429, _) = e { break }                    // 429 → abort
                 if case .pocketBase(429, _) = e { break }
+                // 412: another device wrote after the listing. Not a failure and not charged; the row
+                // stays queued, and the next push lists again so last-write-wins decides (D2).
+                if case .http(412, _) = e { continue }
+                if case .pocketBase(412, _) = e { continue }
                 if Self.endsTheRun(e) { throw e }                      // 401/403: the session is the problem, not this row
                 try await recordFailedAttempt(item, reason: "\(e)", nowMs: nowMs); failed += 1
             }

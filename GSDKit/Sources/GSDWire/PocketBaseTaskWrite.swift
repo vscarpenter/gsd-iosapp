@@ -63,12 +63,6 @@ extension PocketBaseClient {
                                 token: token, body: try JSONEncoder().encode(record))
         return try await send(req, as: PocketBaseTaskRecord.self).id
     }
-    /// Update by record id (PATCH).
-    package func updateTask(recordId: String, record: PocketBaseTaskRecord, token: String) async throws {
-        let req = authedRequest(path: "/api/collections/tasks/records/\(recordId)", method: "PATCH",
-                                token: token, body: try JSONEncoder().encode(record))
-        _ = try await send(req, as: PocketBaseTaskRecord.self)
-    }
     /// Delete by record id (204, no body).
     package func deleteTask(recordId: String, token: String) async throws {
         try await sendNoContent(authedRequest(path: "/api/collections/tasks/records/\(recordId)", method: "DELETE", token: token))

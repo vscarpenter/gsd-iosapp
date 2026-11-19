@@ -53,7 +53,8 @@ struct SyncEnginePushTests {
             if m == "GET" {   // listTasks (remoteIndex)
                 return (Data(indexJSON.utf8), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
             }
-            writes.append((m, request.url!.path))
+            let guarded = request.url!.path.hasPrefix("/api/gsd/tasks/")   // only the guarded route may PATCH or DELETE
+            writes.append((m == "POST" || guarded ? m : "unguarded \(m)", request.url!.path))
             let body = #"{"id":"rec_x","task_id":"a","title":"t","urgent":false,"important":false}"#
             let status = m == "DELETE" ? (deleteStatus ?? writeStatus) : (missingRecords && m == "PATCH" ? 404 : writeStatus)
             return (Data(body.utf8), HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!)

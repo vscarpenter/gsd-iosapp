@@ -19,10 +19,15 @@ private actor SavedServer: RequestExecuting {
     }
 
     func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let guarded = request.url?.path.hasPrefix("/api/gsd/tasks/") == true   // the guarded route wraps the record in `data`
         if request.httpMethod == "PATCH", let body = request.httpBody {
-            let fields = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            let sent = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            let fields = guarded ? try #require(sent["data"] as? [String: Any]) : sent
             record.merge(fields) { _, new in new }
             record["updated"] = record["client_updated_at"]
+        }
+        if guarded {
+            return (Data(), HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!)
         }
         let response: [String: Any] = request.httpMethod == "GET"
             ? ["page": 1, "perPage": 200, "totalItems": 1, "totalPages": 1, "items": [record]]

@@ -11,6 +11,8 @@ import GSDStore
 /// once per push. A 401 or 403 anywhere in the push ends it and charges no row.
 struct SyncEnginePushIdentityTests {
     final class Executor: RequestExecuting, @unchecked Sendable {
+        // Only the guarded route is a valid write; a PATCH or DELETE to the collection records as "unguarded".
+        static func guarded(_ request: URLRequest) -> Bool { request.url!.path.hasPrefix("/api/gsd/tasks/") }
         var listJSON = #"{"page":1,"perPage":200,"totalItems":0,"totalPages":1,"items":[]}"#
         var refreshStatus = 200
         var refreshRecordId = "u1"
@@ -28,7 +30,7 @@ struct SyncEnginePushIdentityTests {
                 return response(refreshStatus == 200 ? confirmed : #"{"message":"nope"}"#, refreshStatus)
             }
             if method == "GET" { return response(listJSON) }
-            writes.append(method)
+            writes.append(Self.guarded(request) ? method : "unguarded \(method)")
             if writeStatus != 200 { return response(#"{"message":"nope"}"#, writeStatus) }
             if method == "DELETE" { return response("", 204) }
             return response(Self.record("a", recordId: "rec_a"))
