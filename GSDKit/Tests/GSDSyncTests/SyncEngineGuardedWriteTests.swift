@@ -382,6 +382,8 @@ struct SyncEngineGuardedWriteTests {
             timestamp: Int(WireDate.parse(Self.listed)!.timeIntervalSince1970 * 1000), payload: edit("edited", at: Self.listed)))
         await #expect(throws: StaleSyncSession.self) { try await engine.push(token: "TOK", owner: "u1") }
         #expect(try await tasks.fetch(id: "a").map { WireDate.format($0.updatedAt) } == Self.listed)
+        let row = try #require(try await queue.pending().first)
+        #expect(row.id == "q1" && row.retryCount == 0 && row.lastAttemptAt == nil && row.status == .pending)
     }
 
     @Test("AC6: a write that was not bumped leaves the local row's stamp alone")
@@ -443,5 +445,50 @@ struct SyncEngineGuardedWriteTests {
         #expect(await server.deletes.isEmpty)
         #expect(try await rig.queue.pending().isEmpty)
         #expect(await server.holds("rec1"))
+    }
+
+    @Test("F2 create half: a create then an archive delete with an older payload both land")
+    func createThenArchiveDelete() async throws {
+        let server = GuardedServer()
+        let rig = try rig(server)
+        try await enqueue(rig, "q1", .create, at: "2026-11-19T17:20:00.000Z", payload: edit("first", at: "2026-11-19T17:20:00.000Z"))
+        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:40:00.000Z", payload: edit("first", at: "2026-11-19T17:00:00.000Z"))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 2 && result.failed == 0)
+        #expect(await server.statuses == [204])
+        #expect(await server.holds("rec_new") == false)
+    }
+
+    @Test("F2 412 protection: another device writes between the PATCH and the DELETE")
+    func editBetweenPatchAndDelete() async throws {
+        let server = await seededServer()
+        await server.changeAfterNextPatch(recordId: "rec1", version: "2026-11-19T17:10:00.000Z", deviceId: "other-device")
+        let rig = try rig(server)
+        try await seedBumpedUpdate(rig)
+        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:45:00.000Z", payload: edit("edited", at: Self.listed))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 0)
+        #expect(await server.statuses == [204, 412])
+        #expect(await server.holds("rec1"))
+        let row = try #require(try await rig.queue.pending().first)
+        #expect(row.id == "q2" && row.retryCount == 0 && row.lastAttemptAt == nil)
+    }
+
+    @Test("AC1 and AC2 hold for stamps a truncating comparison would miss",
+          arguments: ["2026-11-19T17:00:00.002Z", "2026-11-19T17:00:00.009Z", "2026-11-19T17:00:00.015Z"])
+    func restampAtAnyMillisecond(stamp: String) async throws {
+        let bumpedStamp = LWW.guardedVersion(outgoing: stamp, expected: stamp)
+        let server = GuardedServer()
+        await server.put(recordId: "rec1", taskId: "a", version: stamp)
+        let rig = try rig(server)
+        try await rig.tasks.upsert(edit("edited", at: stamp))
+        try await enqueue(rig, "q1", .update, at: stamp, payload: edit("edited", at: stamp))
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(try await rowStamp(rig) == bumpedStamp)
+        let archived = try #require(try await rig.tasks.fetch(id: "a"))
+        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:45:00.000Z", payload: archived)
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(await server.deletes.map(\.expectedVersion) == [bumpedStamp])
+        #expect(await server.holds("rec1") == false)
     }
 }

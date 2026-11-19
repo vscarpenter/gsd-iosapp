@@ -76,6 +76,7 @@ public final class GRDBTaskRepository: TaskRepository {
         }
     }
 
+    // Rounds, not truncates: GRDB's .datetime and the queue's JSON both round to the millisecond, and their read-back Dates differ below it.
     private static func ms(_ date: Date) -> Int { Int((date.timeIntervalSince1970 * 1000).rounded()) }
 
     public func delete(id: String) async throws {
