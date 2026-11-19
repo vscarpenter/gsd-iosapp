@@ -9,11 +9,14 @@ struct RemoteTaskIdentity: Decodable, Sendable {
     /// Raw `client_updated_at`. Missing or a non-string reads as nil, which push treats as an
     /// unusable version rather than a reason to throw out the whole index (parity S11).
     let clientUpdatedAt: String?
+    /// Raw `device_id`: the device that wrote the record last. Missing or a non-string reads as nil.
+    let deviceId: String?
 
     private enum CodingKeys: String, CodingKey {
         case recordId = "id"
         case taskId = "task_id"
         case clientUpdatedAt = "client_updated_at"
+        case deviceId = "device_id"
     }
 
     init(from decoder: Decoder) throws {
@@ -24,6 +27,7 @@ struct RemoteTaskIdentity: Decodable, Sendable {
             throw DecodingError.dataCorruptedError(forKey: .taskId, in: c, debugDescription: "empty id or task_id")
         }
         clientUpdatedAt = try? c.decodeIfPresent(String.self, forKey: .clientUpdatedAt)
+        deviceId = try? c.decodeIfPresent(String.self, forKey: .deviceId)
     }
 }
 
@@ -34,11 +38,14 @@ package struct RemoteIndexEntry: Sendable, Equatable {
     package let recordId: String
     package let version: String?
     package let clientUpdatedAt: Date?
+    /// The listing's `device_id`: which device wrote the record last. Nil when absent.
+    package let deviceId: String?
 
     /// `clientUpdatedAt` is derived from `version`, so the two can't disagree.
-    package init(recordId: String, version: String?) {
+    package init(recordId: String, version: String?, deviceId: String? = nil) {
         self.recordId = recordId
         self.version = version
+        self.deviceId = deviceId
         self.clientUpdatedAt = version.flatMap(WireDate.parse)
     }
 }
@@ -55,7 +62,7 @@ extension PocketBaseClient {
         }
         var index: [String: RemoteIndexEntry] = [:]
         for r in listing.items {
-            index[r.taskId] = RemoteIndexEntry(recordId: r.recordId, version: r.clientUpdatedAt)
+            index[r.taskId] = RemoteIndexEntry(recordId: r.recordId, version: r.clientUpdatedAt, deviceId: r.deviceId)
         }
         return index
     }

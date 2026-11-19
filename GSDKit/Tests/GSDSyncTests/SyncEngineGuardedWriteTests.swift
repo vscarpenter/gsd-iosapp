@@ -29,11 +29,14 @@ actor GuardedServer: RequestExecuting {
     private(set) var collectionWrites: [String] = []      // writes that bypassed the guarded route
     private(set) var postedVersions: [String] = []        // `client_updated_at` of every create
     private var duringPatch: (@Sendable () -> Void)?
+    private var afterPatch: (recordId: String, version: String, deviceId: String)?
+    private var loseNextPatchResponse = false
 
     /// `version: nil` lists the record with no `client_updated_at` at all.
-    func put(recordId: String, taskId: String, version: String?, title: String = "remote") {
+    func put(recordId: String, taskId: String, version: String?, title: String = "remote", deviceId: String? = nil) {
         var record: [String: Any] = ["id": recordId, "task_id": taskId, "owner": "u1", "title": title,
                                      "urgent": false, "important": false]
+        if let deviceId { record["device_id"] = deviceId }
         if let version { record["client_updated_at"] = version }
         records[recordId] = record
     }
@@ -44,6 +47,11 @@ actor GuardedServer: RequestExecuting {
 
     /// Runs as each guarded PATCH arrives, as a sign-out that lands during the request would.
     func onPatch(_ action: @escaping @Sendable () -> Void) { duringPatch = action }
+
+    /// After the next PATCH lands, another device rewrites the record.
+    func changeAfterNextPatch(recordId: String, version: String, deviceId: String) { afterPatch = (recordId, version, deviceId) }
+    /// The next PATCH is applied, but its response never reaches the client.
+    func loseResponseOfNextPatch() { loseNextPatchResponse = true }
 
     func version(of recordId: String) -> String? { records[recordId]?["client_updated_at"] as? String }
     func title(of recordId: String) -> String? { records[recordId]?["title"] as? String }
@@ -87,6 +95,12 @@ actor GuardedServer: RequestExecuting {
         guard let data, Set(data.keys).isSubset(of: Self.allowedKeys),
               let sent = data["client_updated_at"] as? String, sent != expected else { return answer(request, 400) }
         records[recordId] = stored.merging(data) { _, new in new }
+        if let change = afterPatch {
+            records[change.recordId]?["client_updated_at"] = change.version
+            records[change.recordId]?["device_id"] = change.deviceId
+            afterPatch = nil
+        }
+        if loseNextPatchResponse { loseNextPatchResponse = false; throw URLError(.networkConnectionLost) }
         return answer(request, 204)
     }
 
@@ -386,5 +400,48 @@ struct SyncEngineGuardedWriteTests {
         _ = try await rig.engine.push(token: "TOK", owner: "u1")
         let pulled = try await rig.engine.pull(token: "TOK", since: "1970-01-01 00:00:00.000Z")
         #expect(pulled.applied == 0 && pulled.conflicts == 0)
+    }
+
+    // MARK: Own bump across pushes (F3), rounding, and both halves of F2
+
+    @Test("AC9: a task archived while its bumped PATCH was in flight is deleted by the next push")
+    func archivedDuringTheBumpedPatch() async throws {
+        let rig = try rig(await seededServer())
+        // The archive removed the row before the 204, so there is nothing to restamp.
+        try await enqueue(rig, "q1", .update, at: Self.listed, payload: edit("edited", at: Self.listed))
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(await rig.server.version(of: "rec1") == Self.bumped)
+        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:45:00.000Z", payload: edit("edited", at: Self.listed))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 0)
+        #expect(await rig.server.deletes.map(\.expectedVersion) == [Self.bumped])
+        #expect(await rig.server.holds("rec1") == false)
+    }
+
+    @Test("AC10: the PATCH landed, its response was lost, then the task was archived")
+    func lostResponseThenArchive() async throws {
+        let server = await seededServer()
+        await server.loseResponseOfNextPatch()
+        let rig = try rig(server)
+        try await seedBumpedUpdate(rig)
+        _ = try? await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(await server.version(of: "rec1") == Self.bumped)
+        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:45:00.000Z", payload: edit("edited", at: Self.listed))
+        _ = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(await server.deletes.map(\.expectedVersion) == [Self.bumped])
+        #expect(await server.holds("rec1") == false)
+    }
+
+    @Test("AC11: another device's edit at exactly the bumped stamp keeps the delete stale")
+    func otherDeviceAtTheBumpedStamp() async throws {
+        let server = GuardedServer()
+        await server.put(recordId: "rec1", taskId: "a", version: Self.bumped, deviceId: "other-device")
+        let rig = try rig(server)
+        try await enqueue(rig, "q1", .delete, at: "2026-11-19T17:45:00.000Z", payload: edit("edited", at: Self.listed))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 0 && result.failed == 0)
+        #expect(await server.deletes.isEmpty)
+        #expect(try await rig.queue.pending().isEmpty)
+        #expect(await server.holds("rec1"))
     }
 }

@@ -254,8 +254,10 @@ public actor SyncEngine {
                 try await queue.remove(id: item.id); continue
             }
             // Resolved, not retried: the newer remote edit stays, and the next pull delivers it.
-            // A version this push wrote is its own write, not another device's edit (F2).
+            // A version this push wrote (F2), or this device's own +1 ms bump of the archived version
+            // from an earlier push (F3), is our write, not another device's edit.
             if item.operation == .delete, writtenThisPush[item.taskId] != remote?.version,
+               !isOwnBump(item, remote),
                isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt) {
                 try await queue.remove(id: item.id); continue
             }
@@ -291,7 +293,7 @@ public actor SyncEngine {
                         try await client.updateTaskGuarded(recordId: listed.recordId, expectedVersion: listed.version,
                                                            record: guarded, token: token)
                         // A second write to this task in the same push expects the version this one stored.
-                        index[item.taskId] = RemoteIndexEntry(recordId: listed.recordId, version: guarded.clientUpdatedAt)
+                        index[item.taskId] = RemoteIndexEntry(recordId: listed.recordId, version: guarded.clientUpdatedAt, deviceId: deviceId)
                         writtenThisPush[item.taskId] = guarded.clientUpdatedAt
                         // F1: the server holds the bumped stamp, so the local row takes it too, or a later
                         // archive would carry the old one and read the server's copy as a newer edit.
@@ -304,7 +306,7 @@ public actor SyncEngine {
                         // Record the new recordId in the live index so a later same-drain DELETE for the
                         // same task_id finds it (else the create leaks an orphan remote record).
                         let newRecordId = try await client.createTask(wire, token: token)
-                        index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: wire.clientUpdatedAt)
+                        index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: wire.clientUpdatedAt, deviceId: deviceId)
                         writtenThisPush[item.taskId] = wire.clientUpdatedAt
                     }
                 }
@@ -343,6 +345,16 @@ public actor SyncEngine {
             try fence(owner)
             try await tasks.setNotifyBeforeIfNull(id: payload.id, value: resolved)   // one column, never the whole row
         }
+    }
+
+    /// F3: the listed record carries this device's id and exactly the +1 ms bump of the delete's archived
+    /// version, which only this device's own guarded write produces. The expected string comes from the
+    /// same function the push bumps with, and is compared byte for byte. Another device's edit at that
+    /// stamp carries its own id, so it stays stale.
+    private func isOwnBump(_ item: SyncQueueItem, _ remote: RemoteIndexEntry?) -> Bool {
+        guard let payload = item.payload, let remote, remote.deviceId == deviceId, let version = remote.version else { return false }
+        let archived = WireDate.format(payload.updatedAt)
+        return version == LWW.guardedVersion(outgoing: archived, expected: archived)
     }
 
     /// A delete is stale when the remote changed after it was queued (B-42). An archive's delete also
