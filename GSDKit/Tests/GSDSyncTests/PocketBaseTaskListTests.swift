@@ -103,7 +103,7 @@ struct PocketBaseTaskListTests {
     // The push and reconcile index. A record whose body is malformed is still on the server, so it
     // stays in the index. A record the index can't identify makes the whole index untrustworthy.
 
-    private func index(_ exec: PagingExecutor) async throws -> [String: (recordId: String, clientUpdatedAt: Date?)] {
+    private func index(_ exec: PagingExecutor) async throws -> [String: RemoteIndexEntry] {
         try await PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec).remoteIndex(token: "TOK")
     }
 

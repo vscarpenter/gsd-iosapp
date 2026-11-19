@@ -276,7 +276,7 @@ public actor SyncEngine {
                         // Record the new recordId in the live index so a later same-drain DELETE for the
                         // same task_id finds it (else the create leaks an orphan remote record).
                         let newRecordId = try await client.createTask(wire, token: token)
-                        index[item.taskId] = (recordId: newRecordId, clientUpdatedAt: payload.updatedAt)
+                        index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: nil, clientUpdatedAt: payload.updatedAt)
                     }
                 }
                 try await queue.remove(id: item.id); pushed += 1
