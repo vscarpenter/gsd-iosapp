@@ -604,10 +604,16 @@ struct SyncEngineGuardedWriteTests {
         let row = edit("edited", at: ahead)
         try await tasks.upsert(row)
         if queuedUpdate {
+            // Built by hand: `store.archive` clears the task's queued update, and F2 needs the PATCH to run.
+            try await GRDBArchiveRepository(db).archive(row, at: buried)
+            let archivedMs = Int(buried.timeIntervalSince1970 * 1000)
             try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update,
-                timestamp: Int(buried.timeIntervalSince1970 * 1000) - 60_000, payload: row))
+                timestamp: archivedMs - 60_000, payload: row))
+            try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "a", operation: .delete,
+                timestamp: archivedMs, payload: row))
+        } else {
+            try await store.archive(row)
         }
-        try await store.archive(row)
         let result = await engine.sync(trigger: .manual)
         #expect(result.error == nil)
         return (tasks, queue)
@@ -618,6 +624,7 @@ struct SyncEngineGuardedWriteTests {
         let server = GuardedServer()
         await server.put(recordId: "rec1", taskId: "a", version: "2026-11-19T18:02:00.000Z", deviceId: "other-device")
         let (tasks, _) = try await skewedSync(server: server, queuedUpdate: true)
+        #expect(await server.patches.count == 1)   // the bumped PATCH ran, so F2 had a write to recognize
         #expect(await server.holds("rec1"))
         #expect(await server.deletes.isEmpty)
         #expect(try await tasks.fetch(id: "a") != nil)
