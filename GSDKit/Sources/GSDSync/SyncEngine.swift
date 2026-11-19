@@ -255,10 +255,12 @@ public actor SyncEngine {
             }
             // Resolved, not retried: the newer remote edit stays, and the next pull delivers it.
             // A version this push wrote (F2), or this device's own +1 ms bump of the archived version
-            // from an earlier push (F3), is our write, not another device's edit.
-            if item.operation == .delete, writtenThisPush[item.taskId] != remote?.version,
-               !isOwnBump(item, remote),
-               isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt) {
+            // from an earlier push (F3), is our write, not another device's edit. That excuses only the
+            // archived-version check. The queued-after check still applies, so a writer whose clock runs
+            // ahead keeps the delete stale here, as it is in the pull's tombstone logic.
+            let ownWrite = writtenThisPush[item.taskId] == remote?.version || isOwnBump(item, remote)
+            if item.operation == .delete,
+               isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt, ignoringArchivedVersion: ownWrite) {
                 try await queue.remove(id: item.id); continue
             }
             // A rejected token lists as an empty account, so a task missing from the listing proves
@@ -366,11 +368,11 @@ public actor SyncEngine {
     /// archiving a stale copy must not delete the newer task. Web `isStaleDelete`, Android
     /// `remoteEditedAfterQueued` and `remoteEditedAfterArchive`. A remote with no usable version never
     /// reaches this check: the push charges that row first, because staleness can't be judged.
-    private func isStaleDelete(_ item: SyncQueueItem, remoteUpdated: Date?) -> Bool {
+    private func isStaleDelete(_ item: SyncQueueItem, remoteUpdated: Date?, ignoringArchivedVersion: Bool = false) -> Bool {
         guard let remoteUpdated else { return false }
         let queuedAt = Date(timeIntervalSince1970: Double(item.timestamp) / 1000)
         if LWW.isRemoteNewer(remoteUpdated, than: queuedAt, now: now()) { return true }
-        guard let archived = item.payload else { return false }
+        guard !ignoringArchivedVersion, let archived = item.payload else { return false }
         return LWW.isRemoteNewer(remoteUpdated, than: archived.updatedAt, now: now())
     }
 

@@ -563,4 +563,79 @@ struct SyncEngineGuardedWriteTests {
         #expect(await server.collectionWrites == ["POST /api/collections/tasks/records"])
         #expect(await server.holds("rec_new"))
     }
+
+    // MARK: Clock skew (AC14) and the exact shape F3 matches (AC15)
+
+    private static func jwt(_ id: String) -> String {
+        let payload = Data(#"{"id":"\#(id)","exp":9999999999}"#.utf8).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_").replacingOccurrences(of: "=", with: "")
+        return "h.\(payload).s"
+    }
+
+    /// A task archived here at 17:45 whose server copy is stamped by a writer whose clock runs two
+    /// minutes ahead of this device's. A full sync (pull, push, reconcile) runs against a real archive.
+    @MainActor private func skewedSync(server: GuardedServer, queuedUpdate: Bool) async throws
+        -> (tasks: GRDBTaskRepository, queue: GRDBSyncQueueRepository) {
+        let buried = WireDate.parse("2026-11-19T17:45:00.000Z")!
+        let db = try AppDatabase.inMemory()
+        let queue = GRDBSyncQueueRepository(db)
+        let tasks = GRDBTaskRepository(db)
+        let store = TaskStore(repository: tasks, smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db, now: { buried }),
+                              trashRepository: GRDBTrashRepository(db, now: { buried }),
+                              defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!,
+                              clock: { buried }, syncQueue: queue)
+        let cursor = SyncCursor(defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!)
+        cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000)); cursor.markBackfilled()
+        let token = Self.jwt("u1")
+        let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://guarded.test", executor: server),
+                                tasks: tasks, queue: queue, tombstones: GRDBTombstoneRepository(db), cursor: cursor,
+                                deviceId: "ios", tokenProvider: { token }, rawToken: { token },
+                                now: { Self.now }, throttleMs: 0)
+        let ahead = "2026-11-19T18:02:00.000Z"
+        let row = edit("edited", at: ahead)
+        try await tasks.upsert(row)
+        if queuedUpdate {
+            try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update,
+                timestamp: Int(buried.timeIntervalSince1970 * 1000) - 60_000, payload: row))
+        }
+        try await store.archive(row)
+        let result = await engine.sync(trigger: .manual)
+        #expect(result.error == nil)
+        return (tasks, queue)
+    }
+
+    @Test("AC14: a skewed writer's equal-stamp update and archive delete in one push lose nothing")
+    @MainActor func skewWithinOnePush() async throws {
+        let server = GuardedServer()
+        await server.put(recordId: "rec1", taskId: "a", version: "2026-11-19T18:02:00.000Z", deviceId: "other-device")
+        let (tasks, _) = try await skewedSync(server: server, queuedUpdate: true)
+        #expect(await server.holds("rec1"))
+        #expect(await server.deletes.isEmpty)
+        #expect(try await tasks.fetch(id: "a") != nil)
+    }
+
+    @Test("AC14: a skewed writer's own bump seen in a later push loses nothing")
+    @MainActor func skewAcrossPushes() async throws {
+        let server = GuardedServer()
+        await server.put(recordId: "rec1", taskId: "a", version: "2026-11-19T18:02:00.001Z", deviceId: "ios")
+        let (tasks, _) = try await skewedSync(server: server, queuedUpdate: false)
+        #expect(await server.holds("rec1"))
+        #expect(await server.deletes.isEmpty)
+        #expect(try await tasks.fetch(id: "a") != nil)
+    }
+
+    @Test("AC15: F3 matches only this device at exactly one millisecond past the archived version",
+          arguments: [("2026-11-19T17:00:00.002Z", "ios"), (bumped, nil), (bumped, "")] as [(String, String?)])
+    func ownBumpMatchesOnlyTheExactShape(version: String, device: String?) async throws {
+        let server = GuardedServer()
+        await server.put(recordId: "rec1", taskId: "a", version: version, deviceId: device)
+        let rig = try rig(server)
+        try await enqueue(rig, "q1", .delete, at: "2026-11-19T17:45:00.000Z", payload: edit("edited", at: Self.listed))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 0 && result.failed == 0)
+        #expect(await server.deletes.isEmpty)
+        #expect(try await rig.queue.pending().isEmpty)
+        #expect(await server.holds("rec1"))
+    }
 }

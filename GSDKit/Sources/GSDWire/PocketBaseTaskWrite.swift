@@ -1,6 +1,6 @@
 import Foundation
 
-/// The three fields push and deletion reconcile need from a remote record. Decoded on its own,
+/// The four fields push and deletion reconcile need from a remote record. Decoded on its own,
 /// so a record whose other fields are malformed still counts as present on the server (parity
 /// S10). A record missing `id` or `task_id` can't be identified and fails to decode.
 struct RemoteTaskIdentity: Decodable, Sendable {
