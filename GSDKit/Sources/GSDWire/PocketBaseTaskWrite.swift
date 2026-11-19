@@ -35,25 +35,28 @@ package struct RemoteIndexEntry: Sendable, Equatable {
     package let version: String?
     package let clientUpdatedAt: Date?
 
-    package init(recordId: String, version: String?, clientUpdatedAt: Date?) {
+    /// `clientUpdatedAt` is derived from `version`, so the two can't disagree.
+    package init(recordId: String, version: String?) {
         self.recordId = recordId
         self.version = version
-        self.clientUpdatedAt = clientUpdatedAt
+        self.clientUpdatedAt = version.flatMap(WireDate.parse)
     }
 }
 
 extension PocketBaseClient {
-    /// Bulk remote index for push and deletion reconcile (§7.5): `task_id → RemoteIndexEntry`. One fetch per push. Fails closed (parity S10): a record it can't
-    /// identify throws, as does a listing that repeats a task (`listAll`), instead of returning an
-    /// index that would let reconcile delete a local task the server still holds.
+    /// Bulk remote index for push and deletion reconcile (§7.5): `task_id → RemoteIndexEntry`. One
+    /// fetch per push. Fails closed (parity S10): a record it can't identify throws, as does a listing
+    /// that repeats a task (`listAll`), instead of returning an index that would let reconcile delete
+    /// a local task the server still holds.
     package func remoteIndex(token: String) async throws -> [String: RemoteIndexEntry] {
         let listing = try await listAll(RemoteTaskIdentity.self, updatedSince: "1970-01-01T00:00:00.000Z", token: token)
         if listing.undecodable > 0 {
             throw RemoteListingIncomplete(reason: "\(listing.undecodable) records could not be identified")
         }
         var index: [String: RemoteIndexEntry] = [:]
-        for r in listing.items { index[r.taskId] = RemoteIndexEntry(recordId: r.recordId, version: r.clientUpdatedAt,
-                                               clientUpdatedAt: r.clientUpdatedAt.flatMap(WireDate.parse)) }
+        for r in listing.items {
+            index[r.taskId] = RemoteIndexEntry(recordId: r.recordId, version: r.clientUpdatedAt)
+        }
         return index
     }
 

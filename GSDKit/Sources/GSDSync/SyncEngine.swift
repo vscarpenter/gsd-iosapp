@@ -284,14 +284,12 @@ public actor SyncEngine {
                         try await client.updateTaskGuarded(recordId: listed.recordId, expectedVersion: listed.version,
                                                            record: guarded, token: token)
                         // A second write to this task in the same push expects the version this one stored.
-                        index[item.taskId] = RemoteIndexEntry(recordId: listed.recordId, version: guarded.clientUpdatedAt,
-                                                              clientUpdatedAt: WireDate.parse(guarded.clientUpdatedAt))
+                        index[item.taskId] = RemoteIndexEntry(recordId: listed.recordId, version: guarded.clientUpdatedAt)
                     } else {
                         // Record the new recordId in the live index so a later same-drain DELETE for the
                         // same task_id finds it (else the create leaks an orphan remote record).
                         let newRecordId = try await client.createTask(wire, token: token)
-                        index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: wire.clientUpdatedAt,
-                                                              clientUpdatedAt: WireDate.parse(wire.clientUpdatedAt))
+                        index[item.taskId] = RemoteIndexEntry(recordId: newRecordId, version: wire.clientUpdatedAt)
                     }
                 }
                 try await queue.remove(id: item.id); pushed += 1
