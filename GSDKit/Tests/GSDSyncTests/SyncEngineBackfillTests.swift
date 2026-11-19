@@ -18,10 +18,13 @@ private actor BackfillServer: RequestExecuting {
 
     func execute(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         let ok = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        let guarded = request.url?.path.hasPrefix("/api/gsd/tasks/") == true   // the guarded route wraps the record in `data`
         if request.httpMethod == "PATCH", let body = request.httpBody,
-           let fields = try JSONSerialization.jsonObject(with: body) as? [String: Any] {
+           let sent = try JSONSerialization.jsonObject(with: body) as? [String: Any] {
+            let fields = guarded ? try #require(sent["data"] as? [String: Any]) : sent
             record.merge(fields) { _, new in new }
         }
+        if guarded { return (Data(), HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!) }
         guard request.httpMethod == "GET" else { return (try JSONSerialization.data(withJSONObject: record), ok) }
         let items: [[String: Any]] = listed(by: request) ? [record] : []
         let page: [String: Any] = ["page": 1, "perPage": 200, "totalItems": items.count, "totalPages": 1, "items": items]
