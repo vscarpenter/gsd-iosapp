@@ -17,7 +17,7 @@ actor GuardedServer: RequestExecuting {
         "estimated_minutes", "time_spent", "time_entries", "snoozed_until", "saved_at", "focus_date",
         "focus_rank", "client_updated_at", "client_created_at", "device_id"]
 
-    struct Patch: Sendable { let recordId: String; let expectedVersion: String; let clientUpdatedAt: String? }
+    struct Patch: Sendable { let recordId: String; let expectedVersion: String; let clientUpdatedAt: String?; let notifyBefore: Int? }
     struct Delete: Sendable { let recordId: String; let expectedVersion: String }
 
     private var records: [String: [String: Any]] = [:]   // by record id
@@ -87,7 +87,8 @@ actor GuardedServer: RequestExecuting {
         let data = body["data"] as? [String: Any]
         if method == "PATCH" { duringPatch?() }
         if method == "PATCH" { patches.append(Patch(recordId: recordId, expectedVersion: expected,
-                                                     clientUpdatedAt: data?["client_updated_at"] as? String)) }
+                                                     clientUpdatedAt: data?["client_updated_at"] as? String,
+                                                     notifyBefore: data?["notify_before"] as? Int)) }
         else { deletes.append(Delete(recordId: recordId, expectedVersion: expected)) }
         guard let stored = records[recordId] else { return answer(request, 404) }
         guard stored["client_updated_at"] as? String == expected else { return answer(request, 412) }
@@ -289,7 +290,6 @@ struct SyncEngineGuardedWriteTests {
     func updateAfterCreateExpectsTheCreatedVersion() async throws {
         let server = GuardedServer()
         let rig = try rig(server)
-        try await rig.tasks.upsert(edit("second", at: "2026-11-19T17:40:00.000Z"))
         try await enqueue(rig, "q1", .create, at: "2026-11-19T17:20:00.000Z", payload: edit("first", at: "2026-11-19T17:20:00.000Z"))
         try await enqueue(rig, "q2", .update, at: "2026-11-19T17:40:00.000Z", payload: edit("second", at: "2026-11-19T17:40:00.000Z"))
         let result = try await rig.engine.push(token: "TOK", owner: "u1")
@@ -422,17 +422,25 @@ struct SyncEngineGuardedWriteTests {
     }
 
     @Test("AC10: the PATCH landed, its response was lost, then the task was archived")
-    func lostResponseThenArchive() async throws {
+    @MainActor func lostResponseThenArchive() async throws {
         let server = await seededServer()
         await server.loseResponseOfNextPatch()
-        let rig = try rig(server)
-        try await seedBumpedUpdate(rig)
+        let rig = try storeRig(server, clock: Clock(Self.now))
+        let row = edit("edited", at: Self.listed)
+        try await rig.tasks.upsert(row)
+        try await rig.queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update,
+            timestamp: Int(row.updatedAt.timeIntervalSince1970 * 1000), payload: row))
         _ = try? await rig.engine.push(token: "TOK", owner: "u1")
         #expect(await server.version(of: "rec1") == Self.bumped)
-        try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:45:00.000Z", payload: edit("edited", at: Self.listed))
+        #expect(try await rig.queue.pending().map(\.id) == ["q1"])   // charged, kept
+        try await rig.store.archive(row)
+        // The archive clears the task's queued writes, so only the delete is left.
+        let queued = try await rig.queue.all()
+        #expect(queued.count == 1 && queued.first?.operation == .delete)
         _ = try await rig.engine.push(token: "TOK", owner: "u1")
         #expect(await server.deletes.map(\.expectedVersion) == [Self.bumped])
         #expect(await server.holds("rec1") == false)
+        #expect(try await rig.queue.all().isEmpty)
     }
 
     @Test("AC11: another device's edit at exactly the bumped stamp keeps the delete stale")
@@ -452,7 +460,6 @@ struct SyncEngineGuardedWriteTests {
     func createThenArchiveDelete() async throws {
         let server = GuardedServer()
         let rig = try rig(server)
-        try await rig.tasks.upsert(edit("first", at: "2026-11-19T17:20:00.000Z"))
         try await enqueue(rig, "q1", .create, at: "2026-11-19T17:20:00.000Z", payload: edit("first", at: "2026-11-19T17:20:00.000Z"))
         try await enqueue(rig, "q2", .delete, at: "2026-11-19T17:40:00.000Z", payload: edit("first", at: "2026-11-19T17:00:00.000Z"))
         let result = try await rig.engine.push(token: "TOK", owner: "u1")
@@ -574,7 +581,8 @@ struct SyncEngineGuardedWriteTests {
 
     /// A task archived here at 17:45 whose server copy is stamped by a writer whose clock runs two
     /// minutes ahead of this device's. A full sync (pull, push, reconcile) runs against a real archive.
-    @MainActor private func skewedSync(server: GuardedServer, queuedUpdate: Bool) async throws
+    @MainActor private func skewedSync(server: GuardedServer, queuedUpdate: Bool,
+                                       storeClock: (@Sendable () -> Date)? = nil) async throws
         -> (tasks: GRDBTaskRepository, queue: GRDBSyncQueueRepository) {
         let buried = WireDate.parse("2026-11-19T17:45:00.000Z")!
         let db = try AppDatabase.inMemory()
@@ -584,7 +592,7 @@ struct SyncEngineGuardedWriteTests {
                               archiveRepository: GRDBArchiveRepository(db, now: { buried }),
                               trashRepository: GRDBTrashRepository(db, now: { buried }),
                               defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!,
-                              clock: { buried }, syncQueue: queue)
+                              clock: storeClock ?? { buried }, syncQueue: queue)
         let cursor = SyncCursor(defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!)
         cursor.advance(maxApplied: Date(timeIntervalSince1970: 1_000)); cursor.markBackfilled()
         let token = Self.jwt("u1")
@@ -637,5 +645,39 @@ struct SyncEngineGuardedWriteTests {
         #expect(await server.deletes.isEmpty)
         #expect(try await rig.queue.pending().isEmpty)
         #expect(await server.holds("rec1"))
+    }
+
+    private final class Ticks: @unchecked Sendable {
+        var next: Date; let step: TimeInterval
+        init(from start: Date, step: TimeInterval) { next = start; self.step = step }
+        func read() -> Date { defer { next = next.addingTimeInterval(step) }; return next }
+    }
+
+    @Test("an archive reads the clock once: a bump landing between two readings loses nothing")
+    @MainActor func archiveUsesOneClockReading() async throws {
+        let server = GuardedServer()
+        await server.put(recordId: "rec1", taskId: "a", version: "2026-11-19T18:02:00.001Z", deviceId: "ios")
+        let ticks = Ticks(from: WireDate.parse("2026-11-19T18:02:00.000Z")!, step: 0.002)
+        let (tasks, _) = try await skewedSync(server: server, queuedUpdate: false, storeClock: { ticks.read() })
+        #expect(await server.holds("rec1"))
+        #expect(await server.deletes.isEmpty)
+        #expect(try await tasks.fetch(id: "a") != nil)
+    }
+
+    @Test("D-10: a listed record with no local row and a null payload carries the device default")
+    func listedGoneRowPushesTheDefault() async throws {
+        let server = await seededServer()
+        let db = try AppDatabase.inMemory()
+        let queue = GRDBSyncQueueRepository(db)
+        let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://guarded.test", executor: server),
+                                tasks: GRDBTaskRepository(db), queue: queue,
+                                cursor: SyncCursor(defaults: UserDefaults(suiteName: "guarded.\(UUID().uuidString)")!),
+                                deviceId: "ios", tokenProvider: { "TOK" }, now: { Self.now }, throttleMs: 0,
+                                defaultReminder: { 20 })
+        var payload = edit("edited", at: "2026-11-19T17:30:00.000Z"); payload.notifyBefore = nil
+        try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .update,
+            timestamp: Int(payload.updatedAt.timeIntervalSince1970 * 1000), payload: payload))
+        _ = try await engine.push(token: "TOK", owner: "u1")
+        #expect(await server.patches.first?.notifyBefore == 20)
     }
 }

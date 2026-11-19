@@ -179,7 +179,6 @@ struct SyncEngineSessionFenceTests {
 
     @Test func aSignOutMidPushStopsBeforeTheNextItem() async throws {
         let db = try AppDatabase.inMemory(); let session = Session(); let exec = Executor(); let queue = GRDBSyncQueueRepository(db)
-        try await GRDBTaskRepository(db).upsert(task("a")); try await GRDBTaskRepository(db).upsert(task("b"))
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .create, timestamp: 1, payload: task("a")))
         try await queue.enqueue(SyncQueueItem(id: "q2", taskId: "b", operation: .create, timestamp: 2, payload: task("b")))
         exec.onWrite = { _ in session.token = nil }

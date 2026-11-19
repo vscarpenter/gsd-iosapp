@@ -45,7 +45,6 @@ struct SyncEngineReviewFixTests {
 
     @Test func sameDrainCreateThenDeleteDoesNotOrphan() async throws {
         let db = try AppDatabase.inMemory(); let queue = GRDBSyncQueueRepository(db); let exec = CreateDeleteExecutor()
-        try await GRDBTaskRepository(db).upsert(sample("x"))   // the task is live here, so the push may create it
         try await queue.enqueue(SyncQueueItem(id: "c", taskId: "x", operation: .create, timestamp: 1, payload: sample("x")))
         try await queue.enqueue(SyncQueueItem(id: "d", taskId: "x", operation: .delete, timestamp: 2_000))
         let eng = SyncEngine(client: PocketBaseClient(baseURL: "https://api.vinny.io", executor: exec),

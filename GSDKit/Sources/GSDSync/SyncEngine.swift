@@ -258,9 +258,9 @@ public actor SyncEngine {
             // from an earlier push (F3), is our write, not another device's edit. That excuses only the
             // archived-version check. The queued-after check still applies, so a writer whose clock runs
             // ahead keeps the delete stale here, as it is in the pull's tombstone logic.
-            let ownWrite = writtenThisPush[item.taskId] == remote?.version || isOwnBump(item, remote)
             if item.operation == .delete,
-               isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt, ignoringArchivedVersion: ownWrite) {
+               isStaleDelete(item, remoteUpdated: remote?.clientUpdatedAt,
+                             ignoringArchivedVersion: isOwnWrite(item, remote, writtenThisPush)) {
                 try await queue.remove(id: item.id); continue
             }
             // A rejected token lists as an empty account, so a task missing from the listing proves
@@ -305,10 +305,6 @@ public actor SyncEngine {
                             _ = try await tasks.restampIfUnchanged(id: payload.id, from: payload.updatedAt, to: sent)
                         }
                     } else {
-                        // F4: a task that isn't live on this device (archived, in Trash, or deleted for
-                        // good) must not be POSTed back from a stale snapshot. The identity check above
-                        // already ran, so this absence is real. Dropped, neither pushed nor failed.
-                        if current == nil { try await queue.remove(id: item.id); continue }
                         // Record the new recordId in the live index so a later same-drain DELETE for the
                         // same task_id finds it (else the create leaks an orphan remote record).
                         let newRecordId = try await client.createTask(wire, token: token)
@@ -351,6 +347,13 @@ public actor SyncEngine {
             try fence(owner)
             try await tasks.setNotifyBeforeIfNull(id: payload.id, value: resolved)   // one column, never the whole row
         }
+    }
+
+    /// F2 or F3: the listed record is a version this push wrote, or this device's own +1 ms bump. Only a
+    /// delete with a listed record can be an own write; anything else is never exempt.
+    private func isOwnWrite(_ item: SyncQueueItem, _ remote: RemoteIndexEntry?, _ written: [String: String]) -> Bool {
+        guard item.operation == .delete, let remote, let version = remote.version else { return false }
+        return written[item.taskId] == version || isOwnBump(item, remote)
     }
 
     /// F3: the listed record carries this device's id and exactly the +1 ms bump of the delete's archived
