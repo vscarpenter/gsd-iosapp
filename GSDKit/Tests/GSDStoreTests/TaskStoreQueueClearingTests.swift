@@ -169,6 +169,55 @@ struct TaskStoreQueueClearingTests {
         #expect(cancels.events == ["cancel a in Trash"])
     }
 
+    /// The real Trash, except that an edit to the task lands just before the Trash write, after the
+    /// store built its copy. It queues its update, then saves the row, as a main-actor edit does.
+    final class EditLandsBeforeTrash: TrashRepository, @unchecked Sendable {
+        let base: GRDBTrashRepository, tasks: GRDBTaskRepository, queue: GRDBSyncQueueRepository
+        init(_ db: AppDatabase) {
+            base = GRDBTrashRepository(db); tasks = GRDBTaskRepository(db); queue = GRDBSyncQueueRepository(db)
+        }
+        func trash(_ task: Task) async throws { try await base.trash(task) }
+        func trash(_ task: Task, at deletedAt: Date) async throws { try await base.trash(task, at: deletedAt) }
+        func trash(_ task: Task, at deletedAt: Date, queueing item: SyncQueueItem) async throws {
+            var edited = task
+            edited.title = "edited"; edited.updatedAt = task.updatedAt.addingTimeInterval(60)
+            try await queue.enqueue(SyncQueueItem(id: "u-edit", taskId: task.id, operation: .update, timestamp: 3, payload: edited))
+            try await tasks.upsert(edited)
+            try await base.trash(task, at: deletedAt, queueing: item)
+        }
+        func restore(id: String, queueing makeItem: @Sendable (Task) -> SyncQueueItem) async throws -> Task? {
+            try await base.restore(id: id, queueing: makeItem)
+        }
+        func deleteForever(id: String) async throws { try await base.deleteForever(id: id) }
+        func empty() async throws -> Int { try await base.empty() }
+        func fetchAll() async throws -> [Task] { try await base.fetchAll() }
+        func fetchAllStamped() async throws -> [ArchivedTask] { try await base.fetchAllStamped() }
+        func purge(before cutoff: Date) async throws -> Int { try await base.purge(before: cutoff) }
+        func observeAll() -> AsyncThrowingStream<[Task], Error> { base.observeAll() }
+    }
+
+    /// The Trash write clears the edit's queued update, so the Trash row is the only place left that can
+    /// hold the edit. It must be built from the row the write moves, not the copy read before it.
+    @Test("an edit landing just before the Trash write is the copy Trash keeps")
+    func trashKeepsAnEditThatLandedBeforeItsWrite() async throws {
+        let db = try AppDatabase.inMemory()
+        let queue = GRDBSyncQueueRepository(db)
+        let tasks = GRDBTaskRepository(db)
+        let store = TaskStore(repository: tasks, smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db), trashRepository: EditLandsBeforeTrash(db),
+                              defaults: UserDefaults(suiteName: "clear.\(UUID().uuidString)")!,
+                              clock: { Date(timeIntervalSince1970: 1_800_000_000) }, syncQueue: queue)
+        try await tasks.upsert(task("a"))
+
+        try await store.delete(task("a"))
+
+        let trashed = try #require(try await store.trashedTasks().first).task
+        #expect(trashed.title == "edited")
+        #expect(trashed.updatedAt == task("a").updatedAt.addingTimeInterval(60))
+        #expect(try await queue.all().map(\.operation) == [.delete])
+        #expect(try await tasks.fetch(id: "a") == nil)
+    }
+
     @Test("an archive whose delete can't be queued with its clearing returns the task to active and keeps the rows")
     func failedArchiveKeepsEverything() async throws {
         let (store, queue, tasks) = try make(wrap: { FailingClearQueue($0) })

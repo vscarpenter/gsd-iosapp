@@ -448,10 +448,10 @@ public final class TaskStore {
     /// layered over the same server delete the web client performs, so the two clients
     /// remain byte-identical on the wire while both now offer a way back.
     public func delete(_ task: Task) async throws {
-        let task = try await repository.fetch(id: task.id) ?? task
-        // One write queues the delete, removes the task's queued creates and updates, and moves the row
-        // into Trash. A removed row can't be re-queued by the next sync's seed, so a Trash that landed
-        // without its delete would let the next pull resurrect the task. A failed write keeps the row live.
+        // One write reads the live row, moves it into Trash, queues the delete, and removes the task's
+        // queued creates and updates. A removed row can't be re-queued by the next sync's seed, so a Trash
+        // that landed without its delete would let the next pull resurrect the task. A failed write keeps
+        // the row live.
         let trashedAt = clock()   // one reading for the Trash time and the delete's queue time
         let item = Self.makeQueueItem(task.id, .delete, payload: nil, at: trashedAt)
         do {

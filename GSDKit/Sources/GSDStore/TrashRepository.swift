@@ -13,9 +13,12 @@ public protocol TrashRepository: Sendable {
     func trash(_ task: Task, at deletedAt: Date) async throws
     /// Trash a live task, as one write: move the row into Trash, queue `item` (its delete), and remove
     /// the task's queued creates and updates. A charged update left behind would come due after the
-    /// delete landed and POST the task back. If the write fails, the task stays live with its queue
-    /// unchanged. This writes the queue row through the trash repository's own database writer. The
-    /// trash repository and the sync queue must therefore share one database, which `App/GSDApp.swift` does.
+    /// delete landed and POST the task back. The Trash row is the live row as the write finds it, or
+    /// `task` when there is none. An edit saved after the caller read `task` loses its queued update
+    /// here, so the Trash row is the only place left to keep it. If the write fails, the task stays
+    /// live with its queue unchanged. This writes the queue row through the trash repository's own
+    /// database writer. The trash repository and the sync queue must therefore share one database,
+    /// which `App/GSDApp.swift` does.
     func trash(_ task: Task, at deletedAt: Date, queueing item: SyncQueueItem) async throws
     /// Undo from Trash, as one write: move the row back to `tasks`, remove the task's queued deletes,
     /// and queue `makeItem(task)`. A delete waiting out a backoff would otherwise land after the
@@ -58,10 +61,10 @@ public final class GRDBTrashRepository: TrashRepository {
     }
 
     public func trash(_ task: Task, at deletedAt: Date, queueing item: SyncQueueItem) async throws {
-        let record = try DeletedTaskRecord(task, deletedAt: deletedAt)
         let queued = try SyncQueueRecord(item)
         try await dbWriter.write { db in
-            try record.save(db)
+            let live = try TaskRecord.fetchOne(db, key: task.id)?.toDomain() ?? task
+            try DeletedTaskRecord(live, deletedAt: deletedAt).save(db)
             _ = try TaskRecord.deleteOne(db, key: task.id)
             try queued.save(db)
             _ = try SyncQueueRecord.writes(of: [task.id]).deleteAll(db)
