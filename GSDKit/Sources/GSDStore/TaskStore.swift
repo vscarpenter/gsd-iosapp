@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 import GSDModel
 
 /// Snooze durations (product spec §6.7). `.custom` supports arbitrary intervals
@@ -87,6 +88,7 @@ public enum TaskStoreError: Error, LocalizedError, Equatable {
 @MainActor
 @Observable
 public final class TaskStore {
+    private static let log = Logger(subsystem: "dev.vinny.gsd", category: "store")
     public private(set) var tasks: [Task] = []
     /// True once the task observer has delivered its first snapshot. Lets the UI tell
     /// "loaded, and empty" apart from "not loaded yet" — `tasks` starts empty either way.
@@ -455,7 +457,9 @@ public final class TaskStore {
         do {
             try await trashRepository.trash(task, at: trashedAt, queueing: item)
         } catch {
-            // Nothing landed, whichever part failed, so the user can retry.
+            // Nothing landed, whichever part failed, so the user can retry. The cause is logged first,
+            // because a lasting fault such as a full disk reads the same as a passing one to the user.
+            Self.log.error("Trash write failed, task kept live: \(String(describing: type(of: error)), privacy: .public) \(String(describing: error))")
             throw TaskStoreError.deleteNotRecorded
         }
         onMutation?()
