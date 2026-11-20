@@ -20,6 +20,7 @@ struct TaskStoreQueueClearingTests {
         struct Refused: Error {}
         func enqueue(_ item: SyncQueueItem) async throws { try await base.enqueue(item) }
         func enqueueClearingWrites(_ item: SyncQueueItem) async throws { throw Refused() }
+        func enqueueIfLive(_ item: SyncQueueItem) async throws -> Bool { try await base.enqueueIfLive(item) }
         func pending() async throws -> [SyncQueueItem] { try await base.pending() }
         func update(_ item: SyncQueueItem) async throws { try await base.update(item) }
         func remove(id: String) async throws { try await base.remove(id: id) }

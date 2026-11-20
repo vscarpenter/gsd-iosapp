@@ -25,6 +25,7 @@ final class PushAfterEnqueue: SyncQueueRepository, @unchecked Sendable {
     func update(_ item: SyncQueueItem) async throws { try await base.update(item) }
     func remove(id: String) async throws { try await base.remove(id: id) }
     func enqueueClearingWrites(_ item: SyncQueueItem) async throws { try await base.enqueueClearingWrites(item) }
+    func enqueueIfLive(_ item: SyncQueueItem) async throws -> Bool { try await base.enqueueIfLive(item) }
     func allTaskIds() async throws -> Set<String> { try await base.allTaskIds() }
     func all() async throws -> [SyncQueueItem] { try await base.all() }
 }

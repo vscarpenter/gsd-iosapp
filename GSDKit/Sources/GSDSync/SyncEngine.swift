@@ -210,7 +210,9 @@ public actor SyncEngine {
     func seedExistingTasks(owner: String? = nil) async throws {
         for task in try await tasks.fetchAll() {
             try fence(owner)
-            try await queue.enqueue(SyncQueueItem(
+            // The task may be archived or trashed after the snapshot above. The queue checks that it still
+            // exists in the same write, so a seeded update never lands behind that delete and POSTs it back.
+            _ = try await queue.enqueueIfLive(SyncQueueItem(
                 id: UUID().uuidString, taskId: task.id, operation: .update,
                 timestamp: Int(now().timeIntervalSince1970 * 1000), payload: task))
         }

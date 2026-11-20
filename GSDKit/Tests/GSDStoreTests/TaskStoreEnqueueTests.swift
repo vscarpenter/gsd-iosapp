@@ -9,6 +9,7 @@ struct TaskStoreEnqueueTests {
         var ops: [(taskId: String, op: SyncQueueItem.Operation)] = []
         func enqueue(_ item: SyncQueueItem) async throws { ops.append((item.taskId, item.operation)) }
         func enqueueClearingWrites(_ item: SyncQueueItem) async throws { try await enqueue(item) }
+        func enqueueIfLive(_ item: SyncQueueItem) async throws -> Bool { try await enqueue(item); return true }
         func pending() async throws -> [SyncQueueItem] { [] }
         func update(_ item: SyncQueueItem) async throws {}
         func remove(id: String) async throws {}

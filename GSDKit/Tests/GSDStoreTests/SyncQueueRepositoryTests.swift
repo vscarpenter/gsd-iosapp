@@ -32,6 +32,17 @@ struct SyncQueueRepositoryTests {
         #expect(pending[0].payload == nil)              // nil payload round-trips as SQL NULL
     }
 
+    @Test func enqueueIfLiveSkipsAMissingTask() async throws {
+        let db = try AppDatabase.inMemory()
+        let repo = GRDBSyncQueueRepository(db)
+        let item = SyncQueueItem(id: "q1", taskId: "task-1", operation: .update, timestamp: 100, payload: sampleTask("task-1"))
+        #expect(try await repo.enqueueIfLive(item) == false)
+        #expect(try await repo.all().isEmpty)
+        try await GRDBTaskRepository(db).upsert(sampleTask("task-1"))
+        #expect(try await repo.enqueueIfLive(item) == true)
+        #expect(try await repo.all().map(\.id) == ["q1"])
+    }
+
     @Test func pendingIsOrderedByTimestamp() async throws {
         let repo = try makeRepo()
         try await repo.enqueue(SyncQueueItem(id: "b", taskId: "t", operation: .update, timestamp: 200))
