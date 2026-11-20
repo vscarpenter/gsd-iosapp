@@ -715,6 +715,42 @@ struct ResurrectOnSightTests {
         #expect(await stack.server.writtenTaskIds.isEmpty)
     }
 
+    /// R20: one sub-millisecond instant, written through each real format. The server copy holds the
+    /// `client_updated_at` that `TaskWireMapper.toWire` writes for it (`WireDate`, as the Share
+    /// Extension's direct push sends a fresh stamp), and the Trash row holds what GRDB stored. Both round
+    /// to the millisecond, so they tie, and a tie takes the merge path. If `WireDate` truncated while
+    /// last-writer-wins rounded, about half of these rows would read 1 ms newer and send a pointless PATCH.
+    @Test("a Trash row in the same millisecond as its server copy is not sent again at sign-in")
+    func sameMillisecondTrashRowDoesNotResendAtSignIn() async throws {
+        let stack = try makeStack(.signedOut)
+        let ids = (0..<20).map { "x\($0)" }
+        let editedAt = try #require(WireDate.parse(Self.editedAt)).timeIntervalSince1970
+        for (i, id) in ids.enumerated() {
+            // Each edit lands at its own fraction of its own millisecond.
+            let fraction = (Double(i) + 0.5) / Double(ids.count)
+            let instant = Date(timeIntervalSince1970: editedAt + (Double(2 * i) + fraction) / 1000)
+            var task = try await stack.seedActive(id, title: "old")
+            task.title = "new"
+            stack.clock.date = instant
+            try await stack.store.save(task)
+            await stack.server.add(id, title: "new", clientUpdatedAt: WireDate.format(instant))
+        }
+        stack.clock.date = Self.now
+        for id in ids { try await stack.store.delete(try #require(try await stack.repo.fetch(id: id))) }
+
+        await stack.engine.beginSignIn()
+        let result = await stack.engine.sync(trigger: .signIn)
+
+        #expect(result.error == nil)
+        #expect(await stack.server.patches.isEmpty)
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+        #expect(try await stack.queue.all().isEmpty)
+        for id in ids {
+            #expect(try await stack.isActive(id))
+            #expect(!(try await stack.isTrashed(id)))
+        }
+    }
+
     /// Section 8, reading 2, at a sign-in. An earlier sign-in remembered `x` and no run has listed it.
     /// Signed out, the user restores it, edits it, then archives it. The archive copy is newer than the
     /// server's and still stays archived, because the archive was the user's last act here.

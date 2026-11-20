@@ -49,5 +49,7 @@ enum LWW {
 
     private static func ceilingMs(_ now: Date) -> Int { ms(now) + maxClockSkewMs }
 
-    private static func ms(_ date: Date) -> Int { Int(date.timeIntervalSince1970 * 1000) }
+    // Rounds, as GRDB's .datetime, the queue's JSON, and `WireDate` do. A stored stamp can read back a hair
+    // below its millisecond, and truncating it would compare that row as a millisecond older.
+    private static func ms(_ date: Date) -> Int { Int((date.timeIntervalSince1970 * 1000).rounded()) }
 }
