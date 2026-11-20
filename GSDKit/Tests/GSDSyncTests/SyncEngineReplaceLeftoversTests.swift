@@ -80,7 +80,7 @@ struct SyncEngineReplaceLeftoversTests {
         let listed = await server.holds("rec1")
         let reposted = await server.title(of: "rec_new")     // a POST stores its record as rec_new
         #expect(deletes == ["rec1"])
-        #expect(!patches.contains("rec1"))
+        #expect(patches == ["rec2"])                         // the import's update reached the server, and r's didn't
         #expect(posts.isEmpty)
         #expect(live == nil)
         #expect(!listed)

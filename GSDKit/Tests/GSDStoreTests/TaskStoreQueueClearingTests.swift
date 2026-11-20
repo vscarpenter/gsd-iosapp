@@ -165,7 +165,7 @@ struct TaskStoreQueueClearingTests {
         #expect(cancels.events == ["cancel a in Trash"])
 
         try await refuse(.delete, in: rig.db)   // the removal of b's queued update fails
-        await #expect(throws: (any Error).self) { try await rig.store.delete(task("b")) }
+        await #expect(throws: TaskStoreError.deleteNotRecorded) { try await rig.store.delete(task("b")) }
         #expect(cancels.events == ["cancel a in Trash"])
     }
 

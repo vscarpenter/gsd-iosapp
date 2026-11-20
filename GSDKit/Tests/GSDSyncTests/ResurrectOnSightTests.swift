@@ -821,4 +821,26 @@ struct ResurrectOnSightTests {
         #expect(!(try await stack.isActive("x")))
         #expect(try await stack.queue.all().map(\.operation) == [.delete])
     }
+
+    /// A task created while signed out never reached the server. A signed-out Replace that leaves it
+    /// out clears its queued create, so sign-in has nothing to post for it.
+    @Test("a task created, then removed by Replace, while signed out isn't posted at sign-in")
+    func signedOutCreateRemovedByReplaceIsNotPostedAtSignIn() async throws {
+        let stack = try makeStack(.signedOut)
+        await stack.server.add("k")
+        try await stack.store.create(Task(id: "x", title: "Book the hall", urgent: true, important: true,
+                                          createdAt: Self.now, updatedAt: Self.now))
+        let kept = try await stack.seedActive("k")
+        let backup = TaskExport(tasks: [kept], exportedAt: Self.now)
+        try await stack.store.importTasks(try TaskExport.encode(backup), mode: .replace)
+
+        await stack.engine.beginSignIn()
+        let result = await stack.engine.sync(trigger: .signIn)
+
+        #expect(result.error == nil)
+        #expect(!(await stack.server.writtenTaskIds.contains("x")))
+        #expect(!(await stack.server.has("x")))
+        #expect(!(try await stack.isActive("x")))
+        #expect(try await stack.queue.all().isEmpty)
+    }
 }
