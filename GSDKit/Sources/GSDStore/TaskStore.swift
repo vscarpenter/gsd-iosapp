@@ -123,6 +123,9 @@ public final class TaskStore {
     @ObservationIgnored private var smartViewObserverTask: _Concurrency.Task<Void, Never>?
     @ObservationIgnored private var archiveObserverTask: _Concurrency.Task<Void, Never>?
 
+    /// Trash, Undo from Trash, and Import Replace skip `syncQueue` and write their queue rows through
+    /// `trashRepository` and `repository`, in the same write as the move, so all three must share one
+    /// database, as `App/GSDApp.swift` does.
     public init(
         repository: any TaskRepository,
         smartViewRepository: any SmartViewRepository,
