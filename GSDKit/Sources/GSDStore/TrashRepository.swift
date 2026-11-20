@@ -11,8 +11,11 @@ public protocol TrashRepository: Sendable {
     /// Trash with an EXPLICIT stamp, for restoring a backup: re-stamping with `now()` would
     /// reset every trashed row's age and hand the user back a full 30 days they had spent.
     func trash(_ task: Task, at deletedAt: Date) async throws
-    /// Move a row back to `tasks`. No-op when the id is not in the trash.
-    func restore(id: String) async throws -> Task?
+    /// Undo from Trash, as one write: move the row back to `tasks`, remove the task's queued deletes,
+    /// and queue `makeItem(task)`. A delete waiting out a backoff would otherwise land after the
+    /// restored task's write and remove it everywhere. `makeItem` runs inside the write, so it only
+    /// builds the item. Returns nil, writing nothing, when the id is not in the trash.
+    func restore(id: String, queueing makeItem: @Sendable (Task) -> SyncQueueItem) async throws -> Task?
     func deleteForever(id: String) async throws
     func empty() async throws -> Int
     func fetchAll() async throws -> [Task]
@@ -46,12 +49,16 @@ public final class GRDBTrashRepository: TrashRepository {
         }
     }
 
-    public func restore(id: String) async throws -> Task? {
+    public func restore(id: String, queueing makeItem: @Sendable (Task) -> SyncQueueItem) async throws -> Task? {
         try await dbWriter.write { db in
             guard let trashed = try DeletedTaskRecord.fetchOne(db, key: id) else { return nil }
             let task = try trashed.toDomain()
             try TaskRecord(task).save(db)
             _ = try DeletedTaskRecord.deleteOne(db, key: id)
+            _ = try SyncQueueRecord
+                .filter(Column("taskId") == id && Column("operation") == SyncQueueItem.Operation.delete.rawValue)
+                .deleteAll(db)
+            try SyncQueueRecord(makeItem(task)).save(db)
             return task
         }
     }

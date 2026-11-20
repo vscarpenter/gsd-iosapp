@@ -43,7 +43,10 @@ struct TaskStoreWriteOrderTests {
             log.events.append("trash")
             if failTrash { throw Boom() }
         }
-        func restore(id: String) async throws -> Task? { nil }
+        func restore(id: String, queueing makeItem: @Sendable (Task) -> SyncQueueItem) async throws -> Task? {
+            log.events.append("restoreFromTrash")
+            return nil
+        }
         func deleteForever(id: String) async throws {}
         func empty() async throws -> Int { 0 }
         func fetchAll() async throws -> [Task] { [] }

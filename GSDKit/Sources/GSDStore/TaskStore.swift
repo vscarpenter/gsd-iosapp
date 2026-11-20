@@ -480,11 +480,18 @@ public final class TaskStore {
         try await archiveRepository.fetchAllStamped()
     }
 
-    /// Move a task back out of the trash. Enqueues `.create` — the server deleted it when it
-    /// was trashed, so restoring has to put it back, which is exactly what the web does.
+    /// Move a task back out of the trash. Queues `.create`, as the web does, because the Trash's delete
+    /// may already have removed the server copy. The same write removes the task's
+    /// queued delete: a delete still waiting out a backoff would land after the create and take the
+    /// task off every device. If the write fails, the task stays in Trash with its delete queued.
     public func restoreFromTrash(id: String) async throws {
-        guard let task = try await trashRepository.restore(id: id) else { return }
-        _ = await enqueue(task.id, .create, payload: task)
+        let itemId = IDGenerator.generate(size: IDGenerator.Size.task)
+        let queuedAt = Int(clock().timeIntervalSince1970 * 1000)
+        let restored = try await trashRepository.restore(id: id, queueing: { task in
+            SyncQueueItem(id: itemId, taskId: task.id, operation: .create, timestamp: queuedAt, payload: task)
+        })
+        guard let task = restored else { return }
+        onMutation?()
         await refreshReminder(task)
     }
 

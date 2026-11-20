@@ -64,7 +64,9 @@ struct TopThreePersistenceTests {
         try await trash.trash(pickedTask())
         let trashed = try #require(try await trash.fetchAll().first)
         #expect(trashed.focusDate == "2026-11-07" && trashed.focusRank == 2)
-        let restored = try #require(try await trash.restore(id: "pick"))
+        let restored = try #require(try await trash.restore(id: "pick", queueing: {
+            SyncQueueItem(id: "q1", taskId: $0.id, operation: .create, timestamp: 0, payload: $0)
+        }))
         try await archive.archive(restored)
         let archived = try #require(try await archive.fetchAll().first)
         #expect(archived.focusDate == "2026-11-07" && archived.focusRank == 2)

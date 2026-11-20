@@ -53,7 +53,9 @@ struct SavedPersistenceTests {
         try await GRDBTaskRepository(db).upsert(saved)
         try await trash.trash(saved)
         #expect(try await trash.fetchAll().first?.savedAt == now)
-        let restored = try #require(try await trash.restore(id: saved.id))
+        let restored = try #require(try await trash.restore(id: saved.id, queueing: {
+            SyncQueueItem(id: "q1", taskId: $0.id, operation: .create, timestamp: 0, payload: $0)
+        }))
         try await archive.archive(restored)
         #expect(try await archive.fetchAll().first?.savedAt == now)
     }
