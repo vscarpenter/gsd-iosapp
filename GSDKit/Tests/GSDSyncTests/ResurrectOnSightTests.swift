@@ -13,6 +13,8 @@ actor AccountServer: RequestExecuting {
     private var records: [String: [String: Any]] = [:]   // task_id → record
     private(set) var deletedTaskIds: [String] = []
     private(set) var writtenTaskIds: [String] = []
+    /// Each PATCH's task and the title it carried.
+    private(set) var patches: [(taskId: String, title: String?)] = []
     private(set) var listings = 0
     private var sessionDead = false
     private var anotherAccount = false
@@ -41,6 +43,8 @@ actor AccountServer: RequestExecuting {
     func listIncompletely() { incomplete = true }
     func failListings(_ fail: Bool) { listingFails = fail }
     func has(_ taskId: String) -> Bool { records[taskId] != nil }
+    /// The title the account would list for `taskId`.
+    func title(of taskId: String) -> String? { records[taskId]?["title"] as? String }
     /// Runs once, the next time the account is listed: something else happening while a run awaits.
     func whenListed(_ hook: @escaping @Sendable () -> Void) { onListing = hook }
 
@@ -72,6 +76,7 @@ actor AccountServer: RequestExecuting {
             record.merge(body.filter { $0.key != "id" }) { _, new in new }
             records[taskId] = record
             writtenTaskIds.append(taskId)
+            if method == "PATCH" { patches.append((taskId, body["title"] as? String)) }
             if guarded { return (Data(), response(url, 204)) }
             return (try JSONSerialization.data(withJSONObject: record), response(url, 200))
         }
@@ -116,6 +121,23 @@ struct ResurrectOnSightTests {
         case signedIn
     }
 
+    /// The store's clock. A test moves it to edit a task earlier than it trashes it.
+    private final class Clock: @unchecked Sendable { var date: Date; init(_ d: Date) { date = d } }
+
+    private struct ResurrectFailed: Error {}
+
+    /// The real Trash and archive, except that moving a task back to the live table always fails.
+    private struct ResurrectFailingTombstones: TombstoneRepository {
+        let base: GRDBTombstoneRepository
+        func tombstoneDate(id: String) async throws -> Date? { try await base.tombstoneDate(id: id) }
+        func isArchived(id: String) async throws -> Bool { try await base.isArchived(id: id) }
+        func resurrect(_ task: Task) async throws { throw ResurrectFailed() }
+        func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool {
+            try await base.abandonToTrash(id: id, at: deletedAt)
+        }
+        func buriedTask(id: String) async throws -> Task? { try await base.buriedTask(id: id) }
+    }
+
     private struct Stack {
         let server: AccountServer
         let db: AppDatabase
@@ -126,6 +148,7 @@ struct ResurrectOnSightTests {
         let cursor: SyncCursor
         let engine: SyncEngine
         let store: TaskStore
+        let clock: Clock
 
         /// An active row at the server's version, as an earlier sync left it.
         @discardableResult
@@ -153,7 +176,8 @@ struct ResurrectOnSightTests {
         func isTrashed(_ id: String) async throws -> Bool { try await trash.fetchAll().contains { $0.id == id } }
     }
 
-    private func makeStack(_ device: Device, server: AccountServer = AccountServer()) throws -> Stack {
+    private func makeStack(_ device: Device, server: AccountServer = AccountServer(),
+                           resurrectFails: Bool = false) throws -> Stack {
         let db = try AppDatabase.inMemory()
         let defaults = UserDefaults(suiteName: "resurrect-\(UUID().uuidString)")!
         let cursor = SyncCursor(defaults: defaults)
@@ -163,15 +187,18 @@ struct ResurrectOnSightTests {
         let queue = GRDBSyncQueueRepository(db)
         let trash = GRDBTrashRepository(db)
         let archive = GRDBArchiveRepository(db)
+        let tombstones: any TombstoneRepository = resurrectFails
+            ? ResurrectFailingTombstones(base: GRDBTombstoneRepository(db)) : GRDBTombstoneRepository(db)
         let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://resurrect.test", executor: server),
-                                tasks: repo, queue: queue, tombstones: GRDBTombstoneRepository(db), cursor: cursor,
+                                tasks: repo, queue: queue, tombstones: tombstones, cursor: cursor,
                                 deviceId: "ios", tokenProvider: { Self.token }, rawToken: { Self.token },
                                 now: { Self.now }, throttleMs: 0)
+        let clock = Clock(Self.now)
         let store = TaskStore(repository: repo, smartViewRepository: GRDBSmartViewRepository(db),
                               archiveRepository: archive, trashRepository: trash, defaults: defaults,
-                              clock: { Self.now }, syncQueue: queue)
+                              clock: { clock.date }, syncQueue: queue)
         return Stack(server: server, db: db, repo: repo, queue: queue, trash: trash, archive: archive,
-                     cursor: cursor, engine: engine, store: store)
+                     cursor: cursor, engine: engine, store: store, clock: clock)
     }
 
     // MARK: The step (rules 3 to 5)
@@ -606,5 +633,122 @@ struct ResurrectOnSightTests {
         _ = await stack.engine.sync(trigger: .manual)
 
         #expect(await stack.server.deletedTaskIds == ["t1"])
+    }
+
+    // MARK: A Trash row newer than the server's copy (R25)
+
+    /// T1, the signed-out edit. Each test sets the server's stamp against it.
+    nonisolated private static let editedAt = "2026-11-07T11:00:00.000Z"
+
+    /// While signed out, edit `x`'s title to "new" at `editedAt`, then trash it at `now`. Trash removes
+    /// the edit's queued update, so only the Trash row still holds the edit.
+    private func editThenTrashSignedOut(_ stack: Stack) async throws {
+        var task = try await stack.seedActive("x", title: "old")
+        stack.clock.date = try #require(WireDate.parse(Self.editedAt))
+        task.title = "new"
+        try await stack.store.save(task)
+        stack.clock.date = Self.now
+        try await stack.store.delete(task)
+    }
+
+    /// The P5 probe. Sign-in drops the Trash's delete and remembers `x`. The pull leaves the Trash row
+    /// alone, because the Trash came after the server's stamp. So the step is what brings it back. The
+    /// Trash row is newer than the server's copy, so its own fields come back and the push sends them.
+    @Test("a task edited, then trashed, while signed out keeps the edit at sign-in")
+    func signedOutEditThenTrashKeepsTheEditAtSignIn() async throws {
+        let stack = try makeStack(.signedOut)
+        await stack.server.add("x", title: "old")                  // T0, before T1
+        try await editThenTrashSignedOut(stack)
+
+        await stack.engine.beginSignIn()
+        let result = await stack.engine.sync(trigger: .signIn)
+
+        #expect(result.error == nil)
+        #expect(try await stack.repo.fetch(id: "x")?.title == "new")
+        #expect(!(try await stack.isTrashed("x")))
+        #expect(await stack.server.patches.map { $0.title } == ["new"])
+        #expect(await stack.server.title(of: "x") == "new")
+        #expect(await stack.server.deletedTaskIds.isEmpty)
+        #expect(stack.cursor.rememberedDeletes().isEmpty)
+    }
+
+    @Test("a newer server copy still wins over a trashed edit at sign-in")
+    func newerServerCopyStillWinsOverATrashedEdit() async throws {
+        let stack = try makeStack(.signedOut)
+        let serverStamp = "2026-11-07T11:30:00.000Z"               // T0, after T1 and before the Trash
+        await stack.server.add("x", title: "old", clientUpdatedAt: serverStamp)
+        try await editThenTrashSignedOut(stack)
+
+        await stack.engine.beginSignIn()
+        let result = await stack.engine.sync(trigger: .signIn)
+
+        #expect(result.error == nil)
+        let back = try #require(try await stack.repo.fetch(id: "x"))
+        #expect(back.title == "old")
+        #expect(back.updatedAt == WireDate.parse(serverStamp))
+        #expect(await stack.server.patches.isEmpty)
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+    }
+
+    /// R-T5a: a tie isn't a win. Equal stamps keep the merge path, so the server's copy comes back.
+    @Test("a trashed copy tied with the server's stamp takes the server copy")
+    func tiedTrashedCopyTakesTheServerCopy() async throws {
+        let stack = try makeStack(.signedOut)
+        await stack.server.add("x", title: "old", clientUpdatedAt: Self.editedAt)
+        try await editThenTrashSignedOut(stack)
+
+        await stack.engine.beginSignIn()
+        let result = await stack.engine.sync(trigger: .signIn)
+
+        #expect(result.error == nil)
+        #expect(try await stack.repo.fetch(id: "x")?.title == "old")
+        #expect(await stack.server.patches.isEmpty)
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+    }
+
+    /// Section 8, reading 2, at a sign-in. An earlier sign-in remembered `x` and no run has listed it.
+    /// Signed out, the user restores it, edits it, then archives it. The archive copy is newer than the
+    /// server's and still stays archived, because the archive was the user's last act here.
+    @Test("an archive row stays archived at sign-in, even when it's newer than the server's copy")
+    func archivedRowStillStaysArchivedAtSignIn() async throws {
+        let stack = try makeStack(.signedOut)
+        await stack.server.add("x", title: "old")
+        try await stack.seedTrashed("x")
+        stack.cursor.rememberDeletes(["x"])
+        try await stack.store.restoreFromTrash(id: "x")
+        var task = try #require(try await stack.repo.fetch(id: "x"))
+        stack.clock.date = try #require(WireDate.parse(Self.editedAt))
+        task.title = "new"
+        try await stack.store.save(task)
+        stack.clock.date = Self.now
+        try await stack.store.archive(task)
+
+        await stack.engine.beginSignIn()
+        let result = await stack.engine.sync(trigger: .signIn)
+
+        #expect(result.error == nil)
+        #expect(try await stack.archive.fetchAll().first { $0.id == "x" }?.title == "new")
+        #expect(!(try await stack.isActive("x")))
+        #expect(await stack.server.writtenTaskIds.isEmpty)
+        #expect(await stack.server.deletedTaskIds.isEmpty)
+        #expect(stack.cursor.rememberedDeletes().isEmpty)
+    }
+
+    /// PF3. The engine queues the update before the task leaves Trash (Fix E). When that move fails, the
+    /// update has to come out too. Otherwise the push would send it for a task still in Trash.
+    @Test("a failed move out of Trash leaves no queued update")
+    func failedResurrectLeavesNoQueuedUpdate() async throws {
+        let stack = try makeStack(.signedIn, resurrectFails: true)
+        await stack.server.add("x", title: "old")
+        try await stack.trash.trash(try await stack.seedActive("x", title: "new", updatedAt: Self.editedAt), at: Self.now)
+        stack.cursor.rememberDeletes(["x"])
+
+        await #expect(throws: ResurrectFailed.self) {
+            try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+        }
+
+        #expect(try await stack.queue.all().isEmpty)
+        #expect(try await stack.isTrashed("x"))
+        #expect(stack.cursor.rememberedDeletes() == ["x"])
     }
 }
