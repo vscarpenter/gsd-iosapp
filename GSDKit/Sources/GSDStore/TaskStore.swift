@@ -47,10 +47,10 @@ public struct BulkActionResult: Equatable, Sendable {
 }
 
 public enum TaskStoreError: Error, LocalizedError, Equatable {
-    /// A delete could not be recorded for sync (the queue write failed), so the local row was
-    /// KEPT rather than deleted. Deleting it would let the next pull resurrect the task (a deleted
-    /// row is gone, so the next sync's seed cannot re-enqueue the lost delete). Surfaced so the
-    /// user can retry, instead of a silent delete-then-resurrect.
+    /// A delete could not be recorded for sync (the one write that queues it and moves the row into
+    /// Trash failed), so the local row was KEPT rather than deleted. Deleting it would let the next
+    /// pull resurrect the task (a deleted row is gone, so the next sync's seed cannot re-enqueue the
+    /// lost delete). Surfaced so the user can retry, instead of a silent delete-then-resurrect.
     case deleteNotRecorded
     /// An archive's server delete could not be queued. The task is put back to active when that
     /// write succeeds, rather than left archived here with a server copy other devices keep showing.
@@ -447,22 +447,19 @@ public final class TaskStore {
     /// remain byte-identical on the wire while both now offer a way back.
     public func delete(_ task: Task) async throws {
         let task = try await repository.fetch(id: task.id) ?? task
-        // Require the delete to be recorded for sync BEFORE moving the local row. Unlike an
-        // upsert — whose row survives a failed enqueue and is re-enqueued by the next sync's seed
-        // — a removed row can't be re-enqueued by seed, and the next pull would resurrect the
-        // task. If the enqueue fails, abort and keep the row active (the user can retry).
+        // One write queues the delete, removes the task's queued creates and updates, and moves the row
+        // into Trash. A removed row can't be re-queued by the next sync's seed, so a Trash that landed
+        // without its delete would let the next pull resurrect the task. A failed write keeps the row live.
         let trashedAt = clock()   // one reading for the Trash time and the delete's queue time
-        guard let queueItemId = await enqueue(task.id, .delete, payload: nil, at: trashedAt) else {
+        let item = Self.makeQueueItem(task.id, .delete, payload: nil, at: trashedAt)
+        do {
+            try await trashRepository.trash(task, at: trashedAt, queueing: item)
+        } catch {
+            // Nothing landed, whichever part failed, so the user can retry.
             throw TaskStoreError.deleteNotRecorded
         }
-        do {
-            try await trashRepository.trash(task, at: trashedAt)
-        } catch {
-            try? await syncQueue.remove(id: queueItemId)
-            throw error
-        }
-        await reminders.cancel(taskID: task.id)   // before the removal, so a failed removal leaves nothing armed
-        try await dropQueuedWrites(for: task.id)
+        onMutation?()
+        await reminders.cancel(taskID: task.id)   // after the write commits, so a failed Trash leaves it armed
     }
 
     // MARK: Trash (soft delete, 30-day retention — see TrashRetention)
@@ -485,10 +482,9 @@ public final class TaskStore {
     /// queued delete: a delete still waiting out a backoff would land after the create and take the
     /// task off every device. If the write fails, the task stays in Trash with its delete queued.
     public func restoreFromTrash(id: String) async throws {
-        let itemId = IDGenerator.generate(size: IDGenerator.Size.task)
-        let queuedAt = Int(clock().timeIntervalSince1970 * 1000)
+        let queuedAt = clock()
         let restored = try await trashRepository.restore(id: id, queueing: { task in
-            SyncQueueItem(id: itemId, taskId: task.id, operation: .create, timestamp: queuedAt, payload: task)
+            Self.makeQueueItem(task.id, .create, payload: task, at: queuedAt)
         })
         guard let task = restored else { return }
         onMutation?()
@@ -626,10 +622,7 @@ public final class TaskStore {
     @discardableResult
     private func enqueue(_ taskId: String, _ op: SyncQueueItem.Operation, payload: Task?, at stamp: Date? = nil,
                          clearingWrites: Bool = false) async -> String? {
-        let item = SyncQueueItem(id: IDGenerator.generate(size: IDGenerator.Size.task),
-                                 taskId: taskId, operation: op,
-                                 timestamp: Int((stamp ?? clock()).timeIntervalSince1970 * 1000),
-                                 payload: payload)
+        let item = Self.makeQueueItem(taskId, op, payload: payload, at: stamp ?? clock())
         do {
             if clearingWrites { try await syncQueue.enqueueClearingWrites(item) } else { try await syncQueue.enqueue(item) }
         } catch { return nil }
@@ -637,14 +630,12 @@ public final class TaskStore {
         return item.id
     }
 
-    /// A task that leaves the live table has its delete queued, so its queued creates and updates are
-    /// dead weight. Left in place, a charged update comes due after the delete lands, finds the task
-    /// unlisted, and POSTs it back from its old snapshot (F4). Done at the source rather than in the
-    /// push, because the push can't tell "archived" from "queued before its row is written" (Fix E).
-    private func dropQueuedWrites(for taskId: String) async throws {
-        for item in try await syncQueue.all() where item.taskId == taskId && item.operation != .delete {
-            try await syncQueue.remove(id: item.id)
-        }
+    /// The one place a queue item is built: a fresh id and the clock reading in milliseconds. Nonisolated
+    /// because Undo builds its item inside the trash repository's write, off the main actor.
+    nonisolated private static func makeQueueItem(_ taskId: String, _ op: SyncQueueItem.Operation,
+                                                  payload: Task?, at stamp: Date) -> SyncQueueItem {
+        SyncQueueItem(id: IDGenerator.generate(size: IDGenerator.Size.task), taskId: taskId, operation: op,
+                      timestamp: Int(stamp.timeIntervalSince1970 * 1000), payload: payload)
     }
 
     /// Race-proof write (design 2026-06-10 Fix E): persist the queue item BEFORE the task row.
