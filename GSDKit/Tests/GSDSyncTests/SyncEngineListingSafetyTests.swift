@@ -116,16 +116,16 @@ struct SyncEngineListingSafetyTests {
         #expect(exec.writes.isEmpty)
     }
 
-    @Test func pushChargesADeleteWhenTheRemoteVersionIsMissing() async throws {
-        // The guarded delete route needs the listed version as `expected_version` (ADR 0021), so a
-        // delete with no version can't be sent. It spends a retry like any failed attempt.
+    @Test func pushSendsADeleteWhenTheRemoteVersionIsMissing() async throws {
+        // R15: a delete carries no payload to compare, and the user asked for the record to go. So it
+        // goes through the guarded route, and the hook's exact compare still stops it if the record changed.
         let db = try AppDatabase.inMemory(); let queue = GRDBSyncQueueRepository(db)
         let exec = ScriptedExecutor()
         exec.listJSON = page([#"{"id":"rec_a","task_id":"a"}"#])
         try await queue.enqueue(SyncQueueItem(id: "q1", taskId: "a", operation: .delete, timestamp: 1))
         let (pushed, failed) = try await engine(db, exec).push(token: Self.jwt, owner: "u1")
-        #expect(pushed == 0 && failed == 1)
-        #expect(exec.writes.isEmpty)
-        #expect(try await queue.pending().first?.retryCount == 1)
+        #expect(pushed == 1 && failed == 0)
+        #expect(exec.writes.map { "\($0.method) \($0.path)" } == ["DELETE /api/gsd/tasks/rec_a"])
+        #expect(try await queue.all().isEmpty)
     }
 }

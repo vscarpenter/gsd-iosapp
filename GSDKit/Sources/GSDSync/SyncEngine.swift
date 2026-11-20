@@ -243,10 +243,11 @@ public actor SyncEngine {
             try fence(owner)   // outside the item's `do`: a session that ended must not spend this item's retries
             let remote = index[item.taskId]
             // Parity S11 (Android `MalformedRemoteVersion`): a remote copy whose version is missing or
-            // unparseable can't be shown to be older, so a write must not overwrite it. Skip it and
-            // spend a retry, like any failed attempt. The staleness guards below can't run without a
-            // parseable stamp, and a delete is refused the same way (web does the same).
-            if let remote, remote.clientUpdatedAt == nil {
+            // unparseable can't be shown to be older, so an upsert must not overwrite it. Skip it and
+            // spend a retry, like any failed attempt. A delete goes on (R15): it carries no payload to
+            // compare, and the user asked for the record to go. The staleness guards below find no
+            // stamp to judge, and the guarded route still returns 412 if the record changed.
+            if let remote, remote.clientUpdatedAt == nil, item.operation != .delete {
                 try await recordFailedAttempt(item, reason: "Remote task version is missing or malformed", nowMs: nowMs)
                 failed += 1; continue
             }
@@ -272,14 +273,16 @@ public actor SyncEngine {
                 identityConfirmed = true
                 try fence(owner)   // the identity request suspended; the session may have ended during it
             }
-            // The listed record and its version string, exactly as the server holds it. The check above
-            // means a listed record always has one, so this is nil only when the task isn't listed.
+            // The listed record and its version string, exactly as the server holds it. For an upsert, the
+            // check above means a listed record always has one, so this is nil only when the task isn't listed.
             let listed = remote.flatMap { entry in entry.version.map { (recordId: entry.recordId, version: $0) } }
             do {
                 switch item.operation {
                 case .delete:
-                    if let listed {
-                        try await client.deleteTaskGuarded(recordId: listed.recordId, expectedVersion: listed.version, token: token)
+                    // R15: the raw listed string, or "" when the field is absent, because the hook reads
+                    // an absent version as "". A value over 64 characters gets a 400 and is charged below.
+                    if let remote {
+                        try await client.deleteTaskGuarded(recordId: remote.recordId, expectedVersion: remote.version ?? "", token: token)
                     }
                     // The record is gone, so a later same-drain create for this task must POST, not
                     // PATCH the deleted record. A delete that threw never reaches this line.
@@ -371,8 +374,8 @@ public actor SyncEngine {
     /// A delete is stale when the remote changed after it was queued (B-42). An archive's delete also
     /// carries the task as archived, and is stale when the remote is newer than that version (B-47):
     /// archiving a stale copy must not delete the newer task. Web `isStaleDelete`, Android
-    /// `remoteEditedAfterQueued` and `remoteEditedAfterArchive`. A remote with no usable version never
-    /// reaches this check: the push charges that row first, because staleness can't be judged.
+    /// `remoteEditedAfterQueued` and `remoteEditedAfterArchive`. A remote with no usable version is never
+    /// stale, because there is no stamp to judge (R15). The delete is sent, and F2 and F3 don't apply.
     private func isStaleDelete(_ item: SyncQueueItem, remoteUpdated: Date?, ignoringArchivedVersion: Bool = false) -> Bool {
         guard let remoteUpdated else { return false }
         let queuedAt = Date(timeIntervalSince1970: Double(item.timestamp) / 1000)

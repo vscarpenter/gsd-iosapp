@@ -7,8 +7,9 @@ import GSDStore
 
 /// A PocketBase account that enforces the guarded task route (`pb_hooks/task-write-contract.js`):
 /// `expected_version` is compared to the stored `client_updated_at` as a string, byte for byte.
-/// A mismatch is 412, an unknown `data` key or an unchanged `client_updated_at` is 400, a missing
-/// record is 404, and success is 204 with an empty body that stores the sent version.
+/// A mismatch is 412. A missing or overlong `expected_version`, an unknown `data` key, or an unchanged
+/// `client_updated_at` is 400. A missing record is 404, and success is 204 with an empty body that
+/// stores the sent version.
 actor GuardedServer: RequestExecuting {
     static let allowedKeys: Set<String> = [
         "owner", "task_id", "title", "description", "urgent", "important", "quadrant", "due_date",
@@ -90,8 +91,11 @@ actor GuardedServer: RequestExecuting {
                                                      clientUpdatedAt: data?["client_updated_at"] as? String,
                                                      notifyBefore: data?["notify_before"] as? Int)) }
         else { deletes.append(Delete(recordId: recordId, expectedVersion: expected)) }
+        // The hook checks the version's shape before it looks the record up. JavaScript's `length` counts UTF-16 units.
+        guard body["expected_version"] is String, expected.utf16.count <= 64 else { return answer(request, 400) }
         guard let stored = records[recordId] else { return answer(request, 404) }
-        guard stored["client_updated_at"] as? String == expected else { return answer(request, 412) }
+        // `record.getString` reads an absent version as "".
+        guard (stored["client_updated_at"] as? String ?? "") == expected else { return answer(request, 412) }
         if method == "DELETE" { records[recordId] = nil; return answer(request, 204) }
         guard let data, Set(data.keys).isSubset(of: Self.allowedKeys),
               let sent = data["client_updated_at"] as? String, sent != expected else { return answer(request, 400) }
@@ -227,14 +231,61 @@ struct SyncEngineGuardedWriteTests {
         #expect(await rig.server.patches.first?.expectedVersion == odd)
     }
 
-    @Test("a listed delete with no version is charged, not sent")
-    func deleteWithoutVersion() async throws {
+    // MARK: R15, a delete over an unusable listed version is sent
+
+    @Test("R15: a Trash delete over a listed record with no version is sent with an empty expected version")
+    func deleteOverAMissingVersionIsSentWithAnEmptyExpectedVersion() async throws {
         let rig = try rig(await seededServer(version: nil))
+        try await enqueue(rig, "q1", .delete, at: "2026-11-19T17:40:00.000Z")   // a Trash delete carries no payload
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 0)
+        #expect(await rig.server.deletes.map(\.expectedVersion) == [""])
+        #expect(await rig.server.statuses == [204])
+        #expect(await rig.server.holds("rec1") == false)
+        #expect(try await rig.queue.all().isEmpty)
+    }
+
+    @Test("R15: a delete over a garbled listed version sends the raw value")
+    func deleteOverAGarbledVersionSendsTheRawValue() async throws {
+        let rig = try rig(await seededServer(version: "not-a-date"))
         try await enqueue(rig, "q1", .delete, at: "2026-11-19T17:40:00.000Z")
         let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 0)
+        #expect(await rig.server.deletes.map(\.expectedVersion) == ["not-a-date"])
+        #expect(await rig.server.holds("rec1") == false)
+        #expect(try await rig.queue.all().isEmpty)
+    }
+
+    @Test("R15: an update over a listed record with no version is still refused and charged")
+    func upsertOverAMissingVersionIsStillRefusedAndCharged() async throws {
+        let rig = try rig(await seededServer(version: nil))
+        try await enqueue(rig, "q1", .update, at: "2026-11-19T17:30:00.000Z", payload: edit("edited", at: "2026-11-19T17:30:00.000Z"))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
         #expect(result.pushed == 0 && result.failed == 1)
+        #expect(await rig.server.patches.isEmpty)
+        #expect(await rig.server.collectionWrites.isEmpty)
         #expect(try await rig.queue.pending().first?.retryCount == 1)
-        #expect(await rig.server.deletes.isEmpty)
+    }
+
+    @Test("R15: a delete over an overlong version gets 400, is charged, and the push goes on")
+    func deleteOverAnOverlongVersionIsChargedAndThePushContinues() async throws {
+        let overlong = String(repeating: "9", count: 65)
+        let server = await seededServer(version: overlong)
+        await server.put(recordId: "rec2", taskId: "b", version: Self.listed)
+        let rig = try rig(server)
+        try await enqueue(rig, "q1", .delete, at: "2026-11-19T17:40:00.000Z")
+        let other = Task(id: "b", title: "edited b", urgent: false, important: false,
+                         createdAt: WireDate.parse("2026-11-01T00:00:00.000Z")!, updatedAt: WireDate.parse("2026-11-19T17:41:00.000Z")!)
+        try await rig.queue.enqueue(SyncQueueItem(id: "q2", taskId: "b", operation: .update,
+            timestamp: Int(other.updatedAt.timeIntervalSince1970 * 1000), payload: other))
+        let result = try await rig.engine.push(token: "TOK", owner: "u1")
+        #expect(result.pushed == 1 && result.failed == 1)
+        #expect(await server.deletes.map(\.expectedVersion) == [overlong])
+        #expect(await server.statuses == [400, 204])
+        #expect(await server.holds("rec1"))
+        #expect(await server.title(of: "rec2") == "edited b")
+        let row = try #require(try await rig.queue.pending().first)
+        #expect(row.id == "q1" && row.retryCount == 1)
     }
 
     @Test("a 404 from the guarded route is charged")
