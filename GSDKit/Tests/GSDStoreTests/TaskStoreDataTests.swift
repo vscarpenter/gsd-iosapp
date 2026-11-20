@@ -75,10 +75,56 @@ struct TaskStoreDataTests {
         }
         func delete(id: String) async throws { try await base.delete(id: id) }
         func replaceAll(_ tasks: [Task]) async throws { throw Refused() }
-        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], clearingWritesFor removedIds: Set<String>) async throws {
+        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], deletingLeftOut makeDelete: @Sendable (String) -> SyncQueueItem) async throws {
             throw Refused()
         }
         func observeAll() -> AsyncThrowingStream<[Task], Error> { base.observeAll() }
+    }
+
+    /// The real repository, except that a pull lands a new task just before Replace's write, after the
+    /// store read the table.
+    final class PullLandsBeforeReplace: TaskRepository, @unchecked Sendable {
+        let base: GRDBTaskRepository, pulled: Task
+        init(_ base: GRDBTaskRepository, pulled: Task) { self.base = base; self.pulled = pulled }
+        func upsert(_ task: Task) async throws { try await base.upsert(task) }
+        func fetchAll() async throws -> [Task] { try await base.fetchAll() }
+        func fetch(id: String) async throws -> Task? { try await base.fetch(id: id) }
+        func setNotifyBeforeIfNull(id: String, value: Int) async throws { try await base.setNotifyBeforeIfNull(id: id, value: value) }
+        func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool {
+            try await base.restampIfUnchanged(id: id, from: from, to: to)
+        }
+        func delete(id: String) async throws { try await base.delete(id: id) }
+        func replaceAll(_ tasks: [Task]) async throws { try await base.replaceAll(tasks) }
+        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], deletingLeftOut makeDelete: @Sendable (String) -> SyncQueueItem) async throws {
+            try await base.upsert(pulled)
+            try await base.replaceAll(tasks, queueing: items, deletingLeftOut: makeDelete)
+        }
+        func observeAll() -> AsyncThrowingStream<[Task], Error> { base.observeAll() }
+    }
+
+    /// Replace leaves out every task the table holds when its write runs, so a task the pull saved after
+    /// the store read the table is removed with a queued delete like the rest, not wiped without one.
+    @Test("a task saved just before Replace's write is removed with a queued delete")
+    func replaceQueuesADeleteForATaskSavedBeforeItsWrite() async throws {
+        let db = try AppDatabase.inMemory()
+        let tasks = GRDBTaskRepository(db)
+        let queue = GRDBSyncQueueRepository(db)
+        let store = TaskStore(repository: PullLandsBeforeReplace(tasks, pulled: task("late")),
+                              smartViewRepository: GRDBSmartViewRepository(db),
+                              archiveRepository: GRDBArchiveRepository(db),
+                              trashRepository: GRDBTrashRepository(db),
+                              defaults: UserDefaults(suiteName: "test-\(UUID().uuidString)")!,
+                              clock: { Date(timeIntervalSince1970: 1000) },
+                              syncQueue: queue)
+        try await tasks.upsert(task("r"))
+        try await tasks.upsert(task("k"))
+        let backup = try TaskExport.encode(TaskExport(tasks: [task("k")], exportedAt: Date(timeIntervalSince1970: 0)))
+
+        try await store.importTasks(backup, mode: .replace)
+
+        let deleted = try await queue.all().filter { $0.operation == .delete }.map(\.taskId).sorted()
+        #expect(try await tasks.fetchAll().map(\.id) == ["k"])
+        #expect(deleted == ["late", "r"])
     }
 
     private struct QueuedRig {

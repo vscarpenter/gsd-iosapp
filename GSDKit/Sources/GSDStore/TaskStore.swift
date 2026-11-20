@@ -1024,8 +1024,8 @@ public final class TaskStore {
     /// pushes and survives deletion reconcile.
     ///
     /// Replace is one write. It queues those updates and a `.delete` for each task the backup leaves
-    /// out, removes the left-out tasks' queued creates and updates, and swaps the task table. If the
-    /// write fails, nothing changes. Then the backup's companion stores are restored, and the app
+    /// out, read in that write, removes the left-out tasks' queued creates and updates, and swaps the
+    /// task table. If the write fails, nothing changes. Then the backup's companion stores are restored, and the app
     /// drains the deletes through `SyncCoordinator.flushAfterReplace`.
     ///
     /// Merge regenerates colliding ids and remaps references, then upserts each task with a fresh
@@ -1034,9 +1034,7 @@ public final class TaskStore {
     public func importTasks(_ data: Data, mode: ImportMode) async throws -> ImportResult {
         switch mode {
         case .replace:
-            let existingIDs = Set(try await repository.fetchAll().map(\.id))
             let result = try TaskImporter.replace(from: data)
-            let removedIDs = existingIDs.subtracting(result.tasks.map(\.id))
             let now = clock()
             // D3: the import restores the backup's settings, so its default is the one in effect after.
             let defaultReminder = result.notificationSettings?.defaultReminder ?? notificationSettings.defaultReminder
@@ -1047,10 +1045,12 @@ public final class TaskStore {
             }
             // §3.4: left-out tasks are deleted remotely too. The app drains those deletes right after,
             // under the pull-suppression gate, so a create or update still queued for one would find no
-            // record later and POST it back. The same write clears them (I3).
+            // record later and POST it back. The same write clears them (I3). It also reads which tasks
+            // are left out, so a task saved after this point is deleted like the rest.
             let items = stamped.map { Self.makeQueueItem($0.id, .update, payload: $0, at: now) }
-                + removedIDs.map { Self.makeQueueItem($0, .delete, payload: nil, at: now) }
-            try await repository.replaceAll(stamped, queueing: items, clearingWritesFor: removedIDs)
+            try await repository.replaceAll(stamped, queueing: items, deletingLeftOut: { id in
+                Self.makeQueueItem(id, .delete, payload: nil, at: now)
+            })
             onMutation?()
             try await restoreCompanionStores(result, mode: .replace)
             return result

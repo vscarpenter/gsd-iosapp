@@ -25,7 +25,7 @@ struct TaskStoreWriteOrderTests {
         func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { false }
         func delete(id: String) async throws { log.events.append("delete") }
         func replaceAll(_ tasks: [Task]) async throws { log.events.append("replaceAll") }
-        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], clearingWritesFor removedIds: Set<String>) async throws {
+        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], deletingLeftOut makeDelete: @Sendable (String) -> SyncQueueItem) async throws {
             log.events.append("replaceAllQueueing")
         }
         func observeAll() -> AsyncThrowingStream<[Task], Error> {

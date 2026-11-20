@@ -130,8 +130,8 @@ struct NotifyBeforeDrainRaceTests {
         func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { try await base.restampIfUnchanged(id: id, from: from, to: to) }
         func delete(id: String) async throws { try await base.delete(id: id) }
         func replaceAll(_ tasks: [Task]) async throws { try await base.replaceAll(tasks) }
-        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], clearingWritesFor removedIds: Set<String>) async throws {
-            try await base.replaceAll(tasks, queueing: items, clearingWritesFor: removedIds)
+        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], deletingLeftOut makeDelete: @Sendable (String) -> SyncQueueItem) async throws {
+            try await base.replaceAll(tasks, queueing: items, deletingLeftOut: makeDelete)
         }
         func observeAll() -> AsyncThrowingStream<[Task], Error> { base.observeAll() }
     }
