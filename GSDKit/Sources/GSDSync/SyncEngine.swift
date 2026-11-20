@@ -33,6 +33,7 @@ private struct NoTombstones: TombstoneRepository {
     func tombstoneDate(id: String) async throws -> Date? { nil }
     func isArchived(id: String) async throws -> Bool { false }
     func resurrect(_ task: Task) async throws {}
+    func resurrectFromTrash(_ task: Task, queueing item: SyncQueueItem) async throws -> Bool { false }
     func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool { false }
     func buriedTask(id: String) async throws -> Task? { nil }
 }
@@ -775,7 +776,9 @@ public actor SyncEngine {
 
     /// One remembered task the account lists. A Trash row newer than the server's copy holds an edit
     /// made while signed out, and Trash took that edit off the queue. So the Trash row comes back and its
-    /// update goes up, as on Android (R25). Any other Trash row goes, and the server copy becomes active.
+    /// update goes up, as on Android (R25). One write does both, so the task is never live without that
+    /// update (Fix E), and it brings nothing back if the user removed the task after the read here.
+    /// Any other Trash row goes, and the server copy becomes active.
     /// An active copy here, restored while signed out or brought back by the pull, takes the server's
     /// only when it is strictly newer. An archive row stays archived (section 8, reading 2): the archive
     /// was the user's last act here.
@@ -790,9 +793,10 @@ public actor SyncEngine {
         // Only a strictly newer Trash row wins. A tie resolves to `.noOp` and takes the merge below, the
         // same way a tie leaves an active row alone.
         if let buried, LWW.resolve(localUpdatedAt: buried.updatedAt, remoteClientUpdatedAt: ingested) == .keepLocal {
+            let item = SyncQueueItem(id: UUID().uuidString, taskId: buried.id, operation: .update,
+                                     timestamp: Int(now().timeIntervalSince1970 * 1000), payload: buried)
             try fence(owner)
-            try await bringBackFromTrashAndSend(buried)
-            return true
+            return try await tombstones.resurrectFromTrash(buried, queueing: item)
         }
         // A buried row merges the server copy the way an active row does, as web does, so its rich
         // time entries and this device's reminder state survive instead of a rebuild from the wire.
@@ -805,22 +809,6 @@ public actor SyncEngine {
             try await tasks.upsert(incoming)
         }
         return true
-    }
-
-    /// Brings the Trash row back with its own fields and stamp, and queues an update that sends it. The
-    /// queue row goes in first (Fix E), so the task is never live without the write that sends the edit.
-    /// If the move out of Trash fails, the queue row comes out again. Otherwise the push would send an
-    /// update for a task that is still in Trash.
-    private func bringBackFromTrashAndSend(_ buried: Task) async throws {
-        let item = SyncQueueItem(id: UUID().uuidString, taskId: buried.id, operation: .update,
-                                 timestamp: Int(now().timeIntervalSince1970 * 1000), payload: buried)
-        try await queue.enqueue(item)
-        do {
-            try await tombstones.resurrect(buried)
-        } catch {
-            try? await queue.remove(id: item.id)
-            throw error
-        }
     }
 
     // MARK: History (§7.7)

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import GRDB
 import GSDModel
 import GSDStore
 @testable import GSDSync
@@ -124,18 +125,26 @@ struct ResurrectOnSightTests {
     /// The store's clock. A test moves it to edit a task earlier than it trashes it.
     private final class Clock: @unchecked Sendable { var date: Date; init(_ d: Date) { date = d } }
 
-    private struct ResurrectFailed: Error {}
-
-    /// The real Trash and archive, except that moving a task back to the live table always fails.
-    private struct ResurrectFailingTombstones: TombstoneRepository {
+    /// The real Trash and archive, plus a hook that runs once, right after the sync reads a Trash row:
+    /// the user acting on the task while the bring-back still awaits its write.
+    private final class RacingTombstones: TombstoneRepository, @unchecked Sendable {
         let base: GRDBTombstoneRepository
+        var afterBuriedRead: (@MainActor @Sendable () async throws -> Void)?
+        init(_ base: GRDBTombstoneRepository) { self.base = base }
         func tombstoneDate(id: String) async throws -> Date? { try await base.tombstoneDate(id: id) }
         func isArchived(id: String) async throws -> Bool { try await base.isArchived(id: id) }
-        func resurrect(_ task: Task) async throws { throw ResurrectFailed() }
+        func resurrect(_ task: Task) async throws { try await base.resurrect(task) }
+        func resurrectFromTrash(_ task: Task, queueing item: SyncQueueItem) async throws -> Bool {
+            try await base.resurrectFromTrash(task, queueing: item)
+        }
         func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool {
             try await base.abandonToTrash(id: id, at: deletedAt)
         }
-        func buriedTask(id: String) async throws -> Task? { try await base.buriedTask(id: id) }
+        func buriedTask(id: String) async throws -> Task? {
+            let buried = try await base.buriedTask(id: id)
+            if let act = afterBuriedRead { afterBuriedRead = nil; try await act() }
+            return buried
+        }
     }
 
     private struct Stack {
@@ -149,6 +158,7 @@ struct ResurrectOnSightTests {
         let engine: SyncEngine
         let store: TaskStore
         let clock: Clock
+        let racing: RacingTombstones?
 
         /// An active row at the server's version, as an earlier sync left it.
         @discardableResult
@@ -177,7 +187,7 @@ struct ResurrectOnSightTests {
     }
 
     private func makeStack(_ device: Device, server: AccountServer = AccountServer(),
-                           resurrectFails: Bool = false) throws -> Stack {
+                           racing: Bool = false) throws -> Stack {
         let db = try AppDatabase.inMemory()
         let defaults = UserDefaults(suiteName: "resurrect-\(UUID().uuidString)")!
         let cursor = SyncCursor(defaults: defaults)
@@ -187,10 +197,9 @@ struct ResurrectOnSightTests {
         let queue = GRDBSyncQueueRepository(db)
         let trash = GRDBTrashRepository(db)
         let archive = GRDBArchiveRepository(db)
-        let tombstones: any TombstoneRepository = resurrectFails
-            ? ResurrectFailingTombstones(base: GRDBTombstoneRepository(db)) : GRDBTombstoneRepository(db)
+        let racer = racing ? RacingTombstones(GRDBTombstoneRepository(db)) : nil
         let engine = SyncEngine(client: PocketBaseClient(baseURL: "https://resurrect.test", executor: server),
-                                tasks: repo, queue: queue, tombstones: tombstones, cursor: cursor,
+                                tasks: repo, queue: queue, tombstones: racer ?? GRDBTombstoneRepository(db), cursor: cursor,
                                 deviceId: "ios", tokenProvider: { Self.token }, rawToken: { Self.token },
                                 now: { Self.now }, throttleMs: 0)
         let clock = Clock(Self.now)
@@ -198,7 +207,7 @@ struct ResurrectOnSightTests {
                               archiveRepository: archive, trashRepository: trash, defaults: defaults,
                               clock: { clock.date }, syncQueue: queue)
         return Stack(server: server, db: db, repo: repo, queue: queue, trash: trash, archive: archive,
-                     cursor: cursor, engine: engine, store: store, clock: clock)
+                     cursor: cursor, engine: engine, store: store, clock: clock, racing: racer)
     }
 
     // MARK: The step (rules 3 to 5)
@@ -734,21 +743,82 @@ struct ResurrectOnSightTests {
         #expect(stack.cursor.rememberedDeletes().isEmpty)
     }
 
-    /// PF3. The engine queues the update before the task leaves Trash (Fix E). When that move fails, the
-    /// update has to come out too. Otherwise the push would send it for a task still in Trash.
-    @Test("a failed move out of Trash leaves no queued update")
-    func failedResurrectLeavesNoQueuedUpdate() async throws {
-        let stack = try makeStack(.signedIn, resurrectFails: true)
+    /// A remembered Trash row for `x`, newer than the server's copy, so the step brings it back with its
+    /// own fields and queues its update.
+    private func newerTrashRow(_ stack: Stack) async throws {
         await stack.server.add("x", title: "old")
         try await stack.trash.trash(try await stack.seedActive("x", title: "new", updatedAt: Self.editedAt), at: Self.now)
         stack.cursor.rememberDeletes(["x"])
+    }
 
-        await #expect(throws: ResurrectFailed.self) {
+    /// The bring-back write SQLite refuses: the queued update, or the move into the live table together
+    /// with any removal of a queue row, so that a second write can't undo the first.
+    enum RefusedBringBack: String, CaseIterable, Sendable {
+        case queuedUpdate, move
+        var triggers: [String] {
+            switch self {
+            case .queuedUpdate: ["BEFORE INSERT ON syncQueue"]
+            case .move: ["BEFORE INSERT ON tasks", "BEFORE DELETE ON syncQueue"]
+            }
+        }
+    }
+
+    /// PF3. The move out of Trash and the queued update land together or not at all. Otherwise a failed
+    /// move would leave an update that the push sends for a task still in Trash.
+    @Test("a refused bring-back leaves the task in Trash with no queued update", arguments: RefusedBringBack.allCases)
+    func bringBackFromTrashIsOneWrite(refusing write: RefusedBringBack) async throws {
+        let stack = try makeStack(.signedIn)
+        try await newerTrashRow(stack)
+        try await stack.db.writer.write { db in
+            for (n, timing) in write.triggers.enumerated() {
+                try db.execute(sql: "CREATE TRIGGER refuse\(n) \(timing) BEGIN SELECT RAISE(ABORT, 'refused'); END")
+            }
+        }
+
+        await #expect(throws: DatabaseError.self) {
             try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
         }
 
         #expect(try await stack.queue.all().isEmpty)
         #expect(try await stack.isTrashed("x"))
+        #expect(!(try await stack.isActive("x")))
         #expect(stack.cursor.rememberedDeletes() == ["x"])
+    }
+
+    /// The user deletes the task forever after the step read its Trash row. Bringing it back would
+    /// upload a task the user just removed.
+    @Test("a Delete Forever during the bring-back keeps the task deleted")
+    func deleteForeverDuringBringBackStaysDeleted() async throws {
+        let stack = try makeStack(.signedIn, racing: true)
+        try await newerTrashRow(stack)
+        let store = stack.store
+        stack.racing?.afterBuriedRead = { try await store.deleteForever(id: "x") }
+
+        let brought = try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+
+        #expect(brought == 0)
+        #expect(!(try await stack.isActive("x")))
+        #expect(!(try await stack.isTrashed("x")))
+        #expect(try await stack.queue.all().isEmpty)
+    }
+
+    /// The user restores the task and trashes it again after the step read its Trash row. The row holds
+    /// the same copy, but the new delete is the user's latest act, as when it was queued before the step.
+    @Test("an Undo then Trash during the bring-back keeps the task in Trash with its delete")
+    func trashAgainDuringBringBackStaysTrashed() async throws {
+        let stack = try makeStack(.signedIn, racing: true)
+        try await newerTrashRow(stack)
+        let store = stack.store, repo = stack.repo
+        stack.racing?.afterBuriedRead = {
+            try await store.restoreFromTrash(id: "x")
+            try await store.delete(try #require(try await repo.fetch(id: "x")))
+        }
+
+        let brought = try await stack.engine.resurrectOnSight(token: Self.token, owner: "u1")
+
+        #expect(brought == 0)
+        #expect(try await stack.isTrashed("x"))
+        #expect(!(try await stack.isActive("x")))
+        #expect(try await stack.queue.all().map(\.operation) == [.delete])
     }
 }

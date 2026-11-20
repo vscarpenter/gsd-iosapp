@@ -13,6 +13,13 @@ public protocol TombstoneRepository: Sendable {
     func isArchived(id: String) async throws -> Bool
     /// Drop the archived or trashed row and save `task` as live, in one transaction.
     func resurrect(_ task: Task) async throws
+    /// Bring a Trash row back with its own fields and queue `item`, its update, as one write. Returns
+    /// false and writes nothing when the Trash row is gone, no longer holds `task`'s `updatedAt`, or
+    /// the task has a queued delete: an Undo, Delete Forever, or second Trash landed after the caller
+    /// read the row. This writes the queue row through the tombstone repository's own database writer.
+    /// The tombstone repository and the sync queue must therefore share one database, which
+    /// `App/GSDApp.swift` does.
+    func resurrectFromTrash(_ task: Task, queueing item: SyncQueueItem) async throws -> Bool
     /// Move a live task to the trash and drop all its queue rows, in one transaction. Returns false
     /// and changes nothing when the task is gone or has a pending row by the time this runs.
     func abandonToTrash(id: String, at deletedAt: Date) async throws -> Bool
@@ -46,6 +53,22 @@ public final class GRDBTombstoneRepository: TombstoneRepository {
             _ = try ArchivedTaskRecord.deleteOne(db, key: task.id)
             _ = try DeletedTaskRecord.deleteOne(db, key: task.id)
             try record.save(db)
+        }
+    }
+
+    public func resurrectFromTrash(_ task: Task, queueing item: SyncQueueItem) async throws -> Bool {
+        let record = try TaskRecord(task)
+        let queued = try SyncQueueRecord(item)
+        return try await dbWriter.write { db in
+            // Checked here, not by the caller: an Undo, Delete Forever, or second Trash landing after the
+            // caller read the row would otherwise bring back and upload a task the user just removed.
+            guard let trashed = try DeletedTaskRecord.fetchOne(db, key: task.id),
+                  trashed.updatedAt == task.updatedAt,
+                  try SyncQueueRecord.deletes(of: task.id).fetchCount(db) == 0 else { return false }
+            _ = try DeletedTaskRecord.deleteOne(db, key: task.id)
+            try record.save(db)
+            try queued.save(db)
+            return true
         }
     }
 
