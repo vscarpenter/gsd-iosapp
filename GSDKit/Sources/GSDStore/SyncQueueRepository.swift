@@ -56,9 +56,7 @@ public final class GRDBSyncQueueRepository: SyncQueueRepository {
         let record = try SyncQueueRecord(item)
         try await dbWriter.write { db in
             try record.save(db)
-            _ = try SyncQueueRecord
-                .filter(Column("taskId") == item.taskId && Column("operation") != SyncQueueItem.Operation.delete.rawValue)
-                .deleteAll(db)
+            _ = try SyncQueueRecord.writes(of: [item.taskId]).deleteAll(db)
         }
     }
 

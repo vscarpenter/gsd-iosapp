@@ -64,9 +64,7 @@ public final class GRDBTrashRepository: TrashRepository {
             try record.save(db)
             _ = try TaskRecord.deleteOne(db, key: task.id)
             try queued.save(db)
-            _ = try SyncQueueRecord
-                .filter(Column("taskId") == task.id && Column("operation") != SyncQueueItem.Operation.delete.rawValue)
-                .deleteAll(db)
+            _ = try SyncQueueRecord.writes(of: [task.id]).deleteAll(db)
         }
     }
 
@@ -76,9 +74,7 @@ public final class GRDBTrashRepository: TrashRepository {
             let task = try trashed.toDomain()
             try TaskRecord(task).save(db)
             _ = try DeletedTaskRecord.deleteOne(db, key: id)
-            _ = try SyncQueueRecord
-                .filter(Column("taskId") == id && Column("operation") == SyncQueueItem.Operation.delete.rawValue)
-                .deleteAll(db)
+            _ = try SyncQueueRecord.deletes(of: id).deleteAll(db)
             try SyncQueueRecord(makeItem(task)).save(db)
             return task
         }

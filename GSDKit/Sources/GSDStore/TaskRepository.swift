@@ -122,9 +122,7 @@ public final class GRDBTaskRepository: TaskRepository {
         let queued = try items.map { try SyncQueueRecord($0) }
         try await dbWriter.write { db in
             for item in queued { try item.save(db) }
-            _ = try SyncQueueRecord
-                .filter(removedIds.contains(Column("taskId")) && Column("operation") != SyncQueueItem.Operation.delete.rawValue)
-                .deleteAll(db)
+            _ = try SyncQueueRecord.writes(of: removedIds).deleteAll(db)
             _ = try TaskRecord.deleteAll(db)
             for record in records { try record.insert(db) }
         }

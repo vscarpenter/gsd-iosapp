@@ -50,4 +50,15 @@ extension SyncQueueRecord {
             failedAt: failedAt
         )
     }
+
+    /// The queued creates and updates of `taskIds`. A task's delete makes them stale: one left queued
+    /// would come due after the delete landed, find no record, and POST the task back.
+    static func writes(of taskIds: some Collection<String>) -> QueryInterfaceRequest<SyncQueueRecord> {
+        filter(taskIds.contains(Column("taskId")) && Column("operation") != SyncQueueItem.Operation.delete.rawValue)
+    }
+
+    /// The queued deletes of `taskId`.
+    static func deletes(of taskId: String) -> QueryInterfaceRequest<SyncQueueRecord> {
+        filter(Column("taskId") == taskId && Column("operation") == SyncQueueItem.Operation.delete.rawValue)
+    }
 }
