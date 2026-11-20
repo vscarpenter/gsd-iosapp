@@ -25,6 +25,9 @@ struct TaskStoreWriteOrderTests {
         func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { false }
         func delete(id: String) async throws { log.events.append("delete") }
         func replaceAll(_ tasks: [Task]) async throws { log.events.append("replaceAll") }
+        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], clearingWritesFor removedIds: Set<String>) async throws {
+            log.events.append("replaceAllQueueing")
+        }
         func observeAll() -> AsyncThrowingStream<[Task], Error> {
             AsyncThrowingStream { $0.finish() }
         }
@@ -131,6 +134,19 @@ struct TaskStoreWriteOrderTests {
         let store = try makeStore(repo: LoggingRepository(log: log), queue: queue)
         try await store.delete(task("a"))
         #expect(log.events == ["trashQueueing"])
+        #expect(queue.items.isEmpty)
+    }
+
+    /// Import Replace queues its rows and swaps the task table in one write, so no push can run between
+    /// its queue writes and its task write, and nothing goes through the injected queue. This replaces
+    /// the sync-level `importReplaceWindow`, which pushed inside that window.
+    @Test func replaceQueuesAndSwapsInOneCall() async throws {
+        let log = EventLog()
+        let queue = LoggingQueue(log: log)
+        let store = try makeStore(repo: LoggingRepository(log: log), queue: queue)
+        let backup = try TaskExport.encode(TaskExport(tasks: [task("a")], exportedAt: Date(timeIntervalSince1970: 0)))
+        try await store.importTasks(backup, mode: .replace)
+        #expect(log.events == ["replaceAllQueueing"])
         #expect(queue.items.isEmpty)
     }
 

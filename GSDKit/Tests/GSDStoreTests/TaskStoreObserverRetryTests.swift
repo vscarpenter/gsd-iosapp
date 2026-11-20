@@ -31,6 +31,7 @@ struct TaskStoreObserverRetryTests {
         func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { false }
         func delete(id: String) async throws {}
         func replaceAll(_ tasks: [Task]) async throws {}
+        func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], clearingWritesFor removedIds: Set<String>) async throws {}
     }
 
     @Test func observerRecoversAfterAThrownStream() async throws {

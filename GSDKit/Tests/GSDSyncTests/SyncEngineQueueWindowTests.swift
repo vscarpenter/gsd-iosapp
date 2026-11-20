@@ -5,9 +5,10 @@ import GSDStore
 @testable import GSDSync
 @testable import GSDWire
 
-/// TaskStore writes a task's queue row before its task row (Fix E), and import replace queues every
-/// row before one `replaceAll`. A push that runs in either window sees queued work for a task that
-/// isn't live yet. It must still send that work, and nothing may be lost.
+/// TaskStore writes a task's queue row before its task row (Fix E). A push that runs in that window
+/// sees queued work for a task that isn't live yet. It must still send that work, and nothing may be
+/// lost. Import Replace has no such window, because it queues and swaps the task table in one write
+/// (`TaskStoreWriteOrderTests.replaceQueuesAndSwapsInOneCall`).
 final class PushAfterEnqueue: SyncQueueRepository, @unchecked Sendable {
     let base: GRDBSyncQueueRepository
     var engine: SyncEngine?
@@ -89,18 +90,5 @@ struct SyncEngineQueueWindowTests {
         _ = await r.engine.sync(trigger: .periodic)
         #expect(try await r.tasks.fetch(id: "n1") != nil)
         #expect(await server.taskIds() == ["n1"])
-    }
-
-    @Test("a sync during import replace's queue loop keeps every imported task")
-    @MainActor func importReplaceWindow() async throws {
-        let server = UniqueServer()
-        let r = try rig(fireOn: 2, server: server)
-        let data = try TaskExport.encode(TaskExport(tasks: [task("i1"), task("i2"), task("i3")],
-                                                    exportedAt: WireDate.parse("2026-11-18T00:00:00.000Z")!))
-        _ = try await r.store.importTasks(data, mode: .replace)
-        _ = await r.engine.flushDeletes()
-        _ = await r.engine.sync(trigger: .periodic)
-        #expect(try await r.tasks.fetchAll().map(\.id).sorted() == ["i1", "i2", "i3"])
-        #expect(await server.taskIds() == ["i1", "i2", "i3"])
     }
 }

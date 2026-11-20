@@ -13,6 +13,7 @@ private struct UnreadableTaskRepository: TaskRepository {
     func restampIfUnchanged(id: String, from: Date, to: Date) async throws -> Bool { false }
     func delete(id: String) async throws {}
     func replaceAll(_ tasks: [Task]) async throws {}
+    func replaceAll(_ tasks: [Task], queueing items: [SyncQueueItem], clearingWritesFor removedIds: Set<String>) async throws {}
     func observeAll() -> AsyncThrowingStream<[Task], Error> { AsyncThrowingStream { $0.finish() } }
 }
 

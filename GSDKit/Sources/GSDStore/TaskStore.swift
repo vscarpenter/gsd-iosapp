@@ -1015,23 +1015,24 @@ public final class TaskStore {
         return try TaskExport.encode(export)
     }
 
-    /// Parse + persist an import. Replace clears all tasks then bulk-inserts (single
-    /// transaction); Merge regenerates colliding ids + remaps references, then upserts each
-    /// (stamping `updatedAt` via the clock). Limits + lenient decode live in `TaskImporter`.
-    /// Returns the parse result so the UI can report skipped-count. Each written task enqueues an
-    /// `.update` so it pushes + survives deletion-reconcile (import-replace's remote-deletion of
-    /// cleared-but-not-imported tasks is deferred — §8; they re-pull).
+    /// Parse and persist an import. Limits and lenient decode live in `TaskImporter`. Returns the parse
+    /// result so the UI can report the skipped count. Each imported task gets a queued `.update`, so it
+    /// pushes and survives deletion reconcile.
+    ///
+    /// Replace is one write. It queues those updates and a `.delete` for each task the backup leaves
+    /// out, removes the left-out tasks' queued creates and updates, and swaps the task table. If the
+    /// write fails, nothing changes. Then the backup's companion stores are restored, and the app
+    /// drains the deletes through `SyncCoordinator.flushAfterReplace`.
+    ///
+    /// Merge regenerates colliding ids and remaps references, then upserts each task with a fresh
+    /// `updatedAt`.
     @discardableResult
     public func importTasks(_ data: Data, mode: ImportMode) async throws -> ImportResult {
         switch mode {
         case .replace:
             let existingIDs = Set(try await repository.fetchAll().map(\.id))
             let result = try TaskImporter.replace(from: data)
-            let importedIDs = Set(result.tasks.map(\.id))
-            let removedIDs = existingIDs.subtracting(importedIDs)
-            // Each removed task's delete clears its creates and updates, so a failed Replace has to put
-            // them back. Read before anything is queued, so a failed read leaves nothing behind.
-            let cleared = try await syncQueue.all().filter { removedIDs.contains($0.taskId) && $0.operation != .delete }
+            let removedIDs = existingIDs.subtracting(result.tasks.map(\.id))
             let now = clock()
             // D3: the import restores the backup's settings, so its default is the one in effect after.
             let defaultReminder = result.notificationSettings?.defaultReminder ?? notificationSettings.defaultReminder
@@ -1040,24 +1041,13 @@ public final class TaskStore {
                 t.notifyBefore = t.notifyBefore ?? defaultReminder   // D-10: a backup with no offset
                 return t
             }
-            var enqueued: [String] = []
-            for t in stamped {
-                if let id = await enqueue(t.id, .update, payload: t) { enqueued.append(id) }
-            }
-            // §3.4: cleared-but-not-imported tasks must be deleted remotely too (the App drains via
-            // SyncCoordinator.flushAfterReplace under the pull-suppression gate). The delete lands in
-            // that drain, so a create or update left queued would find no record later and POST the
-            // removed task back. Clearing them in the delete's write prevents that (I3).
-            for removed in removedIDs {
-                if let id = await enqueue(removed, .delete, payload: nil, clearingWrites: true) { enqueued.append(id) }
-            }
-            do {
-                try await repository.replaceAll(stamped)
-            } catch {
-                for id in enqueued { try? await syncQueue.remove(id: id) }
-                for item in cleared { try? await syncQueue.enqueue(item) }   // same ids, so nothing the user made is lost
-                throw error
-            }
+            // §3.4: left-out tasks are deleted remotely too. The app drains those deletes right after,
+            // under the pull-suppression gate, so a create or update still queued for one would find no
+            // record later and POST it back. The same write clears them (I3).
+            let items = stamped.map { Self.makeQueueItem($0.id, .update, payload: $0, at: now) }
+                + removedIDs.map { Self.makeQueueItem($0, .delete, payload: nil, at: now) }
+            try await repository.replaceAll(stamped, queueing: items, clearingWritesFor: removedIDs)
+            onMutation?()
             try await restoreCompanionStores(result, mode: .replace)
             return result
         case .merge:
