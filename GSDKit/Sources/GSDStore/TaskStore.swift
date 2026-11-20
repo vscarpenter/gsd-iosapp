@@ -1028,6 +1028,10 @@ public final class TaskStore {
             let existingIDs = Set(try await repository.fetchAll().map(\.id))
             let result = try TaskImporter.replace(from: data)
             let importedIDs = Set(result.tasks.map(\.id))
+            let removedIDs = existingIDs.subtracting(importedIDs)
+            // Each removed task's delete clears its creates and updates, so a failed Replace has to put
+            // them back. Read before anything is queued, so a failed read leaves nothing behind.
+            let cleared = try await syncQueue.all().filter { removedIDs.contains($0.taskId) && $0.operation != .delete }
             let now = clock()
             // D3: the import restores the backup's settings, so its default is the one in effect after.
             let defaultReminder = result.notificationSettings?.defaultReminder ?? notificationSettings.defaultReminder
@@ -1041,14 +1045,17 @@ public final class TaskStore {
                 if let id = await enqueue(t.id, .update, payload: t) { enqueued.append(id) }
             }
             // §3.4: cleared-but-not-imported tasks must be deleted remotely too (the App drains via
-            // SyncCoordinator.flushAfterReplace under the pull-suppression gate).
-            for removed in existingIDs.subtracting(importedIDs) {
-                if let id = await enqueue(removed, .delete, payload: nil) { enqueued.append(id) }
+            // SyncCoordinator.flushAfterReplace under the pull-suppression gate). The delete lands in
+            // that drain, so a create or update left queued would find no record later and POST the
+            // removed task back. Clearing them in the delete's write prevents that (I3).
+            for removed in removedIDs {
+                if let id = await enqueue(removed, .delete, payload: nil, clearingWrites: true) { enqueued.append(id) }
             }
             do {
                 try await repository.replaceAll(stamped)
             } catch {
                 for id in enqueued { try? await syncQueue.remove(id: id) }
+                for item in cleared { try? await syncQueue.enqueue(item) }   // same ids, so nothing the user made is lost
                 throw error
             }
             try await restoreCompanionStores(result, mode: .replace)
