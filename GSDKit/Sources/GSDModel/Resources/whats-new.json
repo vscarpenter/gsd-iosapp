@@ -4,6 +4,61 @@
   "releases": [
     {
       "platform": "web",
+      "version": "15.2.0",
+      "date": "2026-11-27",
+      "notable": false,
+      "headline": null,
+      "new": [
+        "The GSD MCP server 2.0.0 adds four workflows to Claude Code as skills: triage, daily planning, weekly review, and safe cleanup.",
+        "In Claude Code and other clients that can ask, the MCP server checks with you before it permanently deletes a task."
+      ],
+      "improved": [
+        "The About page installs MCP server 2.0.0, which needs Node 22 or later."
+      ],
+      "fixed": []
+    },
+    {
+      "platform": "web",
+      "version": "15.1.0",
+      "date": "2026-11-24",
+      "notable": true,
+      "headline": "More room for the Matrix, with Today a tap away.",
+      "new": [],
+      "improved": [
+        "On phones and short laptops, Today folds into one row with the date and a shortcut to Schedule. Open Today to see your picks.",
+        "Archive puts Restore and Delete next to each task and divides large archives into pages.",
+        "Sync history gives long errors room to wrap and shows how many tasks failed after a partial sync.",
+        "Review shows a single completion trend and calculates it faster on large task lists.",
+        "Settings puts controls near the top and offers Retry if the page fails to load."
+      ],
+      "fixed": [
+        "Review fits narrow screens while your tasks load.",
+        "Schedule opens from Today even when your current search has no results.",
+        "Sync skips older queued changes that would delete a task you restored or bring back a task you deleted.",
+        "Sign-out asks again if new unsynced changes arrive while you review the warning.",
+        "Changes to separate settings can save at the same time and keep both choices."
+      ]
+    },
+    {
+      "platform": "web",
+      "version": "14.9.4",
+      "date": "2026-11-18",
+      "notable": false,
+      "headline": null,
+      "new": [],
+      "improved": [
+        "Settings explains when your browser cannot send task reminders."
+      ],
+      "fixed": [
+        "You can disconnect an expired sync session after reviewing the warning about unsynced changes.",
+        "The sync dialog recovers when a session check is interrupted.",
+        "Task edits use the current sync state when you sign in or out in another tab.",
+        "The feedback invitation counts completion days in your local time zone, just like your streaks.",
+        "The quick-entry field stays below the top bar and comes into view when you focus it."
+      ]
+    },
+    {
+      "platform": "web",
       "version": "14.9.2",
       "date": "2026-11-15",
       "notable": false,
@@ -424,6 +479,25 @@
       ],
       "fixed": [
         "Archiving a task removes its synced copy, so it can't reappear on another device."
+      ]
+    },
+    {
+      "platform": "android",
+      "version": "0.12.0",
+      "date": "2026-11-25",
+      "notable": true,
+      "headline": "Pick today's top three and clear the backlog with a weekly sweep.",
+      "new": [
+        "Pin up to three tasks above the matrix to keep today's priorities in view.",
+        "Start Weekly sweep from Settings to review overdue and stale tasks one at a time. You can also turn on a weekly reminder."
+      ],
+      "improved": [
+        "Set how early to get a reminder for each task, or use your default.",
+        "Trash shows when selection mode is active and announces it to screen readers."
+      ],
+      "fixed": [
+        "Undoing a move to Trash cancels its pending synced delete. Replacing tasks from a backup clears pending changes for the tasks it removes.",
+        "Sync checks a task's version before applying an edit or delete so it can preserve newer changes from another device."
       ]
     },
     {
